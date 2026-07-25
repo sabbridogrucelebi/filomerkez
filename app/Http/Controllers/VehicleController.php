@@ -90,7 +90,8 @@ class VehicleController extends Controller
                 });
             })
             ->when($specialFilter === 'no_driver', fn ($q) => $q->whereDoesntHave('drivers', fn($d) => $d->where('is_active', true)))
-            ->latest()
+            ->orderByRaw("CASE WHEN plate REGEXP '^[0-9]{2} *C *[0-9]+.*$' THEN 0 ELSE 1 END")
+            ->orderBy('plate', 'asc')
             ->paginate(100)
             ->withQueryString();
 

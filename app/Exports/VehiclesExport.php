@@ -14,7 +14,7 @@ class VehiclesExport implements FromCollection, WithHeadings, WithMapping, Shoul
 {
     public function collection()
     {
-        return Vehicle::latest()->get();
+        return Vehicle::with('documents')->latest()->get();
     }
 
     public function headings(): array
@@ -52,6 +52,20 @@ class VehiclesExport implements FromCollection, WithHeadings, WithMapping, Shoul
             ? ($vehicle->other_color ?: 'Diğer')
             : ($vehicle->color ?: '-');
 
+        $latestDocByType = $vehicle->documents->groupBy('document_type')->map(function ($group) {
+            return $group->sortByDesc(function ($d) { return $d->end_date ?? $d->created_at; })->first();
+        });
+
+        $inspectionDoc = $latestDocByType->get('Muayene');
+        $exhaustDoc    = $latestDocByType->get('Egzoz');
+        $insuranceDoc  = $latestDocByType->get('Sigorta');
+        $kaskoDoc      = $latestDocByType->get('Kasko');
+
+        $inspectionDate = $inspectionDoc?->end_date ?? $vehicle->inspection_date;
+        $exhaustDate    = $exhaustDoc?->end_date ?? $vehicle->exhaust_date;
+        $insuranceDate  = $insuranceDoc?->end_date ?? $vehicle->insurance_end_date;
+        $kaskoDate      = $kaskoDoc?->end_date ?? $vehicle->kasko_end_date;
+
         return [
             $vehicle->plate ?: '-',
             $vehicle->brand ?: '-',
@@ -69,10 +83,10 @@ class VehiclesExport implements FromCollection, WithHeadings, WithMapping, Shoul
             $vehicle->license_serial_no ?: '-',
             $vehicle->license_owner ?: '-',
             $vehicle->owner_tax_or_tc_no ?: '-',
-            optional($vehicle->inspection_date)->format('d.m.Y') ?: '-',
-            optional($vehicle->exhaust_date)->format('d.m.Y') ?: '-',
-            optional($vehicle->insurance_end_date)->format('d.m.Y') ?: '-',
-            optional($vehicle->kasko_end_date)->format('d.m.Y') ?: '-',
+            $inspectionDate ? \Carbon\Carbon::parse($inspectionDate)->format('d.m.Y') : '-',
+            $exhaustDate ? \Carbon\Carbon::parse($exhaustDate)->format('d.m.Y') : '-',
+            $insuranceDate ? \Carbon\Carbon::parse($insuranceDate)->format('d.m.Y') : '-',
+            $kaskoDate ? \Carbon\Carbon::parse($kaskoDate)->format('d.m.Y') : '-',
             $vehicle->is_active ? 'Aktif' : 'Pasif',
             $vehicle->notes ?: '-',
             optional($vehicle->created_at)->format('d.m.Y H:i') ?: '-',
