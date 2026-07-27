@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Jobs\SendFcmpushNotification;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class CheckMaintenanceHealth extends Command
 {
@@ -72,6 +73,53 @@ class CheckMaintenanceHealth extends Command
                     );
                     $setting->lube_last_notified_km = $currentKm;
                     $setting->save();
+                }
+            }
+            
+            // Muayene Kontrolü (10 Gün)
+            $docTypes = ['Muayene', 'Egzoz', 'Sigorta', 'Kasko', 'İMM Poliçesi', 'İMM POLİÇESİ'];
+            $latestDocs = $vehicle->documents()
+                ->whereIn('document_type', $docTypes)
+                ->whereNotNull('end_date')
+                ->whereNull('archived_at')
+                ->get()
+                ->groupBy('document_type')
+                ->map(fn($g) => $g->sortByDesc('end_date')->first());
+
+            $inspectionDoc = $latestDocs->get('Muayene');
+            $inspectionDate = $inspectionDoc?->end_date ?? $vehicle->inspection_date;
+            
+            if ($inspectionDate) {
+                $inspectionDays = round(now()->diffInDays($inspectionDate, false));
+                if ($inspectionDays <= 10) {
+                    $cacheKey = 'inspection_notified_' . $vehicle->id . '_' . now()->format('Y-m-d');
+                    if (!Cache::has($cacheKey)) {
+                        $this->sendNotificationToAdmins(
+                            $vehicle->company_id,
+                            '⚠️ Muayene Yaklaşıyor',
+                            "{$vehicle->plate} plakalı aracın muayenesine " . ($inspectionDays < 0 ? abs($inspectionDays) . " gün geçti!" : $inspectionDays . " gün kaldı!")
+                        );
+                        Cache::put($cacheKey, true, now()->endOfDay());
+                    }
+                }
+            }
+
+            // Sigorta Kontrolü (10 Gün)
+            $insuranceDoc = $latestDocs->get('Sigorta');
+            $insuranceDate = $insuranceDoc?->end_date ?? $vehicle->insurance_end_date;
+
+            if ($insuranceDate) {
+                $insuranceDays = round(now()->diffInDays($insuranceDate, false));
+                if ($insuranceDays <= 10) {
+                    $cacheKey = 'insurance_notified_' . $vehicle->id . '_' . now()->format('Y-m-d');
+                    if (!Cache::has($cacheKey)) {
+                        $this->sendNotificationToAdmins(
+                            $vehicle->company_id,
+                            '⚠️ Sigorta Yaklaşıyor',
+                            "{$vehicle->plate} plakalı aracın sigorta bitişine " . ($insuranceDays < 0 ? abs($insuranceDays) . " gün geçti!" : $insuranceDays . " gün kaldı!")
+                        );
+                        Cache::put($cacheKey, true, now()->endOfDay());
+                    }
                 }
             }
         }
