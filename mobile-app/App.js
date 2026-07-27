@@ -42,6 +42,7 @@ import NotificationSettingsScreen from './src/screens/NotificationSettingsScreen
 import AccountInfoScreen from './src/screens/AccountInfoScreen';
 import ActivityScreen from './src/screens/ActivityScreen';
 import TrackingScreen from './src/screens/TrackingScreen';
+import TrackingReportsScreen from './src/screens/TrackingReportsScreen';
 import CompanyUsersScreen from './src/screens/CompanyUsersScreen';
 import CompanyUserFormScreen from './src/screens/CompanyUserFormScreen';
 import ReportsScreen from './src/screens/ReportsScreen';
@@ -264,6 +265,7 @@ function MenuStackScreen() {
             <MenuStack.Screen name="Activity" component={ActivityScreen} />
             <MenuStack.Screen name="Support" component={SupportScreen} />
             <MenuStack.Screen name="Security" component={SecurityScreen} />
+            <MenuStack.Screen name="TrackingReports" component={TrackingReportsScreen} />
             <MenuStack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
             <MenuStack.Screen name="AccountInfo" component={AccountInfoScreen} />
             <MenuStack.Screen name="MaintenanceSettings" component={MaintenanceSettingsScreen} />

@@ -192,6 +192,14 @@ export default function TrackingScreen({ navigation }) {
                 </View>
             </SafeAreaView>
 
+            {/* Reports Button */}
+            <SafeAreaView style={s.reportsWrap} edges={['top']} pointerEvents="box-none">
+                <TouchableOpacity style={s.reportsBtn} onPress={() => navigation.navigate('TrackingReports')}>
+                    <Icon name="file-document-outline" size={18} color="#FFF" />
+                    <Text style={s.reportsBtnText}>Raporlar</Text>
+                </TouchableOpacity>
+            </SafeAreaView>
+
             {/* Bottom Sheet */}
             <Animated.View style={[
                 s.bottomSheet, 
@@ -290,8 +298,12 @@ const s = StyleSheet.create({
     headerBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(15, 23, 42, 0.6)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
     headerTitle: { fontSize: 16, fontWeight: '800', color: '#FFF', marginBottom: 4 },
     liveBadgeWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(16, 185, 129, 0.15)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.3)' },
-    liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981', marginRight: 6 },
-    liveText: { fontSize: 10, fontWeight: '700', color: '#10B981' },
+    liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981', marginRight: 6, shadowColor: '#10B981', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 4 },
+    liveText: { fontSize: 10, fontWeight: '800', color: '#10B981', textTransform: 'uppercase', letterSpacing: 1 },
+
+    reportsWrap: { position: 'absolute', top: Platform.OS === 'android' ? 100 : 120, right: 20, zIndex: 10 },
+    reportsBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#3B82F6', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5, gap: 6 },
+    reportsBtnText: { color: '#FFF', fontSize: 13, fontWeight: '800' },
 
     // Bottom Sheet
     bottomSheet: {

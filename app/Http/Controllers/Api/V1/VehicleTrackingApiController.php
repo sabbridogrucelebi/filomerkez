@@ -98,4 +98,61 @@ class VehicleTrackingApiController extends Controller
             'provider_name' => $setting ? $setting->provider : 'Demo Mode'
         ]);
     }
+
+    public function dailyWorkReport(Request $request)
+    {
+        abort_unless($request->user()->hasPermission('vehicles.view'), 403, 'Bu işlem için yetkiniz bulunmamaktadır.');
+
+        $companyId = $request->user()->company_id;
+        $setting = VehicleTrackingSetting::where('company_id', $companyId)->where('is_active', true)->first();
+        
+        $date = $request->input('date', date('Y-m-d'));
+        $reports = [];
+
+        if ($setting && $setting->provider === 'arvento') {
+            $arvento = new ArventoService($setting);
+            $mapping = $arvento->getMappedLicensePlates();
+            
+            // Sadece bu şirkete atanmış cihazları al
+            $nodeList = implode(',', array_keys($mapping));
+
+            if (!empty($nodeList)) {
+                $reports = $arvento->getDailyFirstContactReport($date, $nodeList);
+            }
+            
+            // O gün hiç kontak açmayan araçları da listeye ekle
+            foreach ($mapping as $node => $plate) {
+                if (!isset($reports[$node])) {
+                    $reports[$node] = [
+                        'LicensePlate' => $plate,
+                        'Driver' => '-',
+                        'DateTime' => '-',
+                        'Latitude' => 0,
+                        'Longitude' => 0,
+                        'Address' => 'Kontak Açılmadı / Veri Yok',
+                    ];
+                }
+            }
+        } else if (!$setting) {
+            // DEMO Veri
+            $dbVehicles = \App\Models\Fleet\Vehicle::where('company_id', $companyId)->get();
+            foreach ($dbVehicles as $v) {
+                $reports[] = [
+                    'LicensePlate' => $v->license_plate,
+                    'Driver' => $v->driver ? $v->driver->first_name . ' ' . $v->driver->last_name : 'Atanmamış',
+                    'DateTime' => $date . ' ' . sprintf('%02d:%02d', rand(6, 11), rand(0, 59)),
+                    'Latitude' => 41.0082 + (rand(-100, 100) / 10000),
+                    'Longitude' => 28.9784 + (rand(-100, 100) / 10000),
+                    'Address' => 'Demo Adres, Istanbul',
+                ];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'reports' => array_values($reports),
+            'date' => $date,
+            'provider_active' => $setting ? true : true
+        ]);
+    }
 }
