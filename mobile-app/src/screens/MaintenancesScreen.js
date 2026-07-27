@@ -51,6 +51,7 @@ export default function MaintenancesScreen({ navigation }) {
 
     const [modalVisible, setModalVisible] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState({
         vehicle_id: '',
         service_date: new Date().toISOString().split('T')[0],
@@ -119,6 +120,7 @@ export default function MaintenancesScreen({ navigation }) {
         const m = String(today.getMonth() + 1).padStart(2, '0');
         const d = String(today.getDate()).padStart(2, '0');
 
+        setEditingId(null);
         setFormData({
             vehicle_id: '',
             service_date: `${y}-${m}-${d}`,
@@ -134,6 +136,33 @@ export default function MaintenancesScreen({ navigation }) {
         setModalVisible(true);
     };
 
+    const openEdit = (item) => {
+        if (!hasPermission('maintenances.edit')) {
+            Alert.alert('Yetki Yok', 'Bakım kaydı düzenleme yetkiniz bulunmuyor.');
+            return;
+        }
+        setEditingId(item.id);
+        setFormData({
+            vehicle_id: item.vehicle_id || '',
+            service_date: item.date ? item.date.split('T')[0] : new Date().toISOString().split('T')[0],
+            maintenance_type: item.type || '',
+            title: item.title || '',
+            km: item.km ? item.km.toString() : '',
+            next_service_km: item.next_km ? item.next_km.toString() : '',
+            amount: item.amount ? item.amount.toString() : '',
+            service_name: item.service_name || '',
+            description: item.description || ''
+        });
+        
+        // Custom mechanic check
+        if (item.service_name && !mechanics.some(m => m.id === item.service_name)) {
+            setCustomMechanic(true);
+        } else {
+            setCustomMechanic(false);
+        }
+        setModalVisible(true);
+    };
+
     const handleSave = async () => {
         if (!formData.vehicle_id) {
             Alert.alert('Eksik Bilgi', 'Lütfen bir araç seçiniz.'); return;
@@ -144,13 +173,19 @@ export default function MaintenancesScreen({ navigation }) {
 
         setSaving(true);
         try {
-            await api.post('/v1/maintenances', formData);
+            const url = editingId ? `/v1/maintenances/${editingId}` : '/v1/maintenances';
+            const method = editingId ? 'PUT' : 'POST';
+            await api({ method, url, data: formData });
+            
+            Alert.alert('Başarılı', editingId ? 'Bakım güncellendi.' : 'Bakım kaydedildi.');
             setModalVisible(false);
             fetchData();
-            Alert.alert('Başarılı', 'Bakım kaydı başarıyla eklendi.');
         } catch (e) {
-            Alert.alert('Hata', 'Kaydedilemedi.');
-        } finally { setSaving(false); }
+            console.error(e);
+            Alert.alert('Hata', 'Kayıt işlemi başarısız oldu.');
+        } finally {
+            setSaving(false);
+        }
     };
 
     const confirmDelete = (id) => {
@@ -388,9 +423,14 @@ export default function MaintenancesScreen({ navigation }) {
                     </View>
                     <View style={{ alignItems: 'flex-end', justifyContent: 'flex-start' }}>
                         <BlinkingPlate plate={item.vehicle?.plate || 'Bilinmiyor'} />
-                        <TouchableOpacity onPress={() => confirmDelete(item.id)} style={{ padding: 4, marginTop: 8 }}>
-                            <Icon name="trash-can-outline" size={20} color="#EF4444" />
-                        </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+                            <TouchableOpacity onPress={() => openEdit(item)} style={{ padding: 4 }}>
+                                <Icon name="pencil-outline" size={20} color="#3B82F6" />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => confirmDelete(item.id)} style={{ padding: 4 }}>
+                                <Icon name="trash-can-outline" size={20} color="#EF4444" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
 
@@ -488,13 +528,13 @@ export default function MaintenancesScreen({ navigation }) {
                 <View style={st.modalOverlay}>
                     <View style={st.modalContent}>
                         <View style={st.modalHeader}>
-                            <Text style={st.modalTitle}>Yeni Bakım Ekle</Text>
-                            <TouchableOpacity onPress={() => setModalVisible(false)} style={st.modalClose}>
+                            <Text style={st.modalTitle}>{editingId ? 'Bakım Düzenle' : 'Yeni Bakım Ekle'}</Text>
+                            <TouchableOpacity style={st.modalCloseBtn} onPress={() => setModalVisible(false)}>
                                 <Icon name="close" size={24} color="#64748B" />
                             </TouchableOpacity>
                         </View>
                         
-                        <ScrollView style={{ padding: 20 }}>
+                        <ScrollView contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={false}>
                             <Text style={st.inputLabel}>Araç *</Text>
                             <TouchableOpacity style={st.selectBtn} onPress={() => { setShowVehicleSelect(true); setVehicleSearchQuery(''); }}>
                                 <Text style={[st.selectBtnText, !formData.vehicle_id && { color: '#94A3B8' }]}>
@@ -545,10 +585,10 @@ export default function MaintenancesScreen({ navigation }) {
 
                             <Text style={[st.inputLabel, { marginTop: 16 }]}>Bir Sonraki Bakım KM</Text>
                             <FormField
-                                value=""
-                                editable={false}
-                                placeholder="Otomatik Hesaplanır"
-                                style={{ backgroundColor: '#F1F5F9' }}
+                                value={formData.next_service_km || ''}
+                                onChangeText={(val) => setFormData({ ...formData, next_service_km: val })}
+                                placeholder="Opsiyonel"
+                                keyboardType="numeric"
                             />
                             <Text style={st.helperText}>YAĞ BAKIMI veya ALT YAĞLAMA seçildiğinde otomatik hesaplanır.</Text>
 
@@ -597,8 +637,12 @@ export default function MaintenancesScreen({ navigation }) {
                                 </ScrollView>
                             )}
 
-                            <TouchableOpacity style={[st.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
-                                {saving ? <ActivityIndicator color="#fff" /> : <Text style={st.saveBtnText}>Kaydet</Text>}
+                            <TouchableOpacity 
+                                style={[st.saveBtn, saving && { opacity: 0.7 }]} 
+                                onPress={handleSave} 
+                                disabled={saving}
+                            >
+                                {saving ? <ActivityIndicator color="#fff" /> : <Text style={st.saveBtnText}>{editingId ? 'Güncelle' : 'Kaydet'}</Text>}
                             </TouchableOpacity>
                             <View style={{ height: 60 }} />
                         </ScrollView>
