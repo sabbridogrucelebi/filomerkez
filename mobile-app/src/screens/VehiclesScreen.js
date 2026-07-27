@@ -132,10 +132,10 @@ export default function VehiclesScreen({ navigation }) {
         const imgSource = item.image_url ? { uri: item.image_url } : getVehicleImage(item.vehicle_type || item.type);
 
         const inspectionDays = item.inspection_date ? Math.ceil((new Date(item.inspection_date) - new Date()) / (1000 * 60 * 60 * 24)) : null;
-        const showInspectionWarning = kpiFilter === 'upcoming_inspection' && inspectionDays !== null && inspectionDays <= 30;
+        const showInspectionWarning = kpiFilter === 'upcoming_inspection' && inspectionDays !== null && inspectionDays <= 10;
 
         const insuranceDays = item.insurance_end_date ? Math.ceil((new Date(item.insurance_end_date) - new Date()) / (1000 * 60 * 60 * 24)) : null;
-        const showInsuranceWarning = kpiFilter === 'upcoming_insurance' && insuranceDays !== null && insuranceDays <= 30;
+        const showInsuranceWarning = kpiFilter === 'upcoming_insurance' && insuranceDays !== null && insuranceDays <= 10;
 
         return (
             <TouchableOpacity style={[s.tableRow, (showInspectionWarning || showInsuranceWarning) && {flexDirection: 'column', alignItems: 'stretch'}]} activeOpacity={0.7} onPress={()=>navigation.navigate('VehicleDetail', { vehicle: item })} onLongPress={()=>setActionItem(item)}>

@@ -283,7 +283,7 @@ export const AuthProvider = ({ children }) => {
             logoutListener.remove();
             api.interceptors.response.eject(interceptorId);
             if (interval) clearInterval(interval);
-            Notifications.removeNotificationSubscription(notificationListener);
+            if (notificationListener) notificationListener.remove();
         };
     }, [userToken]); // Include userToken so interval uses it, but interceptor re-binds. Better yet, we should separate them.
 
