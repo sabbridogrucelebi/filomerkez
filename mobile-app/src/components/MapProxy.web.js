@@ -1,12 +1,35 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 
-export const MapView = ({ style, children }) => (
-    <View style={[style, { alignItems: 'center', justifyContent: 'center', backgroundColor: '#E2E8F0' }]}>
-        <Text style={{ color: '#475569', fontSize: 16, fontWeight: 'bold' }}>Harita Web'de Devre Dışı</Text>
-        <Text style={{ color: '#475569', marginTop: 8 }}>Lütfen mobil cihazdan (Expo Go) test ediniz.</Text>
-        {children}
-    </View>
-);
+const MapView = React.forwardRef((props, ref) => {
+    React.useImperativeHandle(ref, () => ({
+        animateToRegion: () => {},
+        animateCamera: () => {}
+    }));
+    return (
+        <View style={[{ backgroundColor: '#242f3e', justifyContent: 'center', alignItems: 'center' }, props.style]}>
+            <Text style={{ color: '#fff', fontSize: 16 }}>Harita (Web'de Gizli)</Text>
+        </View>
+    );
+});
 
-export const Marker = () => null;
+const MarkerBase = React.forwardRef((props, ref) => <View ref={ref}>{props.children}</View>);
+const MarkerAnimated = React.forwardRef((props, ref) => {
+    React.useImperativeHandle(ref, () => ({
+        animateMarkerToCoordinate: () => {}
+    }));
+    return <View>{props.children}</View>;
+});
+
+const Marker = Object.assign(MarkerBase, { Animated: MarkerAnimated });
+const Circle = (props) => null;
+const PROVIDER_GOOGLE = null;
+
+class AnimatedRegion {
+    constructor(obj) { Object.assign(this, obj); }
+    timing() { return { start: () => {} }; }
+    setValue() {}
+}
+
+export default MapView;
+export { Marker, Circle, AnimatedRegion, PROVIDER_GOOGLE };

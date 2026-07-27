@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator, Dimensions, Platform, Animated, Vibration } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import MapView, { Marker, AnimatedRegion } from 'react-native-maps';
+import MapView, { Marker, AnimatedRegion } from '../components/MapProxy';
 import api from '../api/axios';
 import SpaceWaves from '../components/SpaceWaves';
 

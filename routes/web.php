@@ -115,6 +115,22 @@ Route::get('/gizlilik', function () {
 |--------------------------------------------------------------------------
 */
 Route::get('/cron/backup', [\App\Http\Controllers\BackupController::class, 'cronTrigger']);
+
+Route::get('/cron/deploy', function (\Illuminate\Http\Request $request) {
+    if ($request->key !== 'filo-deploy-2026') {
+        abort(403, 'Yetkisiz erişim');
+    }
+    
+    $repoPath = '/home/u2545454/repositories/filomerkez_v2';
+    
+    // 1. Github'dan yeni kodları çek (Update from remote)
+    $pullOutput = shell_exec("cd {$repoPath} && git pull origin main 2>&1");
+    
+    // 2. cPanel deploy işlemini tetikle (Deploy HEAD commit)
+    $deployOutput = shell_exec("/usr/local/cpanel/bin/uapi VersionControl deploy repository_root={$repoPath} 2>&1");
+    
+    return "PULL SONUCU:\n" . $pullOutput . "\n\nDEPLOY SONUCU:\n" . $deployOutput;
+});
 /*
 |--------------------------------------------------------------------------
 | PUBLIC VEHICLE IMAGE UPLOAD
@@ -1074,3 +1090,5 @@ Route::get('/run-migrations', function () {
 });
 
 // force update routes
+
+Route::get('/run-migrations', function () { \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]); return 'Migrated!'; });

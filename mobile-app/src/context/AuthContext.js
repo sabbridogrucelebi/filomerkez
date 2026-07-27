@@ -7,10 +7,11 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import api from '../api/axios';
+import StylishNotification from '../components/StylishNotification';
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
-        shouldShowAlert: true,
+        shouldShowAlert: false, // Varsayılan sistem uyarısını kapat, kendi Custom UI (StylishNotification) çalışacak
         shouldPlaySound: true,
         shouldSetBadge: false,
     }),
@@ -92,6 +93,7 @@ export const AuthProvider = ({ children }) => {
     const [showTransition, setShowTransition] = useState(false);
     const [unreadChatCount, setUnreadChatCount] = useState(0);
     const unreadCountRef = useRef(0);
+    const notificationRef = useRef(null);
 
     const playNotificationSound = async () => {
         try {
@@ -249,6 +251,19 @@ export const AuthProvider = ({ children }) => {
             secureDeleteItem('userToken');
         });
 
+        const notificationListener = Notifications.addNotificationReceivedListener(notification => {
+            const title = notification.request.content.title;
+            const body = notification.request.content.body;
+            const data = notification.request.content.data;
+            
+            if (title || body) {
+                // Sadece custom gösterim yap, sistem varsayılanını susturmak için üstteki setNotificationHandler'da shouldShowAlert false yapılabilir.
+                if (notificationRef.current) {
+                    notificationRef.current.show(title || 'Yeni Bildirim', body || '', data);
+                }
+            }
+        });
+
         // Intercept headers for permissions update
         const interceptorId = api.interceptors.response.use((response) => {
             if (response.headers['x-permissions-updated-at']) {
@@ -268,12 +283,14 @@ export const AuthProvider = ({ children }) => {
             logoutListener.remove();
             api.interceptors.response.eject(interceptorId);
             if (interval) clearInterval(interval);
+            Notifications.removeNotificationSubscription(notificationListener);
         };
     }, [userToken]); // Include userToken so interval uses it, but interceptor re-binds. Better yet, we should separate them.
 
     return (
         <AuthContext.Provider value={{ login, logout, isLoading, isInitializing, userToken, userInfo, hasPermission, hasRole, showTransition, setShowTransition, refreshMe, unreadChatCount }}>
             {children}
+            <StylishNotification ref={notificationRef} />
         </AuthContext.Provider>
     );
 };
