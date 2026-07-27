@@ -288,17 +288,13 @@
                 // Echo Realtime Listeners
                 if (window.Echo) {
                     window.Echo.private('App.Models.User.' + this.authUserId)
-                        .listen('.message.sent', (e) => {
-                            // User receives notification for conversations they belong to
-                            // Wait, the backend currently broadcasts to private('conversation.X')
-                            // We need to listen to all channels of active conversations
+                        .listen('.message.received', (e) => {
+                            this.fetchConversations(true);
+                            if (this.activeChat && this.activeChat.id === e.conversation_id) {
+                                this.fetchMessages(this.activeChat.id, true);
+                            }
                         });
                 }
-
-                // Fallback polling for updates if Reverb isn't perfectly linked
-                setInterval(() => {
-                    this.fetchConversations(true);
-                }, 5000);
             },
 
             listenToConversation(convId) {

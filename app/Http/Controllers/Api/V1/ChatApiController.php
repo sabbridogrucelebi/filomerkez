@@ -8,6 +8,8 @@ use App\Models\Chat\Message;
 use App\Models\Chat\Attachment;
 use App\Models\User;
 use App\Events\Chat\MessageSent;
+use App\Events\Chat\UserReceivedMessage;
+use App\Jobs\SendFcmpushNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -231,6 +233,31 @@ class ChatApiController extends Controller
             broadcast(new MessageSent($message))->toOthers();
         } catch (\Exception $e) {
             // Broadcasting may fail silently
+        }
+
+        // Send notifications and UserReceivedMessage to all other participants
+        $otherUsers = $conversation->users()->where('users.id', '!=', $request->user()->id)->get();
+        
+        foreach ($otherUsers as $user) {
+            try {
+                broadcast(new UserReceivedMessage($user->id, $conversation->id))->toOthers();
+            } catch (\Exception $e) {}
+
+            // Background Push Notification via Expo
+            if (!empty($user->expo_push_token)) {
+                $senderName = $request->user()->name;
+                $msgBody = $message->type === 'attachment' ? 'Bir dosya gönderdi 📁' : $message->body;
+                
+                dispatch(new SendFcmpushNotification(
+                    $user->id,
+                    "Yeni Mesaj: $senderName",
+                    $msgBody,
+                    [
+                        'type' => 'chat',
+                        'conversation_id' => $conversation->id
+                    ]
+                ));
+            }
         }
 
         return response()->json(['status' => 'sent', 'message' => $message->load('attachments')]);

@@ -5,8 +5,10 @@ import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api/axios';
+import echo from '../utils/echo';
 
 const EMOJIS = [
     '😀','😂','🤣','😍','😘','🥰','😊','😉','😎','🤩',
@@ -37,12 +39,24 @@ export default function PilotChatScreen({ navigation }) {
 
     useFocusEffect(useCallback(() => {
         fetchConversations();
-        const interval = setInterval(() => {
-            fetchConversations(true);
-            if (activeChat) fetchMessages(activeChat.id, true);
-        }, 5000);
-        return () => clearInterval(interval);
-    }, [activeChat]));
+        
+        // Listen to User's private channel for conversation list updates
+        if (userInfo && userInfo.id) {
+            echo.private(`App.Models.User.${userInfo.id}`)
+                .listen('.message.received', (e) => {
+                    fetchConversations(true);
+                    if (activeChat && activeChat.id === e.conversation_id) {
+                        fetchMessages(activeChat.id, true);
+                    }
+                });
+        }
+
+        return () => {
+            if (userInfo && userInfo.id) {
+                echo.leave(`App.Models.User.${userInfo.id}`);
+            }
+        };
+    }, [activeChat, userInfo]));
 
     const fetchConversations = async (s = false) => {
         if (!s) setLoading(true);
@@ -62,8 +76,19 @@ export default function PilotChatScreen({ navigation }) {
     const selectChat = (c) => {
         setActiveChat(c); setMessages([]); fetchMessages(c.id);
         navigation.setOptions({ tabBarStyle: { display: 'none' } });
+        
+        // Listen to active conversation messages
+        echo.private(`conversation.${c.id}`)
+            .listen('.message.sent', (e) => {
+                // If it's my own message, it was already added optimistically, but we might want to refresh anyway
+                if (e.sender_id !== userInfo.id) {
+                    fetchMessages(c.id, true);
+                    fetchConversations(true);
+                }
+            });
     };
     const goBack = () => {
+        if (activeChat) echo.leave(`conversation.${activeChat.id}`);
         setActiveChat(null); setShowEmoji(false);
         navigation.setOptions({ tabBarStyle: undefined });
     };
@@ -93,16 +118,26 @@ export default function PilotChatScreen({ navigation }) {
         if (!r.canceled && r.assets[0]) sendFile(r.assets[0]);
     };
     const pickDocument = async () => {
-        const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images','videos'], quality: 0.7, allowsMultipleSelection: true });
-        if (!r.canceled && r.assets) r.assets.forEach(a => sendFile(a));
+        try {
+            const r = await DocumentPicker.getDocumentAsync({
+                type: '*/*',
+                copyToCacheDirectory: true,
+                multiple: true
+            });
+            if (!r.canceled && r.assets) {
+                r.assets.forEach(a => sendFile(a));
+            }
+        } catch (err) {
+            console.error('Error picking document:', err);
+        }
     };
 
     const sendFile = async (asset) => {
         if (!activeChat) return;
         const fd = new FormData();
         fd.append('body', '');
-        const name = asset.fileName || asset.uri.split('/').pop();
-        fd.append('attachments[0]', { uri: asset.uri, name, type: asset.mimeType || 'image/jpeg' });
+        const name = asset.fileName || asset.name || asset.uri.split('/').pop();
+        fd.append('attachments[0]', { uri: asset.uri, name, type: asset.mimeType || 'application/octet-stream' });
         try {
             await api.post(`/chat/conversations/${activeChat.id}/messages`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
             fetchMessages(activeChat.id, true); fetchConversations(true);
@@ -197,7 +232,10 @@ export default function PilotChatScreen({ navigation }) {
                                 {item.attachments?.map(att => (
                                     att.mime_type?.startsWith('image/') ?
                                         <Image key={att.id} source={{ uri: att.url }} style={st.attachImage} resizeMode="cover" /> :
-                                        <View key={att.id} style={st.attachBadge}><Icon name="file-document-outline" size={14} color="#64748B" /><Text style={st.attachText} numberOfLines={1}>{att.filename}</Text></View>
+                                        <TouchableOpacity key={att.id} style={st.attachBadge} onPress={() => { import('react-native').then(({ Linking }) => Linking.openURL(att.url)); }}>
+                                            <Icon name="file-document-outline" size={24} color="#EF4444" style={{ marginRight: 8 }} />
+                                            <View style={{ flex: 1 }}><Text style={st.attachText} numberOfLines={1}>{att.filename}</Text><Text style={{ fontSize: 10, color: '#64748B' }}>İndirmek için dokunun</Text></View>
+                                        </TouchableOpacity>
                                 ))}
                                 {item.body ? <Text style={[st.msgText, item.is_deleted && { fontStyle: 'italic' }]}>{item.body}</Text> : null}
                                 <View style={st.msgMeta}>
