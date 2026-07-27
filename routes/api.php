@@ -301,6 +301,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/chat/conversations/{conversation}/messages', [\App\Http\Controllers\Api\V1\ChatApiController::class, 'messages']);
     Route::post('/chat/conversations/{conversation}/messages', [\App\Http\Controllers\Api\V1\ChatApiController::class, 'sendMessage']);
     Route::delete('/chat/conversations/{conversation}/messages/{message}', [\App\Http\Controllers\Api\V1\ChatApiController::class, 'deleteMessage']);
+    Route::post('/chat/conversations/{conversation}/call', [\App\Http\Controllers\Api\V1\ChatApiController::class, 'handleCall']);
     Route::post('/chat/profile-photo', [\App\Http\Controllers\Api\V1\ChatApiController::class, 'uploadProfilePhoto']);
 });
 
@@ -315,5 +316,6 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/chat/conversations/{conversation}/messages', [\App\Http\Controllers\Api\V1\ChatApiController::class, 'messages']);
     Route::post('/chat/conversations/{conversation}/messages', [\App\Http\Controllers\Api\V1\ChatApiController::class, 'sendMessage']);
     Route::delete('/chat/conversations/{conversation}/messages/{message}', [\App\Http\Controllers\Api\V1\ChatApiController::class, 'deleteMessage']);
+    Route::post('/chat/conversations/{conversation}/call', [\App\Http\Controllers\Api\V1\ChatApiController::class, 'handleCall']);
     Route::post('/chat/profile-photo', [\App\Http\Controllers\Api\V1\ChatApiController::class, 'uploadProfilePhoto']);
 });

@@ -6,6 +6,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import * as WebBrowser from 'expo-web-browser';
+import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api/axios';
 import echo from '../utils/echo';
@@ -33,20 +36,30 @@ export default function PilotChatScreen({ navigation }) {
     const [showEmoji, setShowEmoji] = useState(false);
     const [selectedMsg, setSelectedMsg] = useState(null);
     const [selectMode, setSelectMode] = useState(false);
+    const [selectMode, setSelectMode] = useState(false);
     const [selectedConvs, setSelectedConvs] = useState([]);
+    const [incomingCall, setIncomingCall] = useState(null);
     const flatListRef = useRef(null);
     const msgIdCounter = useRef(Date.now());
 
     useFocusEffect(useCallback(() => {
         fetchConversations();
         
-        // Listen to User's private channel for conversation list updates
+        // Listen to User's private channel for conversation list updates and Calls
         if (userInfo && userInfo.id) {
             echo.private(`App.Models.User.${userInfo.id}`)
                 .listen('.message.received', (e) => {
                     fetchConversations(true);
                     if (activeChat && activeChat.id === e.conversation_id) {
                         fetchMessages(activeChat.id, true);
+                    }
+                })
+                .listen('.call.event', (e) => {
+                    if (e.action === 'start' && e.caller_id !== userInfo.id) {
+                        setIncomingCall(e);
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    } else if (e.action === 'reject' || e.action === 'end') {
+                        setIncomingCall(null);
                     }
                 });
         }
@@ -203,6 +216,27 @@ export default function PilotChatScreen({ navigation }) {
         } catch(e){ console.error(e); } finally { setCreating(false); }
     };
 
+    // ───── CALL METHODS ─────
+    const startCall = async (type) => {
+        if (!activeChat) return;
+        const roomId = `FiloMerkez_Call_${activeChat.id}_${Math.random().toString(36).substring(7)}`;
+        try {
+            await api.post(`/chat/conversations/${activeChat.id}/call`, { type, action: 'start', room_id: roomId });
+            WebBrowser.openBrowserAsync(`https://meet.jit.si/${roomId}`);
+        } catch(e) { Alert.alert('Hata', 'Arama başlatılamadı'); }
+    };
+
+    const handleCallResponse = async (action) => {
+        if (!incomingCall) return;
+        try {
+            await api.post(`/chat/conversations/${incomingCall.conversation_id}/call`, { type: incomingCall.type, action, room_id: incomingCall.room_id });
+            if (action === 'accept') {
+                WebBrowser.openBrowserAsync(`https://meet.jit.si/${incomingCall.room_id}`);
+            }
+        } catch(e) {}
+        setIncomingCall(null);
+    };
+
     const filtered = search.trim() ? conversations.filter(c => c.name?.toLowerCase().includes(search.toLowerCase())) : conversations;
     const Avatar = ({ uri, name, size = 40 }) => {
         if (uri) return <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size/2 }} />;
@@ -218,6 +252,10 @@ export default function PilotChatScreen({ navigation }) {
                 <View style={{ flex: 1, marginLeft: 10 }}>
                     <Text style={st.chatHeaderName} numberOfLines={1}>{activeChat.name}</Text>
                     <Text style={st.chatHeaderSub}>{activeChat.type === 'group' ? activeChat.participants : 'çevrimiçi'}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 16, marginRight: 10 }}>
+                    <TouchableOpacity onPress={() => startCall('video')}><Icon name="video" size={26} color="#25D366" /></TouchableOpacity>
+                    <TouchableOpacity onPress={() => startCall('voice')}><Icon name="phone" size={24} color="#25D366" /></TouchableOpacity>
                 </View>
             </View>
 
@@ -275,6 +313,25 @@ export default function PilotChatScreen({ navigation }) {
                         <TouchableOpacity style={st.actionItem} onPress={() => setSelectedMsg(null)}><Icon name="close" size={20} color="#64748B" /><Text style={st.actionText}>İptal</Text></TouchableOpacity>
                     </View>
                 </TouchableOpacity>
+            </Modal>
+
+            {/* Incoming Call Modal */}
+            <Modal visible={!!incomingCall} transparent animationType="fade">
+                <View style={[st.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.8)' }]}>
+                    <View style={{ alignItems: 'center', marginBottom: 40 }}>
+                        <Icon name={incomingCall?.type === 'video' ? 'video' : 'phone'} size={60} color="#fff" />
+                        <Text style={{ fontSize: 24, color: '#fff', fontWeight: 'bold', marginTop: 20 }}>{incomingCall?.caller_name}</Text>
+                        <Text style={{ fontSize: 16, color: '#25D366', marginTop: 10 }}>Gelen {incomingCall?.type === 'video' ? 'Görüntülü' : 'Sesli'} Arama...</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 40 }}>
+                        <TouchableOpacity onPress={() => handleCallResponse('reject')} style={{ backgroundColor: '#EF4444', width: 70, height: 70, borderRadius: 35, alignItems: 'center', justifyContent: 'center' }}>
+                            <Icon name="phone-hangup" size={30} color="#fff" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => handleCallResponse('accept')} style={{ backgroundColor: '#25D366', width: 70, height: 70, borderRadius: 35, alignItems: 'center', justifyContent: 'center' }}>
+                            <Icon name="phone" size={30} color="#fff" />
+                        </TouchableOpacity>
+                    </View>
+                </View>
             </Modal>
         </SafeAreaView>
     );

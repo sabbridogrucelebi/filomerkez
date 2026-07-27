@@ -129,8 +129,8 @@
                 </div>
             </div>
             <div class="flex items-center gap-4 text-[#25D366]">
-                <button title="Video Call" class="p-2 hover:bg-[#E7FFDB] rounded-full transition-colors"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg></button>
-                <button title="Voice Call" class="p-2 hover:bg-[#E7FFDB] rounded-full transition-colors"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></button>
+                <button @click="startCall('video')" title="Video Call" class="p-2 hover:bg-[#E7FFDB] rounded-full transition-colors"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg></button>
+                <button @click="startCall('voice')" title="Voice Call" class="p-2 hover:bg-[#E7FFDB] rounded-full transition-colors"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></button>
             </div>
         </div>
 
@@ -248,11 +248,26 @@
                 </div>
                 <button @click="createGroup" :disabled="newGroup.selectedUsers.length === 0 || isCreatingGroup" class="w-full py-4 mt-2 bg-[#25D366] text-white font-bold text-[16px] rounded-2xl hover:bg-[#1EBE5D] disabled:opacity-50 shadow-md shadow-[#25D366]/30 transition-all active:scale-[0.98]">
                     Sohbeti Başlat
+    <!-- Incoming Call Modal -->
+    <div x-show="incomingCall" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm" style="display: none;">
+        <div class="bg-[#1e1e1e] rounded-3xl p-10 flex flex-col items-center w-[350px] shadow-2xl border border-white/10">
+            <div class="w-20 h-20 bg-slate-700 rounded-full mb-6 flex items-center justify-center animate-pulse">
+                <svg x-show="incomingCall?.type === 'video'" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                <svg x-show="incomingCall?.type === 'voice'" viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+            </div>
+            <h2 class="text-white text-2xl font-bold mb-2 text-center" x-text="incomingCall?.caller_name"></h2>
+            <p class="text-[#25D366] text-sm font-medium mb-10" x-text="'Gelen ' + (incomingCall?.type === 'video' ? 'Görüntülü' : 'Sesli') + ' Arama...'"></p>
+            
+            <div class="flex items-center gap-12 w-full justify-center">
+                <button @click="handleCallResponse('reject')" class="w-[60px] h-[60px] rounded-full bg-red-500 flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30">
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"></path><line x1="23" y1="1" x2="1" y2="23"></line></svg>
+                </button>
+                <button @click="handleCallResponse('accept')" class="w-[60px] h-[60px] rounded-full bg-[#25D366] flex items-center justify-center hover:bg-[#1EBE5D] transition-colors shadow-lg shadow-[#25D366]/30 animate-bounce">
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
                 </button>
             </div>
         </div>
     </div>
-
 </div>
 
 <audio id="chat-notification-sound" preload="auto"></audio>
@@ -280,6 +295,7 @@
             newGroup: { name: '', selectedUsers: [] },
             isCreatingGroup: false,
             authUserId: {{ auth()->id() }},
+            incomingCall: null,
 
             init() {
                 this.fetchConversations();
@@ -292,6 +308,13 @@
                             this.fetchConversations(true);
                             if (this.activeChat && this.activeChat.id === e.conversation_id) {
                                 this.fetchMessages(this.activeChat.id, true);
+                            }
+                        })
+                        .listen('.call.event', (e) => {
+                            if (e.action === 'start' && e.caller_id !== this.authUserId) {
+                                this.incomingCall = e;
+                            } else if (e.action === 'reject' || e.action === 'end') {
+                                this.incomingCall = null;
                             }
                         });
                 }
@@ -525,6 +548,36 @@
                 } finally {
                     this.isCreatingGroup = false;
                 }
+            },
+
+            async startCall(type) {
+                if (!this.activeChat) return;
+                const roomId = 'FiloMerkez_Call_' + this.activeChat.id + '_' + Math.random().toString(36).substring(7);
+                try {
+                    await axios.post('/api/v1/chat/conversations/' + this.activeChat.id + '/call', {
+                        type: type,
+                        action: 'start',
+                        room_id: roomId
+                    });
+                    window.open('https://meet.jit.si/' + roomId, '_blank', 'width=800,height=600');
+                } catch(e) {
+                    alert('Arama başlatılamadı');
+                }
+            },
+
+            async handleCallResponse(action) {
+                if (!this.incomingCall) return;
+                try {
+                    await axios.post('/api/v1/chat/conversations/' + this.incomingCall.conversation_id + '/call', {
+                        type: this.incomingCall.type,
+                        action: action,
+                        room_id: this.incomingCall.room_id
+                    });
+                    if (action === 'accept') {
+                        window.open('https://meet.jit.si/' + this.incomingCall.room_id, '_blank', 'width=800,height=600');
+                    }
+                } catch(e) {}
+                this.incomingCall = null;
             }
         }
     }

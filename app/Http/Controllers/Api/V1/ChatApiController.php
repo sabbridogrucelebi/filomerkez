@@ -9,6 +9,7 @@ use App\Models\Chat\Attachment;
 use App\Models\User;
 use App\Events\Chat\MessageSent;
 use App\Events\Chat\UserReceivedMessage;
+use App\Events\Chat\CallEvent;
 use App\Jobs\SendFcmpushNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -261,6 +262,56 @@ class ChatApiController extends Controller
         }
 
         return response()->json(['status' => 'sent', 'message' => $message->load('attachments')]);
+    }
+
+    public function handleCall(Request $request, Conversation $conversation)
+    {
+        if (!$conversation->users->contains($request->user()->id)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'type' => 'required|in:video,voice',
+            'action' => 'required|in:start,accept,reject,end',
+            'room_id' => 'required|string',
+        ]);
+
+        $caller = $request->user();
+        $action = $request->action;
+        $type = $request->type;
+        $roomId = $request->room_id;
+        
+        $otherUsers = $conversation->users()->where('users.id', '!=', $caller->id)->get();
+
+        // Broadcast WebRTC/Jitsi signaling event to all other users
+        foreach ($otherUsers as $user) {
+            broadcast(new CallEvent($user->id, $conversation->id, $caller->id, $caller->name, $type, $action, $roomId))->toOthers();
+        }
+
+        // If starting a call, send push notifications to offline users
+        if ($action === 'start') {
+            $title = $type === 'video' ? '📹 Görüntülü Arama' : '📞 Sesli Arama';
+            $body = "{$caller->name} sizi arıyor...";
+
+            foreach ($otherUsers as $user) {
+                if (!empty($user->expo_push_token)) {
+                    dispatch(new SendFcmpushNotification(
+                        $user->id,
+                        $title,
+                        $body,
+                        [
+                            'type' => 'call',
+                            'call_type' => $type,
+                            'conversation_id' => $conversation->id,
+                            'room_id' => $roomId,
+                            'caller_name' => $caller->name
+                        ]
+                    ));
+                }
+            }
+        }
+
+        return response()->json(['status' => 'success']);
     }
 
     // ── Delete a single message ──
