@@ -76,7 +76,7 @@ class CheckMaintenanceHealth extends Command
                 }
             }
             
-            // Muayene Kontrolü (10 Gün)
+            // Muayene Kontrolü (15 Gün)
             $docTypes = ['Muayene', 'Egzoz', 'Sigorta', 'Kasko', 'İMM Poliçesi', 'İMM POLİÇESİ'];
             $latestDocs = $vehicle->documents()
                 ->whereIn('document_type', $docTypes)
@@ -91,7 +91,7 @@ class CheckMaintenanceHealth extends Command
             
             if ($inspectionDate) {
                 $inspectionDays = round(now()->diffInDays($inspectionDate, false));
-                if ($inspectionDays <= 10) {
+                if ($inspectionDays <= 15) {
                     $cacheKey = 'inspection_notified_' . $vehicle->id . '_' . now()->format('Y-m-d');
                     if (!Cache::has($cacheKey)) {
                         $this->sendNotificationToAdmins(

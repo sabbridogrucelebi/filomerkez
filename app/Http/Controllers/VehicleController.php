@@ -69,11 +69,11 @@ class VehicleController extends Controller
             ->when($status === 'passive', fn ($q) => $q->where('is_active', false))
             ->when($specialFilter === 'upcoming_inspection', function ($q) {
                 $q->where(function ($sub) {
-                    $sub->whereNotNull('inspection_date')->where('inspection_date', '<=', now()->addDays(10))
+                    $sub->whereNotNull('inspection_date')->where('inspection_date', '<=', now()->addDays(15))
                         ->orWhereHas('documents', function ($doc) {
                             $doc->whereIn('document_type', ['Muayene', 'Muayene Raporu'])
                                 ->whereNotNull('end_date')
-                                ->where('end_date', '<=', now()->addDays(10))
+                                ->where('end_date', '<=', now()->addDays(15))
                                 ->whereNull('archived_at');
                         });
                 });
@@ -99,11 +99,11 @@ class VehicleController extends Controller
         $kpi = [
             'total' => Vehicle::count(),
             'upcoming_inspection' => Vehicle::where(function ($q) {
-                $q->whereNotNull('inspection_date')->where('inspection_date', '<=', now()->addDays(10))
+                $q->whereNotNull('inspection_date')->where('inspection_date', '<=', now()->addDays(15))
                   ->orWhereHas('documents', function ($doc) {
                       $doc->whereIn('document_type', ['Muayene', 'Muayene Raporu'])
                           ->whereNotNull('end_date')
-                          ->where('end_date', '<=', now()->addDays(10))
+                          ->where('end_date', '<=', now()->addDays(15))
                           ->whereNull('archived_at');
                   });
             })->count(),

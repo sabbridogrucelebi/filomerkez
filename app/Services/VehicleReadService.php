@@ -28,11 +28,11 @@ class VehicleReadService
         if (isset($filters['filter'])) {
             if ($filters['filter'] === 'upcoming_inspection') {
                 $query->where(function ($q) {
-                    $q->whereNotNull('inspection_date')->where('inspection_date', '<=', now()->addDays(10))
+                    $q->whereNotNull('inspection_date')->where('inspection_date', '<=', now()->addDays(15))
                       ->orWhereHas('documents', function ($doc) {
                           $doc->whereIn('document_type', ['Muayene', 'Muayene Raporu'])
                               ->whereNotNull('end_date')
-                              ->where('end_date', '<=', now()->addDays(10))
+                              ->where('end_date', '<=', now()->addDays(15))
                               ->whereNull('archived_at');
                       });
                 });
@@ -113,11 +113,11 @@ class VehicleReadService
             'total' => Vehicle::where('company_id', $companyId)->count(),
             'upcoming_inspection' => Vehicle::where('company_id', $companyId)
                 ->where(function ($q) {
-                    $q->whereNotNull('inspection_date')->where('inspection_date', '<=', now()->addDays(10))
+                    $q->whereNotNull('inspection_date')->where('inspection_date', '<=', now()->addDays(15))
                       ->orWhereHas('documents', function ($doc) {
                           $doc->whereIn('document_type', ['Muayene', 'Muayene Raporu'])
                               ->whereNotNull('end_date')
-                              ->where('end_date', '<=', now()->addDays(10))
+                              ->where('end_date', '<=', now()->addDays(15))
                               ->whereNull('archived_at');
                       });
                 })->count(),

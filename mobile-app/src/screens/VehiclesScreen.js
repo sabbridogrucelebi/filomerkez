@@ -132,7 +132,7 @@ export default function VehiclesScreen({ navigation }) {
         const imgSource = item.image_url ? { uri: item.image_url } : getVehicleImage(item.vehicle_type || item.type);
 
         const inspectionDays = item.inspection_date ? Math.ceil((new Date(item.inspection_date) - new Date()) / (1000 * 60 * 60 * 24)) : null;
-        const showInspectionWarning = kpiFilter === 'upcoming_inspection' && inspectionDays !== null && inspectionDays <= 10;
+        const showInspectionWarning = kpiFilter === 'upcoming_inspection' && inspectionDays !== null && inspectionDays <= 15;
 
         const insuranceDays = item.insurance_end_date ? Math.ceil((new Date(item.insurance_end_date) - new Date()) / (1000 * 60 * 60 * 24)) : null;
         const showInsuranceWarning = kpiFilter === 'upcoming_insurance' && insuranceDays !== null && insuranceDays <= 10;
