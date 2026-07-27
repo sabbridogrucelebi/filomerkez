@@ -69,6 +69,25 @@ export default function VehicleMaintenancesScreen({ route, navigation }) {
         setModalVisible(true);
     };
 
+    const openEdit = (item) => {
+        if (!hasPermission('maintenances.edit')) {
+            Alert.alert('Yetki Yok', 'Bakım kaydı düzenleme yetkiniz bulunmuyor.');
+            return;
+        }
+        setEditingId(item.id);
+        setFormData({
+            service_date: item.date ? item.date.split('T')[0] : new Date().toISOString().split('T')[0],
+            maintenance_type: item.type || '',
+            title: item.title || '',
+            km: item.km ? item.km.toString() : '',
+            next_service_km: item.next_km ? item.next_km.toString() : '',
+            amount: item.amount ? item.amount.toString() : '',
+            service_name: item.service_name || '',
+            description: item.description || ''
+        });
+        setModalVisible(true);
+    };
+
     const handleSave = async () => {
         if (!formData.title || !formData.service_date || !formData.maintenance_type) {
             Alert.alert('Eksik Bilgi', 'Tarih, Kategori ve İşlem Adı zorunludur.'); return;
@@ -179,6 +198,18 @@ export default function VehicleMaintenancesScreen({ route, navigation }) {
                             <Text style={[st.gridSubValue, { color: '#34D399' }]}>{item.next_km ? `Sonraki: ${fmtKm(item.next_km)} KM` : 'Sonraki KM yok'}</Text>
                         </View>
                     </View>
+                </View>
+
+                {/* ── ACTION BUTTONS ── */}
+                <View style={st.actionRow}>
+                    <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#EFF6FF', flex: 1, marginRight: 8 }]} onPress={() => openEdit(item)}>
+                        <Icon name="pencil-outline" size={16} color="#3B82F6" />
+                        <Text style={[st.actionText, { color: '#3B82F6' }]}>Düzenle</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#FEF2F2', flex: 1 }]} onPress={() => confirmDelete(item.id)}>
+                        <Icon name="trash-can-outline" size={16} color="#EF4444" />
+                        <Text style={[st.actionText, { color: '#EF4444' }]}>Sil</Text>
+                    </TouchableOpacity>
                 </View>
             </View>
         );

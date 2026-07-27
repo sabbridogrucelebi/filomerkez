@@ -61,6 +61,21 @@ export default function VehicleFuelsScreen({ route, navigation }) {
         setModalVisible(true);
     };
 
+    const openEdit = (item) => {
+        if (!hasPermission('fuels.edit')) { Alert.alert('Yetki Yok', 'Yakıt kaydı düzenleme yetkiniz bulunmuyor.'); return; }
+        setEditingId(item.id);
+        setFormData({
+            date: item.date ? item.date.split('T')[0] : new Date().toISOString().split('T')[0],
+            km: item.km ? item.km.toString() : '', 
+            liters: item.liters ? item.liters.toString() : '', 
+            price_per_liter: item.price_per_liter ? item.price_per_liter.toString() : '', 
+            station_name: item.station_name || '', 
+            fuel_type: item.fuel_type || 'Dizel', 
+            notes: item.notes || ''
+        });
+        setModalVisible(true);
+    };
+
     const handleSave = async () => {
         if (!formData.liters || !formData.date) {
             Alert.alert('Eksik Bilgi', 'Tarih ve litre alanları zorunludur.'); return;
@@ -158,7 +173,11 @@ export default function VehicleFuelsScreen({ route, navigation }) {
                 ) : null}
 
                 <View style={st.actionRow}>
-                    <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#FEF2F2' }]} onPress={() => confirmDelete(item.id)}>
+                    <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#EFF6FF', flex: 1, marginRight: 8 }]} onPress={() => openEdit(item)}>
+                        <Icon name="pencil-outline" size={16} color="#3B82F6" />
+                        <Text style={[st.actionText, { color: '#3B82F6' }]}>Düzenle</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#FEF2F2', flex: 1 }]} onPress={() => confirmDelete(item.id)}>
                         <Icon name="trash-can-outline" size={16} color="#EF4444" />
                         <Text style={[st.actionText, { color: '#EF4444' }]}>Sil</Text>
                     </TouchableOpacity>

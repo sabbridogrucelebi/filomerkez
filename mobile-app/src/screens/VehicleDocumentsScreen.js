@@ -43,6 +43,7 @@ export default function VehicleDocumentsScreen({ route, navigation }) {
     const [modalVisible, setModalVisible] = useState(false);
     const [saving, setSaving] = useState(false);
     const [file, setFile] = useState(null);
+    const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState({ document_type: '', document_name: '', start_date: '', end_date: '', notes: '' });
 
     const fetchDocuments = async (isRefreshing = false) => {
@@ -79,6 +80,20 @@ export default function VehicleDocumentsScreen({ route, navigation }) {
         if (!result.canceled) setFile(result.assets[0]);
     };
 
+    const openEdit = (item) => {
+        if (!hasPermission('documents.edit')) { Alert.alert('Yetki Yok', 'Belge düzenleme yetkiniz yok.'); return; }
+        setEditingId(item.id);
+        setFormData({
+            document_type: item.type || '',
+            document_name: item.title || '',
+            start_date: item.start_date ? item.start_date.split('T')[0] : '',
+            end_date: item.end_date ? item.end_date.split('T')[0] : '',
+            notes: item.notes || ''
+        });
+        setFile(null);
+        setModalVisible(true);
+    };
+
     const handleSave = async () => {
         if (!formData.document_type || !formData.document_name) {
             Alert.alert('Eksik Bilgi', 'Belge Türü ve Belge Adı zorunludur.'); return;
@@ -101,7 +116,13 @@ export default function VehicleDocumentsScreen({ route, navigation }) {
                 data.append('file', { uri: file.uri, name: fName, type });
             }
 
-            await api.post('/v1/documents', data, { headers: { 'Content-Type': 'multipart/form-data' }});
+            if (editingId) {
+                data.append('_method', 'PUT');
+                await api.post(`/v1/documents/${editingId}`, data, { headers: { 'Content-Type': 'multipart/form-data' }});
+            } else {
+                await api.post('/v1/documents', data, { headers: { 'Content-Type': 'multipart/form-data' }});
+            }
+            
             setModalVisible(false);
             setFormData({ document_type: '', document_name: '', start_date: '', end_date: '', notes: '' });
             setFile(null);
@@ -184,9 +205,14 @@ export default function VehicleDocumentsScreen({ route, navigation }) {
                         <Text style={st.docType}>{item.type || 'BELGE'}</Text>
                         <Text style={st.docName}>{item.title || 'İsimsiz Belge'}</Text>
                     </View>
-                    <TouchableOpacity onPress={() => confirmDelete(item.id)} style={{ padding: 6 }}>
-                        <Icon name="trash-can-outline" size={20} color="#EF4444" />
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row' }}>
+                        <TouchableOpacity onPress={() => openEdit(item)} style={{ padding: 6 }}>
+                            <Icon name="pencil-outline" size={20} color="#3B82F6" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => confirmDelete(item.id)} style={{ padding: 6 }}>
+                            <Icon name="trash-can-outline" size={20} color="#EF4444" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 <View style={{ alignItems: 'flex-start', marginTop: 4, marginBottom: 16 }}>
@@ -246,6 +272,9 @@ export default function VehicleDocumentsScreen({ route, navigation }) {
                         style={st.addHeaderBtn} 
                         onPress={() => {
                             if(!hasPermission('documents.create')) { Alert.alert('Yetki Yok', 'Yeni belge ekleme yetkiniz yok.'); return; }
+                            setEditingId(null);
+                            setFormData({ document_type: '', document_name: '', start_date: '', end_date: '', notes: '' });
+                            setFile(null);
                             setModalVisible(true);
                         }}
                     >

@@ -92,7 +92,30 @@ export default function VehiclePenaltiesScreen({ route, navigation }) {
             payment_date: '',
             notes: '',
             traffic_penalty_document: null,
-            payment_receipt: null
+            payment_receipt: null,
+            discount_amount: ''
+        });
+        setModalVisible(true);
+    };
+
+    const openEdit = (item) => {
+        if (!hasPermission('penalties.edit')) {
+            Alert.alert('Yetki Yok', 'Ceza kaydı düzenleme yetkiniz bulunmuyor.');
+            return;
+        }
+        setEditingId(item.id);
+        setFormData({
+            penalty_no: item.penalty_no || '',
+            penalty_date: item.date ? item.date.split('T')[0] : new Date().toISOString().split('T')[0],
+            penalty_time: item.time || '',
+            penalty_article: item.article || '',
+            penalty_amount: item.amount ? item.amount.toString() : '',
+            penalty_location: item.location || '',
+            driver_name: item.driver_name || '',
+            notes: item.notes || '',
+            is_paid: item.is_paid || false,
+            payment_date: item.payment_date ? item.payment_date.split('T')[0] : '',
+            discount_amount: item.discount_amount ? item.discount_amount.toString() : ''
         });
         setModalVisible(true);
     };
@@ -291,6 +314,18 @@ export default function VehiclePenaltiesScreen({ route, navigation }) {
                         <Text style={st.notesText}>Not: {toTitleCase(item.notes)}</Text>
                     </View>
                 ) : null}
+
+                {/* ── ACTION BUTTONS ── */}
+                <View style={[st.actionRow, { marginTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 16, flexDirection: 'row' }]}>
+                    <TouchableOpacity style={[{ flex: 1, marginRight: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 12, backgroundColor: '#EFF6FF' }]} onPress={() => openEdit(item)}>
+                        <Icon name="pencil-outline" size={16} color="#3B82F6" />
+                        <Text style={[{ color: '#3B82F6', fontSize: 12, fontWeight: '800', marginLeft: 4 }]}>Düzenle</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 12, backgroundColor: '#FEF2F2' }]} onPress={() => confirmDelete(item.id)}>
+                        <Icon name="trash-can-outline" size={16} color="#EF4444" />
+                        <Text style={[{ color: '#EF4444', fontSize: 12, fontWeight: '800', marginLeft: 4 }]}>Sil</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
         );
     };
