@@ -23,7 +23,7 @@ class VehicleTrackingApiController extends Controller
             $vehicles = $arvento->getVehicleStatus();
 
             // Arvento'dan gelen verilere sistemimizdeki şoförleri eşleştir
-            $dbVehicles = \App\Models\Fleet\Vehicle::with('driver')
+            $dbVehicles = \App\Models\Fleet\Vehicle::with('drivers')
                 ->where('company_id', $companyId)
                 ->get()
                 ->keyBy(function($item) {
@@ -33,8 +33,8 @@ class VehicleTrackingApiController extends Controller
 
             foreach ($vehicles as &$v) {
                 $plateClean = strtoupper(str_replace(' ', '', $v['LicensePlate'] ?? ''));
-                if (isset($dbVehicles[$plateClean]) && $dbVehicles[$plateClean]->driver) {
-                    $driver = $dbVehicles[$plateClean]->driver;
+                if (isset($dbVehicles[$plateClean]) && $dbVehicles[$plateClean]->drivers->first()) {
+                    $driver = $dbVehicles[$plateClean]->drivers->first();
                     $v['Driver'] = trim($driver->first_name . ' ' . $driver->last_name);
                 } else {
                     $v['Driver'] = 'Bilinmiyor';
@@ -44,12 +44,12 @@ class VehicleTrackingApiController extends Controller
 
         // Eğer sistemde araç dönmüyorsa (test hesabı veya boş API) tasarımı görebilmek için Demo (Fake) veri bas:
         if (empty($vehicles)) {
-            $dbVehicles = \App\Models\Fleet\Vehicle::where('company_id', $companyId)->get();
+            $dbVehicles = \App\Models\Fleet\Vehicle::with('drivers')->where('company_id', $companyId)->get();
             foreach ($dbVehicles as $index => $v) {
                 // Rastgele İstanbul koordinatları: 41.0 + random, 28.9 + random
                 $vehicles[] = [
                     'LicensePlate' => $v->license_plate,
-                    'Driver' => $v->driver ? $v->driver->first_name . ' ' . $v->driver->last_name : 'Atanmamış',
+                    'Driver' => $v->drivers->first() ? $v->drivers->first()->first_name . ' ' . $v->drivers->first()->last_name : 'Atanmamış',
                     'Latitude' => 41.0082 + (rand(-100, 100) / 10000),
                     'Longitude' => 28.9784 + (rand(-100, 100) / 10000),
                     'Speed' => rand(0, 80),
@@ -135,11 +135,11 @@ class VehicleTrackingApiController extends Controller
             }
         } else if (!$setting) {
             // DEMO Veri
-            $dbVehicles = \App\Models\Fleet\Vehicle::where('company_id', $companyId)->get();
+            $dbVehicles = \App\Models\Fleet\Vehicle::with('drivers')->where('company_id', $companyId)->get();
             foreach ($dbVehicles as $v) {
                 $reports[] = [
                     'LicensePlate' => $v->license_plate,
-                    'Driver' => $v->driver ? $v->driver->first_name . ' ' . $v->driver->last_name : 'Atanmamış',
+                    'Driver' => $v->drivers->first() ? $v->drivers->first()->first_name . ' ' . $v->drivers->first()->last_name : 'Atanmamış',
                     'DateTime' => $date . ' ' . sprintf('%02d:%02d', rand(6, 11), rand(0, 59)),
                     'Latitude' => 41.0082 + (rand(-100, 100) / 10000),
                     'Longitude' => 28.9784 + (rand(-100, 100) / 10000),

@@ -282,6 +282,19 @@ function MenuStackScreen() {
     );
 }
 
+const ProfileStack = createNativeStackNavigator();
+function ProfileStackScreen() {
+    return (
+        <ProfileStack.Navigator screenOptions={{ headerShown: false, gestureEnabled: true, fullScreenGestureEnabled: true, animation: 'slide_from_right', gestureDirection: 'horizontal', customAnimationOnSwipe: true }}>
+            <ProfileStack.Screen name="ProfileMain" component={ProfileScreen} />
+            <ProfileStack.Screen name="AccountInfo" component={AccountInfoScreen} />
+            <ProfileStack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
+            <ProfileStack.Screen name="Security" component={SecurityScreen} />
+            <ProfileStack.Screen name="Support" component={SupportScreen} />
+        </ProfileStack.Navigator>
+    );
+}
+
 function MainTabs() {
     return (
         <Tab.Navigator tabBar={p => <CustomTabBar {...p} />} screenOptions={{ headerShown: false }}>
@@ -289,7 +302,7 @@ function MainTabs() {
             <Tab.Screen name="VehiclesTab" component={VehiclesStackScreen} />
             <Tab.Screen name="HomeTab" component={HomeScreen} />
             <Tab.Screen name="ChatTab" component={PilotChatScreen} />
-            <Tab.Screen name="Profile" component={ProfileScreen} />
+            <Tab.Screen name="Profile" component={ProfileStackScreen} />
         </Tab.Navigator>
     );
 }

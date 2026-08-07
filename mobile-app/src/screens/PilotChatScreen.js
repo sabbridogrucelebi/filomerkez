@@ -14,10 +14,10 @@ import api from '../api/axios';
 import echo from '../utils/echo';
 
 const EMOJIS = [
-    '😀','😂','🤣','😍','😘','🥰','😊','😉','😎','🤩',
-    '😋','🤔','🤗','😏','😒','😢','😭','😤','🤬','😱',
-    '👍','👎','👏','🙏','💪','❤️','🔥','⭐','✅','🎉',
-    '🚗','🚌','🚐','🛠️','⛽','📋','📞','💬','👋','🙂',
+    '😀', '😂', '🤣', '😍', '😘', '🥰', '😊', '😉', '😎', '🤩',
+    '😋', '🤔', '🤗', '😏', '😒', '😢', '😭', '😤', '🤬', '😱',
+    '👍', '👎', '👏', '🙏', '💪', '❤️', '🔥', '⭐', '✅', '🎉',
+    '🚗', '🚌', '🚐', '🛠️', '⛽', '📋', '📞', '💬', '👋', '🙂',
 ];
 
 export default function PilotChatScreen({ navigation }) {
@@ -36,7 +36,6 @@ export default function PilotChatScreen({ navigation }) {
     const [showEmoji, setShowEmoji] = useState(false);
     const [selectedMsg, setSelectedMsg] = useState(null);
     const [selectMode, setSelectMode] = useState(false);
-    const [selectMode, setSelectMode] = useState(false);
     const [selectedConvs, setSelectedConvs] = useState([]);
     const [incomingCall, setIncomingCall] = useState(null);
     const flatListRef = useRef(null);
@@ -44,29 +43,33 @@ export default function PilotChatScreen({ navigation }) {
 
     useFocusEffect(useCallback(() => {
         fetchConversations();
-        
+
         // Listen to User's private channel for conversation list updates and Calls
-        if (userInfo && userInfo.id) {
-            echo.private(`App.Models.User.${userInfo.id}`)
-                .listen('.message.received', (e) => {
-                    fetchConversations(true);
-                    if (activeChat && activeChat.id === e.conversation_id) {
-                        fetchMessages(activeChat.id, true);
-                    }
-                })
-                .listen('.call.event', (e) => {
-                    if (e.action === 'start' && e.caller_id !== userInfo.id) {
-                        setIncomingCall(e);
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    } else if (e.action === 'reject' || e.action === 'end') {
-                        setIncomingCall(null);
-                    }
-                });
+        if (echo && userInfo && userInfo.id) {
+            try {
+                echo.private(`App.Models.User.${userInfo.id}`)
+                    .listen('.message.received', (e) => {
+                        fetchConversations(true);
+                        if (activeChat && activeChat.id === e.conversation_id) {
+                            fetchMessages(activeChat.id, true);
+                        }
+                    })
+                    .listen('.call.event', (e) => {
+                        if (e.action === 'start' && e.caller_id !== userInfo.id) {
+                            setIncomingCall(e);
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        } else if (e.action === 'reject' || e.action === 'end') {
+                            setIncomingCall(null);
+                        }
+                    });
+            } catch (err) {
+                console.warn('Echo listen failed:', err.message);
+            }
         }
 
         return () => {
-            if (userInfo && userInfo.id) {
-                echo.leave(`App.Models.User.${userInfo.id}`);
+            if (echo && userInfo && userInfo.id) {
+                try { echo.leave(`App.Models.User.${userInfo.id}`); } catch(e) {}
             }
         };
     }, [activeChat, userInfo]));
@@ -89,19 +92,25 @@ export default function PilotChatScreen({ navigation }) {
     const selectChat = (c) => {
         setActiveChat(c); setMessages([]); fetchMessages(c.id);
         navigation.setOptions({ tabBarStyle: { display: 'none' } });
-        
+
         // Listen to active conversation messages
-        echo.private(`conversation.${c.id}`)
-            .listen('.message.sent', (e) => {
-                // If it's my own message, it was already added optimistically, but we might want to refresh anyway
-                if (e.sender_id !== userInfo.id) {
-                    fetchMessages(c.id, true);
-                    fetchConversations(true);
-                }
-            });
+        if (echo) {
+            try {
+                echo.private(`conversation.${c.id}`)
+                    .listen('.message.sent', (e) => {
+                        // If it's my own message, it was already added optimistically, but we might want to refresh anyway
+                        if (e.sender_id !== userInfo.id) {
+                            fetchMessages(c.id, true);
+                            fetchConversations(true);
+                        }
+                    });
+            } catch (err) {
+                console.warn('Echo conversation listen failed:', err.message);
+            }
+        }
     };
     const goBack = () => {
-        if (activeChat) echo.leave(`conversation.${activeChat.id}`);
+        if (activeChat && echo) { try { echo.leave(`conversation.${activeChat.id}`); } catch(e) {} }
         setActiveChat(null); setShowEmoji(false);
         navigation.setOptions({ tabBarStyle: undefined });
     };
@@ -111,8 +120,8 @@ export default function PilotChatScreen({ navigation }) {
         const body = newMessage; setNewMessage(''); setShowEmoji(false);
         const tempId = msgIdCounter.current++;
         const now = new Date();
-        const t = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-        setMessages(p => [...p, { id: tempId, is_mine: true, sender_name: userInfo?.name||'', body, type:'text', time: t, is_read: false, is_deleted: false, attachments: [] }]);
+        const t = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        setMessages(p => [...p, { id: tempId, is_mine: true, sender_name: userInfo?.name || '', body, type: 'text', time: t, is_read: false, is_deleted: false, attachments: [] }]);
         setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
         try {
             await api.post(`/chat/conversations/${activeChat.id}/messages`, { body });
@@ -169,17 +178,19 @@ export default function PilotChatScreen({ navigation }) {
     const deleteConversation = async (conv) => {
         Alert.alert('Sohbeti Sil', `"${conv.name}" sohbetini silmek istediğinize emin misiniz?`, [
             { text: 'İptal', style: 'cancel' },
-            { text: 'Sil', style: 'destructive', onPress: async () => {
-                try {
-                    console.log('[DELETE] Deleting conversation:', conv.id);
-                    const res = await api.delete(`/chat/conversations/${conv.id}`);
-                    console.log('[DELETE] Response:', res.data);
-                    fetchConversations();
-                } catch (e) {
-                    console.error('[DELETE] Error:', e.response?.status, e.response?.data, e.message);
-                    Alert.alert('Hata', 'Sohbet silinemedi: ' + (e.response?.data?.message || e.message));
+            {
+                text: 'Sil', style: 'destructive', onPress: async () => {
+                    try {
+                        console.log('[DELETE] Deleting conversation:', conv.id);
+                        const res = await api.delete(`/chat/conversations/${conv.id}`);
+                        console.log('[DELETE] Response:', res.data);
+                        fetchConversations();
+                    } catch (e) {
+                        console.error('[DELETE] Error:', e.response?.status, e.response?.data, e.message);
+                        Alert.alert('Hata', 'Sohbet silinemedi: ' + (e.response?.data?.message || e.message));
+                    }
                 }
-            }}
+            }
         ]);
     };
 
@@ -189,23 +200,25 @@ export default function PilotChatScreen({ navigation }) {
         if (!selectedConvs.length) return;
         Alert.alert('Toplu Sil', `${selectedConvs.length} sohbeti silmek istediğinize emin misiniz?`, [
             { text: 'İptal', style: 'cancel' },
-            { text: 'Sil', style: 'destructive', onPress: async () => {
-                try {
-                    console.log('[BULK DELETE] IDs:', selectedConvs);
-                    const res = await api.post('/chat/conversations/bulk-delete', { ids: selectedConvs });
-                    console.log('[BULK DELETE] Response:', res.data);
-                    setSelectedConvs([]); setSelectMode(false); fetchConversations();
-                } catch (e) {
-                    console.error('[BULK DELETE] Error:', e.response?.status, e.response?.data, e.message);
-                    Alert.alert('Hata', 'Toplu silme başarısız: ' + (e.response?.data?.message || e.message));
+            {
+                text: 'Sil', style: 'destructive', onPress: async () => {
+                    try {
+                        console.log('[BULK DELETE] IDs:', selectedConvs);
+                        const res = await api.post('/chat/conversations/bulk-delete', { ids: selectedConvs });
+                        console.log('[BULK DELETE] Response:', res.data);
+                        setSelectedConvs([]); setSelectMode(false); fetchConversations();
+                    } catch (e) {
+                        console.error('[BULK DELETE] Error:', e.response?.status, e.response?.data, e.message);
+                        Alert.alert('Hata', 'Toplu silme başarısız: ' + (e.response?.data?.message || e.message));
+                    }
                 }
-            }}
+            }
         ]);
     };
 
-    const fetchUsers = async () => { try { const r = await api.get('/chat/users'); setUsersList(r.data); } catch(e){} };
+    const fetchUsers = async () => { try { const r = await api.get('/chat/users'); setUsersList(r.data); } catch (e) { } };
     const openNewChat = () => { fetchUsers(); setShowNewChat(true); setGroupName(''); setSelectedUsers([]); };
-    const toggleUser = (id) => setSelectedUsers(p => p.includes(id) ? p.filter(x=>x!==id) : [...p, id]);
+    const toggleUser = (id) => setSelectedUsers(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
     const createConversation = async () => {
         if (!selectedUsers.length) return; setCreating(true);
         const type = !groupName.trim() && selectedUsers.length === 1 ? 'direct' : 'group';
@@ -213,7 +226,7 @@ export default function PilotChatScreen({ navigation }) {
             const r = await api.post('/chat/conversations', { type, name: groupName, users: selectedUsers });
             setShowNewChat(false); await fetchConversations();
             selectChat({ id: r.data.id, name: groupName || 'Sohbet', type });
-        } catch(e){ console.error(e); } finally { setCreating(false); }
+        } catch (e) { console.error(e); } finally { setCreating(false); }
     };
 
     // ───── CALL METHODS ─────
@@ -223,7 +236,7 @@ export default function PilotChatScreen({ navigation }) {
         try {
             await api.post(`/chat/conversations/${activeChat.id}/call`, { type, action: 'start', room_id: roomId });
             WebBrowser.openBrowserAsync(`https://meet.jit.si/${roomId}`);
-        } catch(e) { Alert.alert('Hata', 'Arama başlatılamadı'); }
+        } catch (e) { Alert.alert('Hata', 'Arama başlatılamadı'); }
     };
 
     const handleCallResponse = async (action) => {
@@ -233,14 +246,14 @@ export default function PilotChatScreen({ navigation }) {
             if (action === 'accept') {
                 WebBrowser.openBrowserAsync(`https://meet.jit.si/${incomingCall.room_id}`);
             }
-        } catch(e) {}
+        } catch (e) { }
         setIncomingCall(null);
     };
 
     const filtered = search.trim() ? conversations.filter(c => c.name?.toLowerCase().includes(search.toLowerCase())) : conversations;
     const Avatar = ({ uri, name, size = 40 }) => {
-        if (uri) return <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size/2 }} />;
-        return <View style={[st.avatarFallback, { width: size, height: size, borderRadius: size/2 }]}><Text style={[st.avatarFallbackText, { fontSize: size*0.45 }]}>{name?.substring(0,1)||'?'}</Text></View>;
+        if (uri) return <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size / 2 }} />;
+        return <View style={[st.avatarFallback, { width: size, height: size, borderRadius: size / 2 }]}><Text style={[st.avatarFallbackText, { fontSize: size * 0.45 }]}>{name?.substring(0, 1) || '?'}</Text></View>;
     };
 
     // ───── CHAT DETAIL ─────
@@ -351,7 +364,7 @@ export default function PilotChatScreen({ navigation }) {
                         <Text style={st.listTitle}>Sohbetler</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                             <TouchableOpacity onPress={() => setSelectMode(true)}><Text style={{ fontSize: 14, color: '#25D366', fontWeight: '600' }}>Düzenle</Text></TouchableOpacity>
-                            <TouchableOpacity style={st.newChatBtn} onPress={openNewChat}><LinearGradient colors={['#25D366','#1EBE5D']} style={st.newChatGrad}><Icon name="plus" size={22} color="#fff" /></LinearGradient></TouchableOpacity>
+                            <TouchableOpacity style={st.newChatBtn} onPress={openNewChat}><LinearGradient colors={['#25D366', '#1EBE5D']} style={st.newChatGrad}><Icon name="plus" size={22} color="#fff" /></LinearGradient></TouchableOpacity>
                         </View>
                     </>
                 )}
@@ -371,8 +384,8 @@ export default function PilotChatScreen({ navigation }) {
                                 )}
                                 <Avatar uri={item.profile_photo_url} name={item.name} size={52} />
                                 <View style={st.convInfo}>
-                                    <View style={st.convRow}><Text style={st.convName} numberOfLines={1}>{item.name}</Text><Text style={[st.convTime, item.unread_count > 0 && { color: '#25D366' }]}>{item.last_message_time||''}</Text></View>
-                                    <View style={st.convRow}><Text style={st.convLastMsg} numberOfLines={1}>{item.last_message||'Henüz mesaj yok...'}</Text>{item.unread_count > 0 && <View style={st.unreadBadge}><Text style={st.unreadText}>{item.unread_count}</Text></View>}</View>
+                                    <View style={st.convRow}><Text style={st.convName} numberOfLines={1}>{item.name}</Text><Text style={[st.convTime, item.unread_count > 0 && { color: '#25D366' }]}>{item.last_message_time || ''}</Text></View>
+                                    <View style={st.convRow}><Text style={st.convLastMsg} numberOfLines={1}>{item.last_message || 'Henüz mesaj yok...'}</Text>{item.unread_count > 0 && <View style={st.unreadBadge}><Text style={st.unreadText}>{item.unread_count}</Text></View>}</View>
                                 </View>
                                 {!selectMode && (
                                     <TouchableOpacity onPress={() => deleteConversation(item)} style={st.convDeleteBtn}>
@@ -382,7 +395,7 @@ export default function PilotChatScreen({ navigation }) {
                             </TouchableOpacity>
                         );
                     }}
-                    ListEmptyComponent={<View style={{ alignItems:'center', marginTop: 80 }}><Icon name="chat-processing-outline" size={64} color="#E2E8F0" /><Text style={{ fontSize: 18, fontWeight:'800', color:'#475569', marginTop: 16 }}>Henüz sohbet yok</Text><Text style={{ fontSize: 14, color:'#94A3B8', marginTop: 6, textAlign:'center', paddingHorizontal: 40 }}>Mesajlaşmaya başlamak için + butonuna dokunun</Text></View>}
+                    ListEmptyComponent={<View style={{ alignItems: 'center', marginTop: 80 }}><Icon name="chat-processing-outline" size={64} color="#E2E8F0" /><Text style={{ fontSize: 18, fontWeight: '800', color: '#475569', marginTop: 16 }}>Henüz sohbet yok</Text><Text style={{ fontSize: 14, color: '#94A3B8', marginTop: 6, textAlign: 'center', paddingHorizontal: 40 }}>Mesajlaşmaya başlamak için + butonuna dokunun</Text></View>}
                 />
             )}
 
@@ -393,13 +406,15 @@ export default function PilotChatScreen({ navigation }) {
                     <View style={{ paddingHorizontal: 20, marginBottom: 12 }}><Text style={st.modalLabel}>GRUP ADI (DİREKT MESAJ İÇİN BOŞ BIRAKIN)</Text><TextInput style={st.modalInput} placeholder="Grup konusu yazın..." placeholderTextColor="#94A3B8" value={groupName} onChangeText={setGroupName} /></View>
                     <View style={{ paddingHorizontal: 20, marginBottom: 8 }}><Text style={st.modalLabel}>KATILIMCILAR</Text></View>
                     <FlatList data={usersList} keyExtractor={i => i.id.toString()} style={{ maxHeight: 300 }}
-                        renderItem={({ item }) => { const sel = selectedUsers.includes(item.id); return (
-                            <TouchableOpacity style={st.userItem} onPress={() => toggleUser(item.id)} activeOpacity={0.7}>
-                                <View style={[st.userCheck, sel && st.userCheckActive]}>{sel && <Icon name="check" size={14} color="#fff" />}</View>
-                                <Avatar uri={item.profile_photo_url} name={item.name} size={40} />
-                                <Text style={st.userName}>{item.name}</Text>
-                            </TouchableOpacity>
-                        );}} />
+                        renderItem={({ item }) => {
+                            const sel = selectedUsers.includes(item.id); return (
+                                <TouchableOpacity style={st.userItem} onPress={() => toggleUser(item.id)} activeOpacity={0.7}>
+                                    <View style={[st.userCheck, sel && st.userCheckActive]}>{sel && <Icon name="check" size={14} color="#fff" />}</View>
+                                    <Avatar uri={item.profile_photo_url} name={item.name} size={40} />
+                                    <Text style={st.userName}>{item.name}</Text>
+                                </TouchableOpacity>
+                            );
+                        }} />
                     <View style={{ padding: 20 }}><TouchableOpacity style={[st.createBtn, !selectedUsers.length && { opacity: 1 }]} onPress={createConversation} disabled={creating || !selectedUsers.length}>{creating ? <ActivityIndicator color="#fff" /> : <Text style={st.createBtnText}>Sohbeti Başlat</Text>}</TouchableOpacity></View>
                 </View></View>
             </Modal>

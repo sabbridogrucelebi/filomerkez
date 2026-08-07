@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthContext } from '../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -38,7 +38,8 @@ export default function MenuScreen({ navigation }) {
 
     return (
         <View style={s.container}>
-            <LinearGradient colors={['#0F172A', '#020617']} style={StyleSheet.absoluteFillObject} />
+            <LinearGradient colors={['#FFFFFF', '#F1F5F9']} style={StyleSheet.absoluteFillObject} />
+            <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
             <SafeAreaView style={{ flex: 1 }}>
                 
                 {/* Custom Logo Header matching Web */}
@@ -86,14 +87,14 @@ export default function MenuScreen({ navigation }) {
 }
 
 const s = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#0F172A' },
+    container: { flex: 1, backgroundColor: '#FFFFFF' },
     
     logoHeader: {
         alignItems: 'center',
         paddingVertical: 24,
         paddingHorizontal: 20,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.05)',
+        borderBottomColor: 'rgba(0,0,0,0.08)',
         marginBottom: 10,
     },
     logoImage: {
@@ -105,7 +106,7 @@ const s = StyleSheet.create({
     companyName: {
         fontSize: 12,
         fontWeight: '800',
-        color: '#94A3B8',
+        color: '#334155',
         letterSpacing: 2,
     },
 
@@ -113,7 +114,7 @@ const s = StyleSheet.create({
     
     menuLabel: { 
         fontSize: 12, 
-        color: '#475569', 
+        color: '#94A3B8', 
         fontWeight: '800', 
         letterSpacing: 1.5, 
         marginBottom: 16,
@@ -129,18 +130,18 @@ const s = StyleSheet.create({
         alignItems: 'center', 
         padding: 12, 
         borderRadius: 16,
-        backgroundColor: 'transparent',
+        backgroundColor: '#F8FAFC',
     },
     iconWrap: {
         width: 44,
         height: 44,
         borderRadius: 12,
-        backgroundColor: 'rgba(255,255,255,0.03)',
+        backgroundColor: '#EFF6FF',
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
+        borderColor: '#DBEAFE',
     },
     emojiIcon: {
         width: 28,
@@ -154,12 +155,12 @@ const s = StyleSheet.create({
     itemTitle: { 
         fontSize: 16, 
         fontWeight: '800', 
-        color: '#F8FAFC', 
+        color: '#1E293B', 
         marginBottom: 2 
     },
     itemSub: { 
         fontSize: 10, 
-        color: '#64748B', 
+        color: '#94A3B8', 
         fontWeight: '700', 
         letterSpacing: 0.5 
     }
