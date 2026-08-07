@@ -1,5 +1,5 @@
 <?php
-
+// GÜNCELLEME NOTU: Mobil Araç Takip Ekranındaki 'driver' ilişkisi hatası (500) giderildi. (drivers olarak değiştirildi)
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
