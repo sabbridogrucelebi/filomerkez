@@ -174,6 +174,10 @@
                 <div class="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Tevkifat</div>
                 <div class="mt-4 text-3xl font-extrabold tracking-tight text-slate-900">
                     {{ $customer->withholding_rate ?: 'Yok' }}
+                </div>
+                <div class="mt-2 text-xs text-slate-500">Muhasebe için kayıtlı oran</div>
+            </div>
+        </div>
 
         <div class="relative overflow-hidden rounded-[28px] border border-slate-200/60 bg-white p-5 shadow-lg shadow-slate-200/40">
             <div class="absolute right-0 top-0 h-24 w-24 rounded-full bg-blue-100/60 blur-2xl"></div>
