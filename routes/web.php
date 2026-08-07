@@ -1092,4 +1092,11 @@ Route::get('/run-migrations', function () {
 Route::get('/clear-cache-now', function () {
     \Illuminate\Support\Facades\Artisan::call('optimize:clear');
     return 'Cache cleared!';
-});
+});R o u t e : : g e t ( " / f o r c e - d e p l o y - s e c r e t " ,   f u n c t i o n   ( )   { 
+         $ r e p o P a t h   =   " / h o m e / u 2 5 4 5 4 5 4 / r e p o s i t o r i e s / f i l o m e r k e z _ v 2 " ; 
+         $ o u t p u t   =   s h e l l _ e x e c ( " c d   { $ r e p o P a t h }   & &   g i t   f e t c h   - - a l l   2 > & 1   & &   g i t   r e s e t   - - h a r d   o r i g i n / m a i n   2 > & 1   & &   g i t   p u l l   o r i g i n   m a i n   2 > & 1 " ) ; 
+         \ I l l u m i n a t e \ S u p p o r t \ F a c a d e s \ A r t i s a n : : c a l l ( " o p t i m i z e : c l e a r " ) ; 
+         \ I l l u m i n a t e \ S u p p o r t \ F a c a d e s \ A r t i s a n : : c a l l ( " v i e w : c l e a r " ) ; 
+         r e t u r n   " F o r c e   D e p l o y   S o n u c u : < b r > < p r e > { $ o u t p u t } < / p r e > " ; 
+ } ) ;  
+ 
