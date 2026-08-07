@@ -5,10 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\Concerns\BelongsToCompany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class CustomerServiceRoute extends Model
 {
-    use BelongsToCompany;
+    use HasFactory, BelongsToCompany, LogsActivity, SoftDeletes;
 
     protected $fillable = [
         'company_id',

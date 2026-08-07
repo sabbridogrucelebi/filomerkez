@@ -16,9 +16,11 @@ use Carbon\Carbon;
 
 use App\Models\Concerns\LogsActivity;
 
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 class Driver extends Model
 {
-    use BelongsToCompany, LogsActivity;
+    use BelongsToCompany, LogsActivity, SoftDeletes;
 
     protected $fillable = [
         'company_id',

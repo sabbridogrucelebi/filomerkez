@@ -11,9 +11,9 @@ import StylishNotification from '../components/StylishNotification';
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
-        shouldShowAlert: false, // Varsayılan sistem uyarısını kapat, kendi Custom UI (StylishNotification) çalışacak
+        shouldShowAlert: true, // Uygulama açıkken de sistem bildirimi (WhatsApp gibi) düşsün
         shouldPlaySound: true,
-        shouldSetBadge: false,
+        shouldSetBadge: true,
     }),
 });
 
@@ -252,16 +252,7 @@ export const AuthProvider = ({ children }) => {
         });
 
         const notificationListener = Notifications.addNotificationReceivedListener(notification => {
-            const title = notification.request.content.title;
-            const body = notification.request.content.body;
-            const data = notification.request.content.data;
-            
-            if (title || body) {
-                // Sadece custom gösterim yap, sistem varsayılanını susturmak için üstteki setNotificationHandler'da shouldShowAlert false yapılabilir.
-                if (notificationRef.current) {
-                    notificationRef.current.show(title || 'Yeni Bildirim', body || '', data);
-                }
-            }
+            // Sistem banner'ı (shouldShowAlert: true) kullanıldığı için uygulama içi özel bildirime (StylishNotification) gerek yok.
         });
 
         // Intercept headers for permissions update

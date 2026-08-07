@@ -18,9 +18,11 @@ use Illuminate\Support\Str;
 
 use App\Models\Concerns\LogsActivity;
 
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 class Vehicle extends Model
 {
-    use BelongsToCompany, LogsActivity;
+    use BelongsToCompany, LogsActivity, SoftDeletes;
 
     protected $fillable = [
         'company_id',
