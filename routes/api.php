@@ -91,6 +91,9 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckCompa
     Route::patch('/customers/{id}/portal-users/{portalUserId}/toggle-status', [\App\Http\Controllers\Api\V1\CustomerPortalUserApiController::class, 'toggleStatus']);
     Route::delete('/customers/{id}/portal-users/{portalUserId}', [\App\Http\Controllers\Api\V1\CustomerPortalUserApiController::class, 'destroy']);
 
+    // Customer Statement (Cari Ekstresi)
+    Route::get('/customers/{id}/statement', [\App\Http\Controllers\Api\V1\CustomerStatementApiController::class, 'statement']);
+
     Route::get('/trips', [\App\Http\Controllers\Api\V1\TripApiController::class, 'index']);
     Route::get('/trips/export-excel', [\App\Http\Controllers\Api\V1\TripApiController::class, 'exportExcel']);
     Route::get('/trips/export-pdf', [\App\Http\Controllers\Api\V1\TripApiController::class, 'exportPdf']);
@@ -201,6 +204,17 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckCompa
     Route::post('/expenses', [\App\Http\Controllers\Api\V1\ExpenseApiController::class, 'store']);
     Route::put('/expenses/{expense}', [\App\Http\Controllers\Api\V1\ExpenseApiController::class, 'update']);
     Route::delete('/expenses/{expense}', [\App\Http\Controllers\Api\V1\ExpenseApiController::class, 'destroy']);
+
+    // Leaves
+    Route::get('/leaves', [\App\Http\Controllers\Api\V1\LeaveApiController::class, 'index']);
+    Route::post('/leaves', [\App\Http\Controllers\Api\V1\LeaveApiController::class, 'store']);
+    Route::put('/leaves/{leave}', [\App\Http\Controllers\Api\V1\LeaveApiController::class, 'update']);
+    Route::delete('/leaves/{leave}', [\App\Http\Controllers\Api\V1\LeaveApiController::class, 'destroy']);
+
+    // Holidays
+    Route::get('/holidays', [\App\Http\Controllers\Api\V1\HolidayApiController::class, 'index']);
+    Route::post('/holidays', [\App\Http\Controllers\Api\V1\HolidayApiController::class, 'store']);
+    Route::delete('/holidays/{holiday}', [\App\Http\Controllers\Api\V1\HolidayApiController::class, 'destroy']);
 
     // Vehicles (Read-Only)
     Route::get('/vehicles', [\App\Http\Controllers\Api\V1\VehicleApiController::class, 'index']);
