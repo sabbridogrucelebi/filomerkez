@@ -1092,3 +1092,5 @@ Route::get('/run-migrations', function () {
 // force update routes
 
 Route::get('/run-migrations', function () { \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]); return 'Migrated!'; });
+R o u t e : : g e t ( " / c l e a r - c a c h e - n o w " ,   f u n c t i o n   ( )   {   \ I l l u m i n a t e \ S u p p o r t \ F a c a d e s \ A r t i s a n : : c a l l ( " o p t i m i z e : c l e a r " ) ;   r e t u r n   " C a c h e   c l e a r e d ! " ;   } ) ;  
+ 
