@@ -174,54 +174,35 @@
                 <div class="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Tevkifat</div>
                 <div class="mt-4 text-3xl font-extrabold tracking-tight text-slate-900">
                     {{ $customer->withholding_rate ?: 'Yok' }}
-                </div>
-                <div class="mt-2 text-xs text-slate-500">Muhasebe için kayıtlı oran</div>
-            </div>
-        </div>
+@extends('layouts.app')
 
-        <div class="relative overflow-hidden rounded-[28px] border border-slate-200/60 bg-white p-5 shadow-lg shadow-slate-200/40">
-            <div class="absolute right-0 top-0 h-24 w-24 rounded-full bg-blue-100/60 blur-2xl"></div>
-            <div class="relative">
-                <div class="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Sözleşme Durumu</div>
-                @if($activeContract)
-                    <div class="mt-4 text-xl font-extrabold text-emerald-600">Geçerli</div>
-                    <div class="mt-2 text-xs text-slate-500">{{ $activeContract->year }} yılı sözleşmesi aktif</div>
-                @else
-                    <div class="mt-4 text-xl font-extrabold text-rose-600">Süresi Dolmuş</div>
-                    <div class="mt-2 text-xs text-slate-500">Geçerli sözleşme bulunamadı</div>
-                @endif
-            </div>
-        </div>
+@section('title', 'Müşteri Detayı')
+@section('subtitle', 'Müşteri yönetim merkezi')
 
-    </div>
+@section('content')
 
-    <div class="rounded-[30px] border border-slate-200/70 bg-white p-4 shadow-lg shadow-slate-200/40">
-        <div class="flex flex-wrap gap-3">
-            <a href="{{ route('customers.show', [$customer, 'tab' => 'company']) }}" class="{{ $tabClass('company') }}">
-                <span>🏢</span>
-                <span>Firma Bilgileri</span>
-            </a>
+@php
+    $activeTab = request('tab', 'company');
 
-            <a href="{{ route('customers.show', [$customer, 'tab' => 'services']) }}" class="{{ $tabClass('services') }}">
-                <span>🛣️</span>
-                <span>Servisler</span>
-            </a>
+    $customerTypeIcon = match($customer->customer_type) {
+        'Fabrika' => '🏭',
+        'Okul' => '🏫',
+        'Resmi Daire' => '🏛️',
+        'Diğer Servisler' => '🧾',
+        default => '🏢',
+    };
 
-            <a href="{{ route('customers.show', [$customer, 'tab' => 'documents']) }}" class="{{ $tabClass('documents') }}">
-                <span>📁</span>
-                <span>Belge ve Dökümanlar</span>
-            </a>
+    $customerTypeGradient = match($customer->customer_type) {
+        'Fabrika' => 'from-orange-500 via-amber-500 to-yellow-500',
+        'Okul' => 'from-blue-500 via-cyan-500 to-sky-500',
+        'Resmi Daire' => 'from-violet-500 via-fuchsia-500 to-purple-500',
+        'Diğer Servisler' => 'from-emerald-500 via-teal-500 to-cyan-500',
+        default => 'from-slate-700 via-slate-800 to-slate-900',
+    };
 
-            <a href="{{ route('customers.show', [$customer, 'tab' => 'invoices']) }}" class="{{ $tabClass('invoices') }}">
-                <span>🧾</span>
-                <span>Faturalar</span>
-            </a>
-
-            <a href="{{ route('customers.show', [$customer, 'tab' => 'contracts']) }}" class="{{ $tabClass('contracts') }}">
-                <span>📄</span>
-                <span>Sözleşmeler</span>
-            </a>
-
+    $tabClass = function ($key) use ($activeTab) {
+        return $activeTab === $key
+            ? 'inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-900/10'
             : 'inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-50 transition';
     };
 
