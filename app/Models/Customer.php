@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToCompany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -13,7 +12,7 @@ use App\Models\Concerns\LogsActivity;
 
 class Customer extends Model
 {
-    use HasFactory, BelongsToCompany, LogsActivity, SoftDeletes;
+    use BelongsToCompany, LogsActivity, SoftDeletes;
 
     protected $fillable = [
         'company_id',
