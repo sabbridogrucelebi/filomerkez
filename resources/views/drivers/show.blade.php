@@ -171,6 +171,11 @@
                                class="rounded-2xl px-5 py-3 text-sm font-semibold transition {{ $tabClass('images') }}">
                                 🖼️ Resimler
                             </a>
+
+                            <a href="{{ route('drivers.show', ['driver' => $driver->id, 'tab' => 'leaves']) }}"
+                               class="rounded-2xl px-5 py-3 text-sm font-semibold transition {{ $tabClass('leaves') }}">
+                                🏖️ İzinler
+                            </a>
                         </div>
 
                         @if($activeTab === 'general')
@@ -723,6 +728,10 @@
                                     </form>
                                 </div>
                             </div>
+                        @endif
+
+                        @if($activeTab === 'leaves')
+                            @include('drivers.partials.leaves-tab')
                         @endif
                     </div>
                 </div>
