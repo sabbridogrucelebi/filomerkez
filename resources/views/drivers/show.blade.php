@@ -472,6 +472,73 @@
                                     @endif
                                 </div>
 
+                                {{-- Arşiv Belgeleri Başlangıcı --}}
+                                <div class="xl:col-span-8 rounded-[28px] border border-slate-200 bg-white shadow-sm overflow-hidden mt-6">
+                                    <div class="border-b border-slate-100 px-6 py-5 flex items-center justify-between bg-gradient-to-r from-slate-100 via-white to-slate-50">
+                                        <div>
+                                            <h4 class="text-xl font-bold text-slate-900">Arşiv Belgeler</h4>
+                                            <p class="mt-1 text-sm text-slate-500">Süresi geçen veya yenisi yüklendiği için arşive alınan eski belgeler</p>
+                                        </div>
+                                    </div>
+
+                                    @if($archivedDocumentDocuments->count())
+                                        <div class="overflow-x-auto">
+                                            <table class="min-w-full text-sm">
+                                                <thead class="bg-slate-50 text-slate-500">
+                                                    <tr>
+                                                        <th class="px-6 py-4 text-left font-bold">Belge Türü</th>
+                                                        <th class="px-6 py-4 text-left font-bold">Başlangıç</th>
+                                                        <th class="px-6 py-4 text-left font-bold">Bitiş</th>
+                                                        <th class="px-6 py-4 text-left font-bold">Dosya</th>
+                                                        <th class="px-6 py-4 text-left font-bold">İşlem</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="divide-y divide-slate-100">
+                                                    @foreach($archivedDocumentDocuments as $document)
+                                                        <tr class="hover:bg-slate-50/70">
+                                                            <td class="px-6 py-5">
+                                                                <div class="font-semibold text-slate-900">{{ $document->document_type ?: '-' }}</div>
+                                                                <div class="mt-1 text-xs text-slate-500">{{ $document->notes ?: '-' }}</div>
+                                                            </td>
+                                                            <td class="px-6 py-5">
+                                                                {{ optional($document->start_date)->format('d.m.Y') ?: '-' }}
+                                                            </td>
+                                                            <td class="px-6 py-5">
+                                                                {{ optional($document->end_date)->format('d.m.Y') ?: '-' }}
+                                                            </td>
+                                                            <td class="px-6 py-5">
+                                                                @if($document->file_path)
+                                                                    <a href="{{ asset('storage/' . $document->file_path) }}"
+                                                                       target="_blank"
+                                                                       class="text-indigo-600 font-semibold hover:text-indigo-800">
+                                                                        Dosyayı Aç
+                                                                    </a>
+                                                                @else
+                                                                    -
+                                                                @endif
+                                                            </td>
+                                                            <td class="px-6 py-5">
+                                                                <form action="{{ route('drivers.documents.destroy', [$driver, $document]) }}" method="POST" onsubmit="return confirm('Bu belgeyi kalıcı olarak silmek istediğine emin misin?')">
+                                                                    @csrf
+                                                                    @method('DELETE')
+                                                                    <button type="submit"
+                                                                            class="rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-100">
+                                                                        Sil
+                                                                    </button>
+                                                                </form>
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    @else
+                                        <div class="p-8 text-center text-sm text-slate-500">Henüz arşivlenmiş belge yok.</div>
+                                    @endif
+                                </div>
+                                {{-- Arşiv Belgeleri Bitişi --}}
+
+
                                 <div class="xl:col-span-4 rounded-[28px] border border-slate-200 bg-white shadow-sm overflow-hidden">
                                     <div class="border-b border-slate-100 px-6 py-5">
                                         <h4 class="text-xl font-bold text-slate-900">Yeni Belge Yükle</h4>

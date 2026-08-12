@@ -295,8 +295,18 @@ class DriverController extends Controller
             return $isImageDocument($document) || ($extension === 'pdf' && $document->document_type === 'Kimlik ve Ehliyet');
         })->values();
 
-        $documentDocuments = $documents->filter(function ($document) use ($isImageDocument) {
+        $allDocumentDocuments = $documents->filter(function ($document) use ($isImageDocument) {
             return !$isImageDocument($document);
+        });
+
+        $documentDocuments = $allDocumentDocuments->filter(function ($doc) {
+            return is_null($doc->archived_at)
+                && (is_null($doc->end_date) || $doc->end_date->startOfDay()->gte(now()->startOfDay()));
+        })->values();
+
+        $archivedDocumentDocuments = $allDocumentDocuments->filter(function ($doc) {
+            return !is_null($doc->archived_at)
+                || (!is_null($doc->end_date) && $doc->end_date->startOfDay()->lt(now()->startOfDay()));
         })->values();
 
         $featuredImage = $imageDocuments->first();
@@ -399,6 +409,7 @@ class DriverController extends Controller
             'imageCount',
             'documents',
             'documentDocuments',
+            'archivedDocumentDocuments',
             'imageDocuments',
             'featuredImage',
             'totalNetSalary',
