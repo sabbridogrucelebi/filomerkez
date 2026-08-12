@@ -862,7 +862,7 @@ class DriverController extends Controller
             ->with('documentable')
             ->orderByDesc('end_date')
             ->get()
-            ->filter(fn ($doc) => $doc->documentable)
+            ->filter(fn ($doc) => $doc->documentable && $doc->documentable->is_active)
             ->unique(fn ($doc) => $doc->documentable_id . '_' . $doc->document_type) // Sadece en güncel belgeyi tut
             ->filter(function ($doc) use ($today) {
                 // Her belge türüne özel eşik uygula

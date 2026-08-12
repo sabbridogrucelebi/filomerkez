@@ -68,7 +68,7 @@
             ->with('documentable')
             ->orderByDesc('end_date') // En yeni tarihli olanı en üste al
             ->get()
-            ->filter(fn ($doc) => $doc->documentable)
+            ->filter(fn ($doc) => $doc->documentable && $doc->documentable->is_active)
             ->unique(fn ($doc) => $doc->documentable_id . '_' . $doc->document_type) // Her araç için her belge tipinden sadece EN GÜNCEL olanı tut
             ->filter(fn ($doc) => $doc->end_date->startOfDay()->lt(now()->startOfDay())) // Kalan en güncel belgelerden günü geçmiş olanları filtrele
             ->sortBy('end_date') // Yakın tarihte bitenleri önce göster
@@ -79,6 +79,7 @@
         $criticalMaintenances = collect();
         $vehiclesForMaint = \App\Models\Fleet\Vehicle::with(['maintenanceSetting', 'maintenances'])
             ->where('company_id', $company->id)
+            ->where('is_active', true)
             ->get();
             
         foreach ($vehiclesForMaint as $v) {
