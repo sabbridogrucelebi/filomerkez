@@ -121,19 +121,24 @@ Route::get('/cron/deploy', function (\Illuminate\Http\Request $request) {
         abort(403, 'Yetkisiz erişim');
     }
     
-    $repoPath = '/home/u2545454/repositories/filomerkez_v2';
-    
-    // 1. Github'dan yeni kodları çek (Update from remote)
-    $pullOutput = shell_exec("cd {$repoPath} && git pull origin main 2>&1");
-    
-    // 2. cPanel deploy işlemini tetikle (Deploy HEAD commit)
-    $deployOutput = shell_exec("/usr/local/cpanel/bin/uapi VersionControl deploy repository_root={$repoPath} 2>&1");
-    
-    // 3. Cache'leri temizle (View, Route, Config vb.)
+    // 1. Cache'leri temizle (View, Route, Config vb.)
     \Illuminate\Support\Facades\Artisan::call('optimize:clear');
     \Illuminate\Support\Facades\Artisan::call('view:clear');
     
-    return "PULL SONUCU:\n" . $pullOutput . "\n\nDEPLOY SONUCU:\n" . $deployOutput . "\n\nCACHE TEMIZLENDI";
+    $repoPath = '/home/u2545454/repositories/filomerkez_v2';
+    
+    $pullOutput = 'shell_exec disabled';
+    $deployOutput = 'shell_exec disabled';
+    
+    if (function_exists('shell_exec')) {
+        // 2. Github'dan yeni kodları çek (Update from remote)
+        $pullOutput = shell_exec("cd {$repoPath} && git pull origin main 2>&1");
+        
+        // 3. cPanel deploy işlemini tetikle (Deploy HEAD commit)
+        $deployOutput = shell_exec("/usr/local/cpanel/bin/uapi VersionControl deploy repository_root={$repoPath} 2>&1");
+    }
+    
+    return "CACHE TEMIZLENDI\n\nPULL SONUCU:\n" . $pullOutput . "\n\nDEPLOY SONUCU:\n" . $deployOutput;
 });
 /*
 |--------------------------------------------------------------------------
