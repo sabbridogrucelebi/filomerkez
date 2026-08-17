@@ -123,7 +123,17 @@ Route::get('/cron/deploy', function (\Illuminate\Http\Request $request) {
     
     // 1. Cache'leri temizle (View, Route, Config vb.)
     \Illuminate\Support\Facades\Artisan::call('optimize:clear');
-    \Illuminate\Support\Facades\Artisan::call('view:clear');
+    echo "CACHE TEMIZLENDI\n\n";
+
+    // DEBUG MUSTAFA
+    $mustafa = \App\Models\Fleet\Driver::where('full_name', 'like', '%Mustafa PEKUYAR%')->first();
+    if ($mustafa) {
+        $docs = $mustafa->documents()->get(['id', 'document_type', 'start_date', 'end_date', 'archived_at']);
+        echo "MUSTAFA DOCS: \n" . json_encode($docs) . "\n\n";
+    }
+
+    // 2. Git Pull İşlemi
+    if (function_exists('shell_exec')) {
     
     $repoPath = '/home/u2545454/repositories/filomerkez_v2';
     
