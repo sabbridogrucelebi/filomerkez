@@ -754,7 +754,9 @@ class DriverController extends Controller
 
     protected function resolveDriverDocumentStatus(Driver $driver): array
     {
-        $documents = $driver->documents->map(function ($document) use ($driver) {
+        $documents = $driver->documents->filter(function($doc) {
+            return is_null($doc->archived_at);
+        })->map(function ($document) use ($driver) {
             return $this->decorateDriverDocument($document, $driver);
         });
 
