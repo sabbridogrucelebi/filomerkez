@@ -756,7 +756,10 @@ class DriverController extends Controller
     {
         $documents = $driver->documents->filter(function($doc) {
             return is_null($doc->archived_at);
-        })->map(function ($document) use ($driver) {
+        })
+        ->sortByDesc('created_at')
+        ->unique('document_type')
+        ->map(function ($document) use ($driver) {
             return $this->decorateDriverDocument($document, $driver);
         });
 
