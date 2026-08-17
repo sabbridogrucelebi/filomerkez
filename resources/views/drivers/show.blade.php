@@ -380,7 +380,7 @@
                         @endif
 
                         @if($activeTab === 'documents')
-                            <div class="grid gap-6 xl:grid-cols-12">
+                            <div class="grid gap-6 xl:grid-cols-12" x-data="{ archiveOpen: false }">
                                 <div class="xl:col-span-8 rounded-[28px] border border-slate-200 bg-white shadow-sm overflow-hidden">
                                     <div class="border-b border-slate-100 px-6 py-5 flex items-center justify-between">
                                         <div>
@@ -388,26 +388,33 @@
                                             <p class="mt-1 text-sm text-slate-500">Tüm personel belgeleri tek sekmede yönetilir</p>
                                         </div>
 
-                                        @if($documentDocuments->count())
-                                            <a href="{{ route('drivers.documents.zip', $driver) }}"
-                                               class="group relative inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-200/60 transition-all duration-300 hover:scale-[1.04] hover:shadow-xl hover:shadow-indigo-300/50 active:scale-[0.98]"
-                                               title="Tüm belgeleri ZIP olarak indir">
-                                                {{-- 3D Document Icon --}}
-                                                <div class="relative flex items-center justify-center w-9 h-9 transition-transform duration-500 group-hover:rotate-[-8deg] group-hover:scale-110" style="perspective: 200px;">
-                                                    <div class="absolute inset-0 rounded-xl bg-white/20 backdrop-blur-sm border border-white/30 shadow-[0_6px_16px_rgba(0,0,0,0.25),inset_0_1px_0_rgba(255,255,255,0.3)] transition-all duration-500 group-hover:shadow-[0_10px_30px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.4)]" style="transform: rotateX(8deg) rotateY(-6deg);"></div>
-                                                    <svg class="relative w-5 h-5 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 11v6m0 0l-2.5-2.5M12 17l2.5-2.5"/>
-                                                    </svg>
-                                                </div>
-                                                <div class="flex flex-col">
-                                                    <span class="text-sm font-bold leading-tight">Toplu İndir</span>
-                                                    <span class="text-[10px] font-medium text-white/70 leading-tight">{{ $documentDocuments->count() }} belge · ZIP</span>
-                                                </div>
-                                                {{-- Shine effect --}}
-                                                <div class="absolute inset-0 rounded-2xl bg-gradient-to-r from-white/0 via-white/20 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-                                            </a>
-                                        @endif
+                                        <div class="flex items-center gap-3">
+                                            <button type="button"
+                                                    @click="archiveOpen = !archiveOpen"
+                                                    class="inline-flex items-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-700 transition">
+                                                Arşiv Belgeler
+                                            </button>
+
+                                            @if($documentDocuments->count() || $archivedDocumentDocuments->count())
+                                                <a href="{{ route('drivers.documents.zip', $driver) }}"
+                                                   class="group relative inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-200/60 transition-all duration-300 hover:scale-[1.04] hover:shadow-xl hover:shadow-indigo-300/50 active:scale-[0.98]"
+                                                   title="Tüm belgeleri ZIP olarak indir">
+                                                    {{-- 3D Document Icon --}}
+                                                    <div class="relative flex items-center justify-center w-9 h-9 transition-transform duration-500 group-hover:rotate-[-8deg] group-hover:scale-110" style="perspective: 200px;">
+                                                        <div class="absolute inset-0 rounded-xl bg-white/20 backdrop-blur-sm border border-white/30 shadow-[0_6px_16px_rgba(0,0,0,0.25),inset_0_1px_0_rgba(255,255,255,0.3)] transition-all duration-500 group-hover:shadow-[0_10px_30px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.4)]" style="transform: rotateX(8deg) rotateY(-6deg);"></div>
+                                                        <svg class="relative w-5 h-5 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 11v6m0 0l-2.5-2.5M12 17l2.5-2.5"/>
+                                                        </svg>
+                                                    </div>
+                                                    <div class="flex flex-col">
+                                                        <span class="text-sm font-bold leading-tight">Toplu İndir</span>
+                                                    </div>
+                                                    {{-- Shine effect --}}
+                                                    <div class="absolute inset-0 rounded-2xl bg-gradient-to-r from-white/0 via-white/20 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+                                                </a>
+                                            @endif
+                                        </div>
                                     </div>
 
                                     @if($documentDocuments->count())
@@ -468,17 +475,31 @@
                                             </table>
                                         </div>
                                     @else
-                                        <div class="p-8 text-center text-sm text-slate-500">Henüz belge kaydı yok.</div>
+                                        <div class="p-8 text-center text-sm text-slate-500">Henüz aktif belge kaydı yok.</div>
                                     @endif
                                 </div>
 
                                 {{-- Arşiv Belgeleri Başlangıcı --}}
-                                <div class="xl:col-span-8 rounded-[28px] border border-slate-200 bg-white shadow-sm overflow-hidden mt-6">
+                                <div class="xl:col-span-8 rounded-[28px] border border-slate-200 bg-white shadow-sm overflow-hidden mt-6"
+                                     x-show="archiveOpen"
+                                     x-transition:enter="transition ease-out duration-200"
+                                     x-transition:enter-start="opacity-0 -translate-y-2"
+                                     x-transition:enter-end="opacity-100 translate-y-0"
+                                     x-transition:leave="transition ease-in duration-150"
+                                     x-transition:leave-start="opacity-100 translate-y-0"
+                                     x-transition:leave-end="opacity-0 -translate-y-2"
+                                     style="display: none;"
+                                >
                                     <div class="border-b border-slate-100 px-6 py-5 flex items-center justify-between bg-gradient-to-r from-slate-100 via-white to-slate-50">
                                         <div>
                                             <h4 class="text-xl font-bold text-slate-900">Arşiv Belgeler</h4>
                                             <p class="mt-1 text-sm text-slate-500">Süresi geçen veya yenisi yüklendiği için arşive alınan eski belgeler</p>
                                         </div>
+                                        <button type="button"
+                                                @click="archiveOpen = false"
+                                                class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">
+                                            Kapat
+                                        </button>
                                     </div>
 
                                     @if($archivedDocumentDocuments->count())
