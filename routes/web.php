@@ -133,8 +133,6 @@ Route::get('/cron/deploy', function (\Illuminate\Http\Request $request) {
     }
 
     // 2. Git Pull İşlemi
-    if (function_exists('shell_exec')) {
-    
     $repoPath = '/home/u2545454/repositories/filomerkez_v2';
     
     $pullOutput = 'shell_exec disabled';
