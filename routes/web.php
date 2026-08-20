@@ -116,6 +116,14 @@ Route::get('/gizlilik', function () {
 */
 Route::get('/cron/backup', [\App\Http\Controllers\BackupController::class, 'cronTrigger']);
 
+Route::get('/cron/maintenance-check', function (\Illuminate\Http\Request $request) {
+    if ($request->key !== 'filo-deploy-2026') {
+        abort(403, 'Yetkisiz erişim');
+    }
+    \Illuminate\Support\Facades\Artisan::call('maintenance:check-health');
+    return "Bakım kontrolü çalıştırıldı: " . \Illuminate\Support\Facades\Artisan::output();
+});
+
 Route::get('/cron/deploy', function (\Illuminate\Http\Request $request) {
     if ($request->key !== 'filo-deploy-2026') {
         abort(403, 'Yetkisiz erişim');
