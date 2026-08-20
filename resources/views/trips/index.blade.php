@@ -166,10 +166,10 @@
                                     <div class="font-bold text-slate-900 truncate">{{ $route->route_name }}</div>
                                     <div class="mt-1 text-xs text-slate-500 flex flex-col gap-1">
                                         @if($route->service_type !== 'evening')
-                                        <div class="flex items-center gap-1" title="{{ $dMName }}"><span class="w-2 h-2 rounded-full bg-sky-400"></span> Sabah: {{ $route->morningVehicle->plate ?? 'Tanımsız' }} <span class="text-[9px] text-slate-400">({{ $dMName }})</span></div>
+                                        <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-sky-400"></span> Sabah: {{ $route->morningVehicle->plate ?? 'Tanımsız' }}</div>
                                         @endif
                                         @if($route->service_type !== 'morning')
-                                        <div class="flex items-center gap-1" title="{{ $dEName }}"><span class="w-2 h-2 rounded-full bg-indigo-400"></span> Akşam: {{ $route->eveningVehicle->plate ?? 'Tanımsız' }} <span class="text-[9px] text-slate-400">({{ $dEName }})</span></div>
+                                        <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-indigo-400"></span> Akşam: {{ $route->eveningVehicle->plate ?? 'Tanımsız' }}</div>
                                         @endif
                                     </div>
                                 </td>
@@ -249,9 +249,6 @@
                                                     <div class="flex items-center justify-between">
                                                         <span>S:</span><span class="truncate ml-1">{{ $mPlate }}</span>
                                                     </div>
-                                                    <div class="flex items-center justify-between {{ $isMCustom ? 'bg-slate-900 text-white rounded px-1 mt-0.5 py-0.5' : 'opacity-80' }}">
-                                                        <span>👤</span><span class="truncate ml-1">{{ $mDisplayDriver }}</span>
-                                                    </div>
                                                 </div>
                                                 @endif
 
@@ -269,9 +266,6 @@
                                                 <div class="text-[9px] font-bold px-1.5 py-1 rounded flex flex-col gap-0.5 {{ $isEveningDiff ? 'bg-rose-200 text-rose-900 border-2 border-dashed border-rose-500' : 'bg-rose-100 text-rose-800 border border-rose-200' }}" title="{{ $isEveningDiff ? 'Farklı Araç Gitti!' : 'Akşam Aracı' }}">
                                                     <div class="flex items-center justify-between">
                                                         <span>A:</span><span class="truncate ml-1">{{ $ePlate }}</span>
-                                                    </div>
-                                                    <div class="flex items-center justify-between {{ $isECustom ? 'bg-slate-900 text-white rounded px-1 mt-0.5 py-0.5' : 'opacity-80' }}">
-                                                        <span>👤</span><span class="truncate ml-1">{{ $eDisplayDriver }}</span>
                                                     </div>
                                                 </div>
                                                 @endif
