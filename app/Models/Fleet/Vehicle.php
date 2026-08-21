@@ -27,6 +27,7 @@ class Vehicle extends Model
     protected $fillable = [
         'company_id',
         'plate',
+        'device_imei',
         'brand',
         'model',
         'vehicle_type',

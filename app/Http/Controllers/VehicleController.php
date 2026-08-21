@@ -582,6 +582,7 @@ class VehicleController extends Controller
 
         $data = $request->validate([
             'plate' => 'required|string|max:20|unique:vehicles,plate',
+            'device_imei' => 'nullable|string|max:20',
             'brand' => 'nullable|string|max:100',
             'model' => 'nullable|string|max:100',
             'vehicle_type' => 'nullable|string|max:100',
@@ -650,6 +651,7 @@ class VehicleController extends Controller
 
         $data = $request->validate([
             'plate' => 'required|string|max:20|unique:vehicles,plate,' . $vehicle->id,
+            'device_imei' => 'nullable|string|max:20',
             'brand' => 'nullable|string|max:100',
             'model' => 'nullable|string|max:100',
             'vehicle_type' => 'nullable|string|max:100',

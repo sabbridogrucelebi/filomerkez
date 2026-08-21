@@ -1,0 +1,13 @@
+{
+  "name": "filomerkez-tcp-server",
+  "version": "1.0.0",
+  "description": "Concox GT06N GPS Tracker TCP Server for Filomerkez",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "mysql2": "^3.9.7"
+  }
+}

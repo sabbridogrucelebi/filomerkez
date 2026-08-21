@@ -42,47 +42,48 @@ class VehicleTrackingApiController extends Controller
             }
         }
 
-        // Eğer sistemde araç dönmüyorsa (test hesabı veya boş API) tasarımı görebilmek için Demo (Fake) veri bas:
+        // Arvento seçili değilse veya Arvento verisi yoksa kendi veritabanımızdan (Concox GT06N) çek
         if (empty($vehicles)) {
             $dbVehicles = \App\Models\Fleet\Vehicle::with('drivers')->where('company_id', $companyId)->get();
-            foreach ($dbVehicles as $index => $v) {
-                // Rastgele İstanbul koordinatları: 41.0 + random, 28.9 + random
-                $vehicles[] = [
-                    'LicensePlate' => $v->license_plate,
-                    'Driver' => $v->drivers->first() ? $v->drivers->first()->first_name . ' ' . $v->drivers->first()->last_name : 'Atanmamış',
-                    'Latitude' => 41.0082 + (rand(-100, 100) / 10000),
-                    'Longitude' => 28.9784 + (rand(-100, 100) / 10000),
-                    'Speed' => rand(0, 80),
-                    'EngineStatus' => rand(0, 1) ? 'Açık' : 'Kapalı'
-                ];
+            
+            // Her araç için en son konumu bul
+            $locations = \App\Models\Fleet\VehicleLocation::whereIn('vehicle_id', $dbVehicles->pluck('id'))
+                ->orderBy('recorded_at', 'desc')
+                ->get()
+                ->groupBy('vehicle_id')
+                ->map(function ($group) {
+                    return $group->first();
+                });
+
+            foreach ($dbVehicles as $v) {
+                $loc = $locations->get($v->id);
+                if ($loc) {
+                    $statusArr = is_string($loc->status) ? json_decode($loc->status, true) : $loc->status;
+                    $vehicles[] = [
+                        'LicensePlate' => $v->license_plate,
+                        'Driver' => $v->drivers->first() ? trim($v->drivers->first()->first_name . ' ' . $v->drivers->first()->last_name) : 'Atanmamış',
+                        'Latitude' => $loc->latitude,
+                        'Longitude' => $loc->longitude,
+                        'Speed' => $loc->speed,
+                        'EngineStatus' => (isset($statusArr['acc']) && $statusArr['acc']) ? 'Açık' : 'Kapalı',
+                        'DeviceImei' => $v->device_imei,
+                        'RecordedAt' => $loc->recorded_at ? $loc->recorded_at->format('Y-m-d H:i:s') : null,
+                    ];
+                }
             }
 
-            // Eğer veritabanında da GİDERİLMİŞ hiç araç yoksa (Company sıfır araçlıysa), TAMAMEN SAHTE 3 araç ekle:
+            // Eğer hiç canlı veri yoksa sistemi test edebilmek için 1 tane sahte araç ekle (Sadece test için)
             if (empty($vehicles)) {
                 $vehicles = [
                     [
-                        'LicensePlate' => '34 ABC 123',
-                        'Driver' => 'Ahmet Yılmaz',
+                        'LicensePlate' => 'TEST 123 (CİHAZ BEKLENİYOR)',
+                        'Driver' => 'Test Sürücü',
                         'Latitude' => 41.0122,
                         'Longitude' => 28.9760,
-                        'Speed' => 45,
-                        'EngineStatus' => 'Açık'
-                    ],
-                    [
-                        'LicensePlate' => '34 XYZ 987',
-                        'Driver' => 'Mehmet Çelebi',
-                        'Latitude' => 41.0200,
-                        'Longitude' => 28.9800,
                         'Speed' => 0,
-                        'EngineStatus' => 'Kapalı'
-                    ],
-                    [
-                        'LicensePlate' => '34 DEF 456',
-                        'Driver' => 'Ali Demir',
-                        'Latitude' => 41.0050,
-                        'Longitude' => 28.9700,
-                        'Speed' => 65,
-                        'EngineStatus' => 'Açık'
+                        'EngineStatus' => 'Kapalı',
+                        'DeviceImei' => null,
+                        'RecordedAt' => date('Y-m-d H:i:s')
                     ]
                 ];
             }

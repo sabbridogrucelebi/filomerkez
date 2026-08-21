@@ -6,15 +6,33 @@ import { MaterialCommunityIcons as Icon, Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 import axios from '../api/axios';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
 
-// Light Map Style (matching web)
-const mapStyle = [
-  { "featureType": "administrative", "elementType": "geometry", "stylers": [{ "visibility": "off" }] },
-  { "featureType": "poi", "stylers": [{ "visibility": "off" }] },
-  { "featureType": "road", "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
-  { "featureType": "transit", "stylers": [{ "visibility": "off" }] }
+// Dark/Premium Map Style
+const premiumMapStyle = [
+  { "elementType": "geometry", "stylers": [{ "color": "#212121" }] },
+  { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
+  { "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
+  { "elementType": "labels.text.stroke", "stylers": [{ "color": "#212121" }] },
+  { "featureType": "administrative", "elementType": "geometry", "stylers": [{ "color": "#757575" }] },
+  { "featureType": "administrative.country", "elementType": "labels.text.fill", "stylers": [{ "color": "#9e9e9e" }] },
+  { "featureType": "administrative.land_parcel", "stylers": [{ "visibility": "off" }] },
+  { "featureType": "administrative.locality", "elementType": "labels.text.fill", "stylers": [{ "color": "#bdbdbd" }] },
+  { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
+  { "featureType": "poi.park", "elementType": "geometry", "stylers": [{ "color": "#181818" }] },
+  { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [{ "color": "#616161" }] },
+  { "featureType": "poi.park", "elementType": "labels.text.stroke", "stylers": [{ "color": "#1b1b1b" }] },
+  { "featureType": "road", "elementType": "geometry.fill", "stylers": [{ "color": "#2c2c2c" }] },
+  { "featureType": "road", "elementType": "labels.text.fill", "stylers": [{ "color": "#8a8a8a" }] },
+  { "featureType": "road.arterial", "elementType": "geometry", "stylers": [{ "color": "#373737" }] },
+  { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#3c3c3c" }] },
+  { "featureType": "road.highway.controlled_access", "elementType": "geometry", "stylers": [{ "color": "#4e4e4e" }] },
+  { "featureType": "road.local", "elementType": "labels.text.fill", "stylers": [{ "color": "#616161" }] },
+  { "featureType": "transit", "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
+  { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#000000" }] },
+  { "featureType": "water", "elementType": "labels.text.fill", "stylers": [{ "color": "#3d3d3d" }] }
 ];
 
 export default function TrackingScreen({ navigation }) {
@@ -28,18 +46,15 @@ export default function TrackingScreen({ navigation }) {
     const [selectedVehicle, setSelectedVehicle] = useState(null);
     const [lastUpdated, setLastUpdated] = useState(null);
 
-    // Animasyonlar
+    // Animations
     const sheetAnim = useRef(new Animated.Value(0)).current;
     const [sheetOpen, setSheetOpen] = useState(true);
 
     useEffect(() => {
         fetchLiveLocations();
-        
-        // 15 saniyede bir otomatik güncelleme
         const interval = setInterval(() => {
             fetchLiveLocations(false);
         }, 15000);
-
         return () => clearInterval(interval);
     }, []);
 
@@ -47,7 +62,6 @@ export default function TrackingScreen({ navigation }) {
         if (showLoading) setLoading(true);
         try {
             const res = await axios.get('/v1/vehicle-tracking/live');
-            
             if (res.data && res.data.vehicles) {
                 const dataObj = res.data.vehicles;
                 const vehiclesArray = Object.values(dataObj).filter(v => v.Latitude != null && v.Longitude != null);
@@ -57,7 +71,6 @@ export default function TrackingScreen({ navigation }) {
                 setProviderName(res.data.provider_name || 'Arvento');
                 setLastUpdated(new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
                 
-                // Haritayı ilk yüklemede araçlara odakla
                 if (showLoading && vehiclesArray.length > 0 && mapRef.current) {
                     const coords = vehiclesArray.map(v => ({ latitude: parseFloat(v.Latitude), longitude: parseFloat(v.Longitude) }));
                     setTimeout(() => {
@@ -70,7 +83,6 @@ export default function TrackingScreen({ navigation }) {
             }
         } catch (error) {
             console.error("Araç takip verisi çekilemedi:", error);
-            alert("Veri çekilemedi: " + (error.response?.data?.message || error.message));
         } finally {
             if (showLoading) setLoading(false);
         }
@@ -81,7 +93,8 @@ export default function TrackingScreen({ navigation }) {
         Animated.spring(sheetAnim, {
             toValue,
             useNativeDriver: true,
-            friction: 8
+            friction: 8,
+            tension: 50
         }).start();
         setSheetOpen(!sheetOpen);
     };
@@ -92,8 +105,8 @@ export default function TrackingScreen({ navigation }) {
             mapRef.current.animateToRegion({
                 latitude: parseFloat(vehicle.Latitude),
                 longitude: parseFloat(vehicle.Longitude),
-                latitudeDelta: 0.01,
-                longitudeDelta: 0.01,
+                latitudeDelta: 0.005,
+                longitudeDelta: 0.005,
             }, 1000);
         }
     };
@@ -103,8 +116,8 @@ export default function TrackingScreen({ navigation }) {
     if (loading) {
         return (
             <View style={s.center}>
-                <ActivityIndicator size="large" color="#3B82F6" />
-                <Text style={{ color: '#64748B', marginTop: 12 }}>Uydudan veri alınıyor...</Text>
+                <ActivityIndicator size="large" color="#6366F1" />
+                <Text style={{ color: '#9CA3AF', marginTop: 12, fontWeight: '600' }}>Uydudan veri alınıyor...</Text>
             </View>
         );
     }
@@ -112,7 +125,7 @@ export default function TrackingScreen({ navigation }) {
     if (!providerActive) {
         return (
             <SafeAreaView style={s.center}>
-                <Icon name="satellite-variant" size={64} color="#94A3B8" />
+                <Icon name="satellite-variant" size={64} color="#4B5563" />
                 <Text style={s.errorTitle}>Takip Sistemi Kapalı</Text>
                 <Text style={s.errorDesc}>Araç takip sistemi entegrasyonunuz aktif değil. Lütfen web panelden ayarlarınızı yapın.</Text>
                 <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()}>
@@ -124,15 +137,12 @@ export default function TrackingScreen({ navigation }) {
 
     return (
         <View style={s.container}>
-            {/* Arka Plan Gradient (Light) */}
-            <LinearGradient colors={['#F8FAFC', '#F1F5F9']} style={StyleSheet.absoluteFillObject} />
-
             {/* Harita */}
             <MapView
                 ref={mapRef}
-                style={[StyleSheet.absoluteFillObject, { bottom: height * 0.4 }]}
+                style={[StyleSheet.absoluteFillObject]}
                 provider={PROVIDER_GOOGLE}
-                customMapStyle={mapStyle}
+                customMapStyle={premiumMapStyle}
                 showsUserLocation={false}
                 showsMyLocationButton={false}
                 showsCompass={false}
@@ -151,88 +161,88 @@ export default function TrackingScreen({ navigation }) {
                             coordinate={{ latitude: lat, longitude: lng }}
                             onPress={() => focusOnVehicle(v)}
                             tracksViewChanges={false}
+                            zIndex={isSelected ? 999 : 1}
                         >
-                            <View style={[s.dotMarkerOuter, isOn ? s.dotOuterOn : s.dotOuterOff, isSelected && s.dotOuterSelected]}>
-                                <View style={[s.dotMarkerInner, isOn ? s.dotInnerOn : s.dotInnerOff]} />
+                            <View style={s.markerWrap}>
+                                <View style={[
+                                    s.pulsingCircle, 
+                                    { borderColor: isOn ? '#10B981' : '#EF4444' },
+                                    isSelected && { width: 50, height: 50, borderRadius: 25, borderWidth: 2 }
+                                ]}>
+                                    <LinearGradient
+                                        colors={isOn ? ['#34D399', '#059669'] : ['#F87171', '#DC2626']}
+                                        style={s.markerCore}
+                                    >
+                                        <Icon name={isOn ? "navigation" : "car-off"} size={14} color="#FFF" style={isOn ? { transform: [{ rotate: '45deg' }] } : {}} />
+                                    </LinearGradient>
+                                </View>
+                                {isSelected && (
+                                    <View style={s.markerLabel}>
+                                        <Text style={s.markerPlate}>{v.LicensePlate}</Text>
+                                    </View>
+                                )}
                             </View>
                         </Marker>
                     );
                 })}
             </MapView>
 
-            {/* Üst Kısım: Başlık ve Bilgi Kartları */}
-            <SafeAreaView style={s.topContainer} edges={['top']}>
-                {/* Başlık Barı */}
-                <View style={s.headerRow}>
-                    <TouchableOpacity style={s.iconBtn} onPress={() => navigation.goBack()}>
-                        <Icon name="arrow-left" size={24} color="#1E293B" />
-                    </TouchableOpacity>
-                    
-                    <View style={s.headerTitleWrap}>
-                        <View style={s.titleGroup}>
-                            <View style={s.titleLine} />
-                            <View>
-                                <Text style={s.headerTitle}>Araç Takip</Text>
+            {/* Glassmorphism Header */}
+            <View style={s.topContainer}>
+                <BlurView intensity={70} tint="dark" style={s.headerBlur}>
+                    <SafeAreaView edges={['top']} style={{ paddingBottom: 15 }}>
+                        <View style={s.headerRow}>
+                            <TouchableOpacity style={s.glassBtn} onPress={() => navigation.goBack()}>
+                                <Icon name="arrow-left" size={22} color="#FFF" />
+                            </TouchableOpacity>
+                            
+                            <View style={s.headerTitleWrap}>
+                                <Text style={s.headerTitle}>Canlı Filo Takibi</Text>
                                 <View style={s.headerSubWrap}>
-                                    <View style={s.liveDotSmall} />
-                                    <Text style={s.headerSub}>ENTEGRASYON AYARLARI VE CANLI TAKİP</Text>
+                                    <View style={[s.liveIndicator, { backgroundColor: '#10B981' }]} />
+                                    <Text style={s.headerSub}>{providerName} Üzerinden Bağlı</Text>
                                 </View>
                             </View>
-                        </View>
-                    </View>
 
-                    <TouchableOpacity style={s.iconBtn} onPress={() => fetchLiveLocations(true)}>
-                        <Icon name="refresh" size={24} color="#1E293B" />
-                    </TouchableOpacity>
-                </View>
+                            <TouchableOpacity style={s.glassBtn} onPress={() => fetchLiveLocations(true)}>
+                                <Icon name="refresh" size={22} color="#FFF" />
+                            </TouchableOpacity>
+                        </View>
 
-                {/* İstatistik Kartları (Yatay Scroll) */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.statsScroll}>
-                    <View style={s.statCard}>
-                        <View style={[s.statIconWrap, { backgroundColor: '#EFF6FF' }]}>
-                            <Icon name="satellite-variant" size={20} color="#3B82F6" />
+                        {/* Top Stats */}
+                        <View style={s.statsContainer}>
+                            <View style={s.statBox}>
+                                <Text style={s.statValText}>{vehicles.length}</Text>
+                                <Text style={s.statLblText}>Toplam</Text>
+                            </View>
+                            <View style={s.statBoxDivider} />
+                            <View style={s.statBox}>
+                                <Text style={[s.statValText, { color: '#34D399' }]}>{activeCount}</Text>
+                                <Text style={s.statLblText}>Aktif Araç</Text>
+                            </View>
+                            <View style={s.statBoxDivider} />
+                            <View style={s.statBox}>
+                                <Text style={s.statValText}>{userInfo?.name || 'Admin'}</Text>
+                                <Text style={s.statLblText}>Kullanıcı</Text>
+                            </View>
                         </View>
-                        <View>
-                            <Text style={s.statLabel}>SİSTEM</Text>
-                            <Text style={s.statValue}>{providerName}</Text>
-                        </View>
-                    </View>
-                    
-                    <View style={s.statCard}>
-                        <View style={[s.statIconWrap, { backgroundColor: '#ECFDF5' }]}>
-                            <View style={s.liveDotLarge} />
-                        </View>
-                        <View>
-                            <Text style={s.statLabel}>AKTİF ARAÇ</Text>
-                            <Text style={s.statValue}>{activeCount}</Text>
-                        </View>
-                    </View>
+                    </SafeAreaView>
+                </BlurView>
+            </View>
 
-                    <View style={s.statCard}>
-                        <View style={[s.statIconWrap, { backgroundColor: '#F3F4F6' }]}>
-                            <Icon name="account" size={20} color="#4B5563" />
-                        </View>
-                        <View>
-                            <Text style={s.statLabel}>KULLANICI</Text>
-                            <Text style={s.statValue} numberOfLines={1}>{userInfo?.name || 'Kullanıcı'}</Text>
-                        </View>
-                    </View>
-                </ScrollView>
+            {/* Floating Action Buttons */}
+            <View style={s.fabContainer}>
+                <TouchableOpacity style={s.fabBtn} onPress={() => {
+                    if (mapRef.current && vehicles.length > 0) {
+                        const coords = vehicles.map(v => ({ latitude: parseFloat(v.Latitude), longitude: parseFloat(v.Longitude) }));
+                        mapRef.current.fitToCoordinates(coords, { edgePadding: { top: 150, right: 50, bottom: height * 0.45, left: 50 }, animated: true });
+                    }
+                }}>
+                    <Icon name="fit-to-screen-outline" size={22} color="#FFF" />
+                </TouchableOpacity>
+            </View>
 
-                {/* Butonlar */}
-                <View style={s.actionRow}>
-                    <TouchableOpacity style={s.primaryBtn} onPress={() => navigation.navigate('TrackingReports')}>
-                        <Icon name="file-document-outline" size={16} color="#FFF" style={{marginRight:6}} />
-                        <Text style={s.primaryBtnText}>RAPORLAR</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity style={s.secondaryBtn} onPress={() => alert('Web panele yönlendiriliyor...')}>
-                        <Text style={s.secondaryBtnText}>AYARLARI DEĞİŞTİR</Text>
-                    </TouchableOpacity>
-                </View>
-            </SafeAreaView>
-
-            {/* Bottom Sheet (Araç Listesi) */}
+            {/* Glassmorphism Bottom Sheet */}
             <Animated.View style={[
                 s.bottomSheet, 
                 { 
@@ -244,6 +254,8 @@ export default function TrackingScreen({ navigation }) {
                     }] 
                 }
             ]}>
+                <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFillObject} />
+                
                 <View style={s.sheetHandleWrap}>
                     <TouchableOpacity style={s.sheetHandleClickArea} onPress={toggleSheet}>
                         <View style={s.sheetHandle} />
@@ -251,8 +263,8 @@ export default function TrackingScreen({ navigation }) {
                 </View>
 
                 <View style={s.sheetHeader}>
-                    <Text style={s.sheetTitle}>Araç Listesi</Text>
-                    <Text style={s.sheetSub}>Son Güncelleme: {lastUpdated}</Text>
+                    <Text style={s.sheetTitle}>Filo Araçları</Text>
+                    <Text style={s.sheetSub}>Son Güncelleme: <Text style={{color: '#FFF'}}>{lastUpdated}</Text></Text>
                 </View>
 
                 <ScrollView style={s.sheetScroll} showsVerticalScrollIndicator={false}>
@@ -271,18 +283,25 @@ export default function TrackingScreen({ navigation }) {
                                     onPress={() => focusOnVehicle(v)}
                                     activeOpacity={0.7}
                                 >
-                                    <View style={[s.vIconWrap, { backgroundColor: isOn ? '#ECFDF5' : '#FEF2F2' }]}>
-                                        <Text style={{fontSize: 20}}>🚚</Text>
-                                    </View>
+                                    <LinearGradient
+                                        colors={isOn ? ['rgba(16, 185, 129, 0.2)', 'rgba(5, 150, 105, 0.1)'] : ['rgba(239, 68, 68, 0.2)', 'rgba(220, 38, 38, 0.1)']}
+                                        style={s.vIconWrap}
+                                    >
+                                        <Icon name={isOn ? "car-connected" : "car"} size={22} color={isOn ? "#34D399" : "#F87171"} />
+                                    </LinearGradient>
                                     <View style={s.vInfo}>
                                         <Text style={s.vPlate}>{v.LicensePlate}</Text>
-                                        <Text style={s.vDriver} numberOfLines={1}>{v.Driver || 'Bilinmiyor'}</Text>
+                                        <Text style={s.vDriver} numberOfLines={1}>
+                                            <Icon name="account" size={12} color="#9CA3AF" /> {v.Driver || 'Bilinmiyor'}
+                                        </Text>
                                     </View>
                                     <View style={s.vSpeedWrap}>
-                                        <Text style={[s.vSpeed, {color: '#3B82F6'}]}>{speed} <Text style={{fontSize: 10}}>km/h</Text></Text>
+                                        <Text style={[s.vSpeed, {color: isOn ? '#FFF' : '#D1D5DB'}]}>
+                                            {speed} <Text style={{fontSize: 10, color: '#9CA3AF'}}>km/h</Text>
+                                        </Text>
                                         <View style={s.vStatusWrap}>
                                             <View style={[s.statusDotSmall, {backgroundColor: isOn ? '#10B981' : '#EF4444'}]} />
-                                            <Text style={[s.vStatus, {color: isOn ? '#10B981' : '#EF4444'}]}>{isOn ? 'HAREKETLİ' : 'DURAN'}</Text>
+                                            <Text style={[s.vStatus, {color: isOn ? '#34D399' : '#F87171'}]}>{isOn ? 'HAREKETLİ' : 'DURAN'}</Text>
                                         </View>
                                     </View>
                                 </TouchableOpacity>
@@ -297,72 +316,64 @@ export default function TrackingScreen({ navigation }) {
 }
 
 const s = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFFFFF' },
-    center: { flex: 1, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', padding: 24 },
-    errorTitle: { fontSize: 20, fontWeight: '800', color: '#1E293B', marginTop: 16, marginBottom: 8 },
-    errorDesc: { fontSize: 14, color: '#64748B', textAlign: 'center', marginBottom: 24 },
-    backBtn: { paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#3B82F6', borderRadius: 12 },
+    container: { flex: 1, backgroundColor: '#111827' },
+    center: { flex: 1, backgroundColor: '#111827', alignItems: 'center', justifyContent: 'center', padding: 24 },
+    errorTitle: { fontSize: 22, fontWeight: '800', color: '#F3F4F6', marginTop: 16, marginBottom: 8 },
+    errorDesc: { fontSize: 14, color: '#9CA3AF', textAlign: 'center', marginBottom: 24 },
+    backBtn: { paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#6366F1', borderRadius: 12 },
     backBtnText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
 
-    // Harita Nokta İkonları
-    dotMarkerOuter: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 2 },
-    dotOuterOn: { backgroundColor: 'rgba(16, 185, 129, 0.2)', borderColor: 'rgba(16, 185, 129, 0.4)' },
-    dotOuterOff: { backgroundColor: 'rgba(239, 68, 68, 0.2)', borderColor: 'rgba(239, 68, 68, 0.4)' },
-    dotOuterSelected: { width: 36, height: 36, borderRadius: 18, borderWidth: 3, borderColor: '#3B82F6' },
-    dotMarkerInner: { width: 12, height: 12, borderRadius: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3 },
-    dotInnerOn: { backgroundColor: '#10B981' },
-    dotInnerOff: { backgroundColor: '#EF4444' },
+    // Markers
+    markerWrap: { alignItems: 'center', justifyContent: 'center' },
+    pulsingCircle: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(17, 24, 39, 0.4)' },
+    markerCore: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 5 },
+    markerLabel: { marginTop: 4, backgroundColor: 'rgba(17, 24, 39, 0.8)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#374151' },
+    markerPlate: { color: '#F9FAFB', fontSize: 10, fontWeight: '800' },
 
-    // Üst Kısım
-    topContainer: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, paddingBottom: 10 },
-    headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 16 },
-    iconBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
+    // Header Blur
+    topContainer: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 },
+    headerBlur: { borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.05)' },
+    headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10 },
+    glassBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255, 255, 255, 0.1)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)' },
     
-    headerTitleWrap: { flex: 1, paddingHorizontal: 12 },
-    titleGroup: { flexDirection: 'row', alignItems: 'center' },
-    titleLine: { width: 4, height: 36, backgroundColor: '#8B5CF6', borderRadius: 2, marginRight: 10 },
-    headerTitle: { fontSize: 22, fontWeight: '900', color: '#1E293B', letterSpacing: -0.5 },
-    headerSubWrap: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-    liveDotSmall: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981', marginRight: 6 },
-    headerSub: { fontSize: 9, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5 },
+    headerTitleWrap: { flex: 1, alignItems: 'center' },
+    headerTitle: { fontSize: 18, fontWeight: '800', color: '#FFF', letterSpacing: 0.5 },
+    headerSubWrap: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+    liveIndicator: { width: 8, height: 8, borderRadius: 4, marginRight: 6, shadowColor: '#10B981', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 4 },
+    headerSub: { fontSize: 11, fontWeight: '600', color: '#9CA3AF' },
 
-    statsScroll: { paddingHorizontal: 16, gap: 12, paddingBottom: 16 },
-    statCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', padding: 12, borderRadius: 16, minWidth: 140, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-    statIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-    liveDotLarge: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#10B981', borderWidth: 3, borderColor: '#A7F3D0' },
-    statLabel: { fontSize: 9, fontWeight: '800', color: '#94A3B8', letterSpacing: 1, marginBottom: 2 },
-    statValue: { fontSize: 15, fontWeight: '900', color: '#1E293B' },
+    statsContainer: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', marginTop: 10, paddingHorizontal: 10 },
+    statBox: { alignItems: 'center', flex: 1 },
+    statBoxDivider: { width: 1, height: 24, backgroundColor: 'rgba(255, 255, 255, 0.1)' },
+    statValText: { fontSize: 16, fontWeight: '800', color: '#FFF' },
+    statLblText: { fontSize: 10, color: '#9CA3AF', marginTop: 2, fontWeight: '600', letterSpacing: 0.5 },
 
-    actionRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 12, justifyContent: 'flex-end' },
-    primaryBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#4F46E5', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20 },
-    primaryBtnText: { color: '#FFF', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
-    secondaryBtn: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#0F172A', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20 },
-    secondaryBtnText: { color: '#FFF', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+    // FAB
+    fabContainer: { position: 'absolute', right: 16, bottom: height * 0.45 + 16, zIndex: 9 },
+    fabBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(17, 24, 39, 0.8)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4 },
 
-    // Bottom Sheet (Araç Listesi)
+    // Bottom Sheet (Glassmorphism)
     bottomSheet: {
         position: 'absolute',
         bottom: 0, left: 0, right: 0,
         height: height * 0.45,
-        backgroundColor: '#FFFFFF',
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -10 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-        elevation: 20,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.05)',
+        borderBottomWidth: 0
     },
-    sheetHandleWrap: { alignItems: 'center', width: '100%' },
+    sheetHandleWrap: { alignItems: 'center', width: '100%', paddingTop: 10 },
     sheetHandleClickArea: { width: 100, height: 30, alignItems: 'center', justifyContent: 'center' },
-    sheetHandle: { width: 40, height: 5, borderRadius: 3, backgroundColor: '#E2E8F0' },
+    sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: 'rgba(255, 255, 255, 0.3)' },
     
-    sheetHeader: { paddingHorizontal: 24, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-    sheetTitle: { fontSize: 18, fontWeight: '900', color: '#1E293B' },
-    sheetSub: { fontSize: 11, color: '#94A3B8', marginTop: 4, fontWeight: '600' },
+    sheetHeader: { paddingHorizontal: 24, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.05)' },
+    sheetTitle: { fontSize: 18, fontWeight: '800', color: '#FFF' },
+    sheetSub: { fontSize: 11, color: '#9CA3AF', marginTop: 4, fontWeight: '500' },
 
     sheetScroll: { flex: 1 },
-    noDataText: { textAlign: 'center', color: '#94A3B8', marginTop: 24, fontSize: 13 },
+    noDataText: { textAlign: 'center', color: '#6B7280', marginTop: 24, fontSize: 13 },
     
     vehicleCard: {
         flexDirection: 'row',
@@ -370,18 +381,18 @@ const s = StyleSheet.create({
         paddingVertical: 16,
         paddingHorizontal: 24,
         borderBottomWidth: 1,
-        borderBottomColor: '#F8FAFC',
+        borderBottomColor: 'rgba(255, 255, 255, 0.03)',
     },
-    vehicleCardSelected: { backgroundColor: '#F0FDF4' },
+    vehicleCardSelected: { backgroundColor: 'rgba(255, 255, 255, 0.05)' },
     
-    vIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 16 },
+    vIconWrap: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginRight: 16, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)' },
     vInfo: { flex: 1 },
-    vPlate: { fontSize: 15, fontWeight: '800', color: '#1E293B', marginBottom: 4 },
-    vDriver: { fontSize: 11, color: '#64748B', fontWeight: '500' },
+    vPlate: { fontSize: 15, fontWeight: '700', color: '#FFF', marginBottom: 4 },
+    vDriver: { fontSize: 12, color: '#9CA3AF', fontWeight: '500' },
 
     vSpeedWrap: { alignItems: 'flex-end' },
-    vSpeed: { fontSize: 16, fontWeight: '900' },
+    vSpeed: { fontSize: 18, fontWeight: '800' },
     vStatusWrap: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-    statusDotSmall: { width: 6, height: 6, borderRadius: 3, marginRight: 4 },
-    vStatus: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }
+    statusDotSmall: { width: 6, height: 6, borderRadius: 3, marginRight: 4, shadowColor: '#10B981', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 2 },
+    vStatus: { fontSize: 9, fontWeight: '700', letterSpacing: 0.5 }
 });

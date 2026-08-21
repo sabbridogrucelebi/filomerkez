@@ -163,6 +163,51 @@
             </div>
         </div>
 
+        <div class="rounded-[30px] border border-slate-200 bg-white shadow-sm overflow-hidden relative">
+            <div class="absolute top-0 right-0 -mt-10 -mr-10 opacity-10">
+                <svg width="120" height="120" viewBox="0 0 24 24" fill="currentColor" class="text-indigo-600"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            </div>
+            <div class="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-indigo-50/80 to-blue-50/80 relative z-10">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800">Araç Takip Sistemi (GPS)</h3>
+                        <p class="text-sm text-slate-500 mt-0.5">Canlı izleme ve hız kontrolleri için cihaza ait 15 haneli numarayı girin</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5 relative z-10">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Cihaz IMEI Numarası</label>
+                    <div class="relative">
+                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                            <span class="text-slate-400 font-mono text-sm">#</span>
+                        </div>
+                        <input type="text" name="device_imei" value="{{ old('device_imei', $vehicle->device_imei) }}"
+                            class="w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-4 py-3 text-slate-800 font-mono shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 outline-none transition"
+                            placeholder="Örn: 861234567890123" maxlength="20">
+                    </div>
+                    @error('device_imei')
+                        <p class="text-red-600 text-xs mt-2">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div class="flex items-center">
+                    <div class="rounded-2xl bg-indigo-50 border border-indigo-100 p-4 text-sm text-indigo-800 w-full flex items-start gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p>IMEI numarasını kaydederek bu aracın saniye saniye canlı konumunu izleyebilir, hız ihlallerini ve kontak açılış kapanış anlarını raporlayabilirsiniz.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="rounded-[30px] border border-slate-200 bg-white shadow-sm overflow-hidden">
             <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/70">
                 <h3 class="text-lg font-bold text-slate-800">Ruhsat ve Sahip Bilgileri</h3>
