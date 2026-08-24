@@ -158,6 +158,7 @@
     <script>
         let map;
         let markers = {};
+        let isFirstLoad = true;
         const allVehicles = @json($vehicles);
 
         document.addEventListener("DOMContentLoaded", function() {
@@ -167,8 +168,9 @@
         });
 
         function initMap() {
-            const defaultCenter = [39.9334, 32.8597];
-            map = L.map('map', { zoomControl: false }).setView(defaultCenter, 6);
+            // Varsayılan Merkez: Konya
+            const defaultCenter = [37.8746, 32.4932];
+            map = L.map('map', { zoomControl: false }).setView(defaultCenter, 11);
 
             // Arvento benzeri premium, sade ve temiz yol haritası (CartoDB Voyager)
             L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -189,11 +191,13 @@
         }
 
         function renderVehicles(liveData) {
+            let bounds = [];
             liveData.forEach(vehicle => {
                 if (vehicle.Latitude && vehicle.Longitude) {
                     const lat = parseFloat(vehicle.Latitude);
                     const lng = parseFloat(vehicle.Longitude);
                     const isMoving = vehicle.Speed > 0;
+                    bounds.push([lat, lng]);
                     
                     const popupContent = `
                         <div style="font-family: sans-serif; min-width: 160px; padding: 2px;">
@@ -219,6 +223,12 @@
                     }
                 }
             });
+
+            // İlk yüklemede haritayı araçların olduğu bölgeye otomatik yakınlaştır
+            if (isFirstLoad && bounds.length > 0) {
+                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+                isFirstLoad = false;
+            }
         }
 
         function updateSidebarList(liveData) {
