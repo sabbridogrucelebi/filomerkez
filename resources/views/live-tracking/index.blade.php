@@ -64,6 +64,7 @@
             </div>
         </div>
         
+    <div class="absolute top-4 left-24 right-4 z-10 flex justify-end items-center pointer-events-none">
         <div class="flex items-center gap-3 pointer-events-auto">
             @if(session('success'))
                 <div class="glass-panel px-4 py-2 rounded-xl text-emerald-600 font-bold text-xs flex items-center gap-2 border-emerald-200 shadow-lg animate-bounce">
@@ -77,57 +78,72 @@
         </div>
     </div>
 
-    <!-- Açılır/Kapanır Sol Sidebar (Premium 3D) -->
-    <div id="leftSidebar" class="absolute top-24 bottom-4 left-4 z-[20] w-20 hover:w-72 transition-all duration-300 ease-in-out flex flex-col pointer-events-none group">
+    <!-- Ultra Premium Full-Height Sidebar -->
+    <div id="premiumSidebar" class="absolute top-0 bottom-0 left-0 z-[1000] w-[88px] hover:w-[320px] bg-white/70 backdrop-blur-3xl border-r border-white/60 shadow-[20px_0_40px_rgba(0,0,0,0.03)] transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] flex flex-col group overflow-hidden">
         
-        <!-- Sidebar Ana Kutu -->
-        <div class="h-full w-full bg-white/80 backdrop-blur-xl rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.1),_inset_0_2px_0_rgba(255,255,255,1),_inset_0_-2px_0_rgba(0,0,0,0.05)] border border-white flex flex-col overflow-hidden pointer-events-auto transition-all duration-300">
+        <!-- Üst Kısım: Logo ve Başlık -->
+        <div class="h-24 flex items-center px-6 border-b border-slate-200/50 shrink-0">
+            <div class="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 shadow-[0_8px_16px_rgba(79,70,229,0.3)] shrink-0 transition-transform duration-500 group-hover:rotate-3 group-hover:scale-105">
+                <span class="text-white font-black text-sm tracking-tighter">FM</span>
+                <div class="absolute -right-1 -top-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white shadow-sm"></div>
+            </div>
+            <div class="ml-5 flex flex-col opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100 whitespace-nowrap">
+                <h1 class="text-xl font-black text-slate-800 tracking-tight leading-none mb-1">FiloMerkez</h1>
+                <p class="text-[10px] font-extrabold text-indigo-500 uppercase tracking-[0.2em]">Premium Takip</p>
+            </div>
+        </div>
+
+        <!-- Ana Menü -->
+        <div class="flex-1 py-8 px-4 flex flex-col gap-2 overflow-y-auto custom-scrollbar">
             
-            <!-- Logo / Üst Kısım -->
-            <div class="h-20 flex items-center px-6 border-b border-slate-100/50">
-                <div class="min-w-[32px] h-8 w-8 rounded-xl bg-indigo-600 shadow-[0_4px_15px_rgba(79,70,229,0.4),_inset_0_2px_0_rgba(255,255,255,0.2)] flex items-center justify-center text-white font-black text-sm transition-all group-hover:scale-110">
-                    FM
+            <!-- Canlı Harita (Aktif) -->
+            <button class="relative w-full flex items-center px-4 py-4 rounded-2xl bg-indigo-50 text-indigo-700 transition-all duration-300 group/menuitem overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-r from-indigo-100/50 to-transparent opacity-0 group-hover/menuitem:opacity-100 transition-opacity"></div>
+                <div class="relative flex items-center justify-center min-w-[24px] shrink-0">
+                    <svg class="w-6 h-6 drop-shadow-sm" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
                 </div>
-                <div class="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
-                    <h2 class="text-sm font-black text-slate-800">Filo Yönetimi</h2>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Araç Takip Sistemi</p>
+                <div class="ml-6 flex flex-col text-left opacity-0 group-hover:opacity-100 transition-opacity duration-500 whitespace-nowrap">
+                    <span class="text-sm font-black tracking-wide">Canlı Harita</span>
+                    <span class="text-[10px] font-bold text-indigo-400/80 mt-0.5">Tüm filoyu anlık izle</span>
                 </div>
-            </div>
+                <!-- Aktif İndikatör -->
+                <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-indigo-600 rounded-r-full shadow-[0_0_8px_rgba(79,70,229,0.6)]"></div>
+            </button>
 
-            <!-- Menü Öğeleri -->
-            <div class="flex-1 py-6 px-4 space-y-2 overflow-y-auto custom-scrollbar">
-                
-                <!-- Canlı İzleme (Aktif) -->
-                <a href="#" class="flex items-center px-2 py-3 rounded-2xl bg-slate-100/50 text-indigo-600 transition-all hover:bg-white hover:shadow-md cursor-pointer group/item">
-                    <div class="min-w-[40px] flex justify-center">
-                        <svg class="w-6 h-6 drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
-                    </div>
-                    <span class="ml-2 text-sm font-black opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Canlı Harita</span>
-                </a>
+            <!-- Tanımlamalar -->
+            <button onclick="alert('Tanımlamalar arayüzü eklenecek')" class="relative w-full flex items-center px-4 py-4 rounded-2xl text-slate-500 hover:text-slate-800 hover:bg-white hover:shadow-[0_8px_20px_rgba(0,0,0,0.04)] transition-all duration-300 group/menuitem overflow-hidden mt-2">
+                <div class="relative flex items-center justify-center min-w-[24px] shrink-0 group-hover/menuitem:scale-110 transition-transform">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                </div>
+                <div class="ml-6 flex flex-col text-left opacity-0 group-hover:opacity-100 transition-opacity duration-500 whitespace-nowrap">
+                    <span class="text-sm font-black tracking-wide">Cihaz Tanımlamaları</span>
+                    <span class="text-[10px] font-bold text-slate-400 mt-0.5">IMEI ve Araç eşleştirme</span>
+                </div>
+            </button>
 
-                <!-- Tanımlamalar -->
-                <a href="#" class="flex items-center px-2 py-3 rounded-2xl text-slate-500 transition-all hover:bg-white hover:shadow-md hover:text-slate-800 cursor-pointer group/item mt-2">
-                    <div class="min-w-[40px] flex justify-center">
-                        <svg class="w-6 h-6 drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                    </div>
-                    <span class="ml-2 text-sm font-black opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Tanımlamalar</span>
-                </a>
+        </div>
 
-            </div>
-
-            <!-- Alt Durum Bilgisi (Sadece Hover'da) -->
-            <div class="p-6 border-t border-slate-100/50 bg-slate-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-xs font-bold text-slate-500">Sistem Durumu</span>
-                    <span class="flex h-2 w-2 relative">
+        <!-- Alt Durum Kutusu -->
+        <div class="px-6 pb-8 pt-4 shrink-0">
+            <div class="p-4 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/50 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 whitespace-nowrap transform translate-y-4 group-hover:translate-y-0">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-bold text-slate-300">Sunucu Bağlantısı</span>
+                    <span class="flex h-2.5 w-2.5 relative">
                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                     </span>
                 </div>
-                <div class="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
-                    <div class="h-full bg-emerald-500 w-full"></div>
+                <div class="h-1.5 w-full bg-slate-700/50 rounded-full overflow-hidden mb-2">
+                    <div class="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 w-full animate-pulse"></div>
                 </div>
-                <p class="text-[10px] text-slate-400 font-bold mt-2 text-center uppercase tracking-wider">Senkronize</p>
+                <p class="text-[10px] text-emerald-400/80 font-black tracking-widest uppercase">TCP Canlı Akış Aktif</p>
+            </div>
+            <!-- Kapalı Haldeki Status Noktası -->
+            <div class="absolute bottom-10 left-0 right-0 flex justify-center group-hover:opacity-0 transition-opacity duration-300">
+                <span class="flex h-3 w-3 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></span>
+                </span>
             </div>
         </div>
     </div>
