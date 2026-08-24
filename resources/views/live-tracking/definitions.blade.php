@@ -68,7 +68,7 @@
 <body class="h-screen w-screen overflow-hidden bg-slate-50 font-sans antialiased text-slate-800 flex">
 
     <!-- Mavi Premium Full-Height Sidebar -->
-    <div style="width: 280px; background: linear-gradient(to bottom, #4338ca, #1e40af); border-right: 1px solid rgba(99,102,241,0.4); box-shadow: 6px 0 30px rgba(30,58,138,0.15);" class="flex flex-col overflow-hidden shrink-0">
+    <div style="width: 280px; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-right: 1px solid rgba(255,255,255,0.1); box-shadow: 6px 0 30px rgba(0,0,0,0.2);" class="flex flex-col overflow-hidden shrink-0">
         
         <!-- Üst Kısım: Logo -->
         <div style="height:80px; display:flex; align-items:center; padding:0 24px; border-bottom:1px solid rgba(99,102,241,0.2); flex-shrink:0;">

@@ -45,9 +45,11 @@
         /* Sidebar Intro Animation */
         #blueSidebar {
             width: 280px;
-            background: linear-gradient(to bottom, #4338ca, #1e40af);
-            border-right: 1px solid rgba(99,102,241,0.4);
-            box-shadow: 6px 0 30px rgba(30,58,138,0.15);
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 6px 0 30px rgba(0,0,0,0.2);
             transition: transform 0.8s cubic-bezier(0.2,0.8,0.2,1);
         }
         #blueSidebar.sidebar-hidden {
@@ -59,10 +61,11 @@
 
         /* Navbar */
         #topNavbar {
-            background: linear-gradient(135deg, #4338ca, #1e40af);
-            border: 1px solid rgba(99,102,241,0.3);
-            box-shadow: 0 8px 32px rgba(30,58,138,0.2);
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
             backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             transition: transform 0.6s cubic-bezier(0.2,0.8,0.2,1), opacity 0.6s ease;
         }
         #topNavbar.navbar-hidden {
@@ -213,13 +216,13 @@
             </button>
 
             <!-- Tanımlamalar -->
-            <button class="sidebar-item" onclick="alert('Tanımlamalar arayüzü eklenecek')">
+            <a href="{{ route('vehicle-tracking.definitions') }}" class="sidebar-item" style="position:relative; text-decoration:none;">
                 <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                 <div class="item-text">
                     <span>Cihaz Tanımlamaları</span>
                     <span>IMEI ve Araç eşleştirme</span>
                 </div>
-            </button>
+            </a>
 
         </div>
 
@@ -293,7 +296,7 @@
             fetchData();
             setInterval(fetchData, 3000);
 
-            // 5 saniye intro animasyonu: sidebar ve navbar kayarak gelir
+            // Başlangıçta sidebar ve navbar gelsin
             setTimeout(function() {
                 document.getElementById('blueSidebar').classList.remove('sidebar-hidden');
                 document.getElementById('blueSidebar').classList.add('sidebar-visible');
@@ -302,6 +305,27 @@
                 document.getElementById('topNavbar').classList.remove('navbar-hidden');
                 document.getElementById('topNavbar').classList.add('navbar-visible');
             }, 800);
+
+            // 5 saniye sonra gizle (Eğer üzerine gelinmezse)
+            let hideTimeout;
+            
+            function resetHideTimer() {
+                clearTimeout(hideTimeout);
+                document.getElementById('blueSidebar').classList.remove('sidebar-hidden');
+                document.getElementById('blueSidebar').classList.add('sidebar-visible');
+                
+                hideTimeout = setTimeout(() => {
+                    document.getElementById('blueSidebar').classList.remove('sidebar-visible');
+                    document.getElementById('blueSidebar').classList.add('sidebar-hidden');
+                }, 5000);
+            }
+
+            // Mouse hareketinde sayacı sıfırla (sadece sidebar alanı veya harita geneli)
+            document.addEventListener('mousemove', resetHideTimer);
+            document.addEventListener('click', resetHideTimer);
+            
+            // İlk sayacı başlat
+            resetHideTimer();
         });
 
         function initMap() {
