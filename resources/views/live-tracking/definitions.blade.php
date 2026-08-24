@@ -9,6 +9,18 @@
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
         
+        /* Premium 3D Glassmorphism - Sidebar Intro Animation */
+        #blueSidebar {
+            width: 280px;
+            background: linear-gradient(145deg, rgba(30, 58, 138, 0.8), rgba(15, 23, 42, 0.9));
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border-right: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.05), 10px 0 30px rgba(0, 0, 0, 0.4);
+            transition: transform 0.8s cubic-bezier(0.2,0.8,0.2,1);
+        }
+
+        /* 3D Sidebar Menu Item */
         .sidebar-item {
             display: flex;
             align-items: center;
@@ -18,40 +30,50 @@
             color: rgba(199,210,254,0.9);
             font-weight: 800;
             font-size: 14px;
-            transition: all 0.25s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
-            border: none;
-            background: none;
+            border: 1px solid transparent;
+            background: transparent;
             width: 100%;
             text-align: left;
             text-decoration: none;
         }
         .sidebar-item:hover {
-            background: rgba(255,255,255,0.08);
+            background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
             color: white;
+            transform: translateX(4px);
         }
         .sidebar-item.active {
-            background: rgba(255,255,255,0.12);
+            background: linear-gradient(145deg, rgba(99, 102, 241, 0.2), rgba(67, 56, 202, 0.1));
             color: white;
-            border: 1px solid rgba(255,255,255,0.15);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.1);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            box-shadow: inset 0 2px 4px rgba(255,255,255,0.1), 0 8px 20px rgba(0,0,0,0.3);
+            transform: scale(1.02);
         }
         .sidebar-item.active::before {
             content: '';
             position: absolute;
-            left: 0;
+            left: -4px;
             top: 50%;
             transform: translateY(-50%);
-            width: 4px;
-            height: 28px;
-            background: white;
-            border-radius: 0 4px 4px 0;
-            box-shadow: 0 0 12px rgba(255,255,255,0.6);
+            width: 8px;
+            height: 32px;
+            background: linear-gradient(180deg, #818cf8, #4338ca);
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 0 15px rgba(129, 140, 248, 0.8);
         }
         .sidebar-item svg {
-            width: 22px;
-            height: 22px;
+            width: 26px;
+            height: 26px;
             flex-shrink: 0;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+            transition: all 0.3s ease;
+        }
+        .sidebar-item:hover svg, .sidebar-item.active svg {
+            color: #818cf8;
+            transform: scale(1.1) rotate(-5deg);
         }
         .sidebar-item .item-text {
             display: flex;
@@ -68,7 +90,7 @@
 <body class="h-screen w-screen overflow-hidden bg-slate-50 font-sans antialiased text-slate-800 flex">
 
     <!-- Mavi Premium Full-Height Sidebar -->
-    <div style="width: 280px; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-right: 1px solid rgba(255,255,255,0.1); box-shadow: 6px 0 30px rgba(0,0,0,0.2);" class="flex flex-col overflow-hidden shrink-0">
+    <div id="blueSidebar" class="flex flex-col overflow-hidden shrink-0">
         
         <!-- Üst Kısım: Logo -->
         <div style="height:80px; display:flex; align-items:center; padding:0 24px; border-bottom:1px solid rgba(99,102,241,0.2); flex-shrink:0;">

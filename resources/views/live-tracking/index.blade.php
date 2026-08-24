@@ -42,14 +42,14 @@
         }
         .custom-vehicle-tooltip::before { display: none !important; }
 
-        /* Sidebar Intro Animation */
+        /* Premium 3D Glassmorphism - Sidebar Intro Animation */
         #blueSidebar {
             width: 280px;
-            background: rgba(15, 23, 42, 0.4);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-right: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 6px 0 30px rgba(0,0,0,0.2);
+            background: linear-gradient(145deg, rgba(30, 58, 138, 0.8), rgba(15, 23, 42, 0.9));
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border-right: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.05), 10px 0 30px rgba(0, 0, 0, 0.4);
             transition: transform 0.8s cubic-bezier(0.2,0.8,0.2,1);
         }
         #blueSidebar.sidebar-hidden {
@@ -59,13 +59,13 @@
             transform: translateX(0);
         }
 
-        /* Navbar */
+        /* Premium 3D Glassmorphism - Navbar */
         #topNavbar {
-            background: rgba(15, 23, 42, 0.4);
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            background: linear-gradient(145deg, rgba(30, 58, 138, 0.8), rgba(15, 23, 42, 0.9));
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.05), 0 10px 30px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
             transition: transform 0.6s cubic-bezier(0.2,0.8,0.2,1), opacity 0.6s ease;
         }
         #topNavbar.navbar-hidden {
@@ -77,34 +77,36 @@
             opacity: 1;
         }
 
-        /* 3D Button */
+        /* Premium 3D Button */
         .btn-3d {
             position: relative;
-            background: rgba(255,255,255,0.15);
-            border: 1px solid rgba(255,255,255,0.25);
+            background: linear-gradient(145deg, rgba(99, 102, 241, 0.9), rgba(67, 56, 202, 0.9));
+            border: 1px solid rgba(255, 255, 255, 0.25);
             border-radius: 14px;
             color: white;
-            font-weight: 800;
+            font-weight: 900;
             font-size: 13px;
             padding: 10px 18px;
             cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 0 rgba(0,0,0,0.15), 0 6px 20px rgba(0,0,0,0.1);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.3), 0 6px 0 #1e1b4b, 0 12px 20px rgba(0, 0, 0, 0.4);
             text-decoration: none;
             display: flex;
             align-items: center;
             gap: 8px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
         .btn-3d:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 0 rgba(0,0,0,0.15), 0 10px 30px rgba(0,0,0,0.15);
+            box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.4), 0 8px 0 #1e1b4b, 0 16px 25px rgba(0, 0, 0, 0.5);
+            background: linear-gradient(145deg, rgba(129, 140, 248, 0.95), rgba(79, 70, 229, 0.95));
         }
         .btn-3d:active {
-            transform: translateY(2px);
-            box-shadow: 0 1px 0 rgba(0,0,0,0.15);
+            transform: translateY(4px);
+            box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.1), 0 2px 0 #1e1b4b, 0 4px 10px rgba(0, 0, 0, 0.3);
         }
 
-        /* Sidebar Menu Item */
+        /* 3D Sidebar Menu Item */
         .sidebar-item {
             display: flex;
             align-items: center;
@@ -114,39 +116,49 @@
             color: rgba(199,210,254,0.9);
             font-weight: 800;
             font-size: 14px;
-            transition: all 0.25s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
-            border: none;
-            background: none;
+            border: 1px solid transparent;
+            background: transparent;
             width: 100%;
             text-align: left;
         }
         .sidebar-item:hover {
-            background: rgba(255,255,255,0.08);
+            background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
             color: white;
+            transform: translateX(4px);
         }
         .sidebar-item.active {
-            background: rgba(255,255,255,0.12);
+            background: linear-gradient(145deg, rgba(99, 102, 241, 0.2), rgba(67, 56, 202, 0.1));
             color: white;
-            border: 1px solid rgba(255,255,255,0.15);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.1);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            box-shadow: inset 0 2px 4px rgba(255,255,255,0.1), 0 8px 20px rgba(0,0,0,0.3);
+            transform: scale(1.02);
         }
         .sidebar-item.active::before {
             content: '';
             position: absolute;
-            left: 0;
+            left: -4px;
             top: 50%;
             transform: translateY(-50%);
-            width: 4px;
-            height: 28px;
-            background: white;
-            border-radius: 0 4px 4px 0;
-            box-shadow: 0 0 12px rgba(255,255,255,0.6);
+            width: 8px;
+            height: 32px;
+            background: linear-gradient(180deg, #818cf8, #4338ca);
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 0 15px rgba(129, 140, 248, 0.8);
         }
         .sidebar-item svg {
-            width: 22px;
-            height: 22px;
+            width: 26px;
+            height: 26px;
             flex-shrink: 0;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+            transition: all 0.3s ease;
+        }
+        .sidebar-item:hover svg, .sidebar-item.active svg {
+            color: #818cf8;
+            transform: scale(1.1) rotate(-5deg);
         }
         .sidebar-item .item-text {
             display: flex;
