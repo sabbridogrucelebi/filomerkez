@@ -43,7 +43,7 @@ class LiveTrackingController extends Controller
             if ($lastLocation) {
                 $liveData[] = [
                     'Node' => $vehicle->id,
-                    'LicensePlate' => $vehicle->license_plate,
+                    'LicensePlate' => $vehicle->plate,
                     'Latitude' => $lastLocation->latitude,
                     'Longitude' => $lastLocation->longitude,
                     'Speed' => $lastLocation->speed,
@@ -54,7 +54,7 @@ class LiveTrackingController extends Controller
             } else {
                 $liveData[] = [
                     'Node' => $vehicle->id,
-                    'LicensePlate' => $vehicle->license_plate,
+                    'LicensePlate' => $vehicle->plate,
                     'Latitude' => null,
                     'Longitude' => null,
                     'Speed' => 0,

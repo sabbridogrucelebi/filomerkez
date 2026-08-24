@@ -170,8 +170,8 @@
             const defaultCenter = [39.9334, 32.8597];
             map = L.map('map', { zoomControl: false }).setView(defaultCenter, 6);
 
-            // Google Maps Hybrid Katmanı (Premium Görünüm)
-            L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            // Google Maps Standart Yol Haritası (Sokaklar ve trafik görünümü)
+            L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
                 maxZoom: 20,
                 attribution: '© Google Maps'
             }).addTo(map);
@@ -238,7 +238,7 @@
                             <div class="flex items-center gap-3">
                                 <div class="w-2 h-10 rounded-full ${isMoving ? 'bg-emerald-500' : 'bg-rose-500'} shadow-sm"></div>
                                 <div>
-                                    <h4 class="font-black text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">${v.license_plate}</h4>
+                                    <h4 class="font-black text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">${v.plate}</h4>
                                     <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">${isMoving ? 'HAREKETLİ' : 'DURAN'}</p>
                                 </div>
                             </div>
@@ -252,10 +252,10 @@
                     html += `
                         <div class="bg-slate-50/50 p-3 rounded-2xl border border-slate-100 flex justify-between items-center opacity-80 hover:opacity-100 transition-all">
                             <div>
-                                <h4 class="font-black text-slate-600 text-sm">${v.license_plate}</h4>
+                                <h4 class="font-black text-slate-600 text-sm">${v.plate}</h4>
                                 <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">CİHAZ YOK</p>
                             </div>
-                            <button onclick="openImeiModal(${v.id}, '${v.license_plate}', '${v.device_imei || ''}')" class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-[10px] font-black text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all shadow-sm">
+                            <button onclick="openImeiModal(${v.id}, '${v.plate}', '${v.device_imei || ''}')" class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-[10px] font-black text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all shadow-sm">
                                 IMEI EKLE
                             </button>
                         </div>
