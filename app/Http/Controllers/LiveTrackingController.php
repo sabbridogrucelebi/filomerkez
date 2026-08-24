@@ -96,13 +96,17 @@ class LiveTrackingController extends Controller
 
         $companyId = auth()->user()->company_id;
 
-        $vehicles = Vehicle::where('company_id', $companyId)->orderBy('plate')->get();
+        $vehiclesWithDevice = Vehicle::where('company_id', $companyId)->whereNotNull('device_imei')->where('device_imei', '!=', '')->orderBy('plate')->get();
+        $vehiclesWithoutDevice = Vehicle::where('company_id', $companyId)->where(function($q) {
+            $q->whereNull('device_imei')->orWhere('device_imei', '');
+        })->orderBy('plate')->get();
+
         $alarms = VehicleAlarm::where('company_id', $companyId)->with('vehicle')->get();
         $geofences = Geofence::where('company_id', $companyId)->get();
         $schedules = WorkSchedule::where('company_id', $companyId)->get();
 
         // Her aracın son sinyal zamanını hesapla
-        foreach ($vehicles as $vehicle) {
+        foreach ($vehiclesWithDevice as $vehicle) {
             $lastLoc = VehicleLocation::where('vehicle_id', $vehicle->id)
                 ->orderBy('recorded_at', 'desc')
                 ->first();
@@ -110,7 +114,7 @@ class LiveTrackingController extends Controller
             $vehicle->device_status = $this->getDeviceStatus($vehicle, $lastLoc);
         }
 
-        return view('live-tracking.definitions', compact('vehicles', 'alarms', 'geofences', 'schedules'));
+        return view('live-tracking.definitions', compact('vehiclesWithDevice', 'vehiclesWithoutDevice', 'alarms', 'geofences', 'schedules'));
     }
 
     private function getDeviceStatus(Vehicle $vehicle, $lastLocation): string

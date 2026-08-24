@@ -165,27 +165,33 @@
             <div id="tab-content-vehicles" class="space-y-6">
                 <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
                     <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-lg font-black text-slate-800">Cihaz Atamaları</h3>
-                        <p class="text-xs font-bold text-slate-400">Toplam {{ $vehicles->count() }} araç</p>
+                        <div>
+                            <h3 class="text-lg font-black text-slate-800">Cihaz Atamaları</h3>
+                            <p class="text-xs font-bold text-slate-400 mt-1">Sistemde cihaz takılı {{ $vehiclesWithDevice->count() }} araç bulunuyor.</p>
+                        </div>
+                        <button onclick="openImeiModal()" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-black hover:bg-indigo-700 transition shadow-lg shadow-indigo-600/30 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                            Yeni Cihaz Tanımla
+                        </button>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        @foreach($vehicles as $v)
-                        <div class="p-4 rounded-2xl border {{ $v->device_imei ? 'border-indigo-100 bg-indigo-50/30' : 'border-slate-100 bg-slate-50' }} flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden group">
+                        @forelse($vehiclesWithDevice as $v)
+                        <div class="p-5 rounded-2xl border border-indigo-100 bg-indigo-50/20 flex flex-col justify-between hover:shadow-lg transition-all duration-300 relative overflow-hidden group">
                             
                             <!-- Durum Göstergesi -->
                             @if($v->device_status === 'online')
-                                <div class="absolute top-4 right-4 flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black">
+                                <div class="absolute top-4 right-4 flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black shadow-sm">
                                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                                     ONLINE
                                 </div>
                             @elseif($v->device_status === 'offline')
-                                <div class="absolute top-4 right-4 flex items-center gap-1.5 px-2 py-1 rounded-full bg-rose-100 text-rose-700 text-[10px] font-black">
+                                <div class="absolute top-4 right-4 flex items-center gap-1.5 px-2 py-1 rounded-full bg-rose-100 text-rose-700 text-[10px] font-black shadow-sm">
                                     <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                                     OFFLINE
                                 </div>
                             @elseif($v->device_status === 'never')
-                                <div class="absolute top-4 right-4 flex items-center gap-1.5 px-2 py-1 rounded-full bg-slate-200 text-slate-600 text-[10px] font-black">
+                                <div class="absolute top-4 right-4 flex items-center gap-1.5 px-2 py-1 rounded-full bg-slate-100 text-slate-600 text-[10px] font-black shadow-sm">
                                     <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
                                     SİNYAL YOK
                                 </div>
@@ -196,21 +202,25 @@
                                 <p class="text-xs font-bold text-slate-500 mt-1">{{ $v->brand }} {{ $v->model }}</p>
                             </div>
 
-                            <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+                            <div class="mt-4 pt-4 border-t border-slate-100/50 flex items-center justify-between">
                                 <div>
                                     <span class="block text-[10px] font-bold text-slate-400 uppercase">Cihaz IMEI</span>
-                                    @if($v->device_imei)
-                                        <span class="text-sm font-black text-indigo-600 font-mono">{{ $v->device_imei }}</span>
-                                    @else
-                                        <span class="text-xs font-bold text-rose-500">Cihaz Yok</span>
-                                    @endif
+                                    <span class="text-sm font-black text-indigo-600 font-mono">{{ $v->device_imei }}</span>
                                 </div>
                                 <button onclick="openImeiModal({{ $v->id }}, '{{ $v->plate }}', '{{ $v->device_imei }}')" class="h-8 w-8 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-200 flex items-center justify-center transition-colors shadow-sm">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                 </button>
                             </div>
                         </div>
-                        @endforeach
+                        @empty
+                        <div class="col-span-full py-12 flex flex-col items-center justify-center text-center">
+                            <div class="w-16 h-16 bg-slate-50 text-slate-300 rounded-2xl flex items-center justify-center mb-4">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                            </div>
+                            <h4 class="text-lg font-black text-slate-700">Kayıtlı Cihaz Yok</h4>
+                            <p class="text-sm text-slate-500 mt-2 font-medium">Sistemde henüz eşleştirilmiş bir cihaz bulunmuyor. Sağ üstteki "Yeni Cihaz Tanımla" butonu ile başlayın.</p>
+                        </div>
+                        @endforelse
                     </div>
                 </div>
             </div>
@@ -314,14 +324,13 @@
     <div id="imeiModal" class="fixed inset-0 z-[2000] hidden flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeImeiModal()"></div>
         <div class="relative bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300" id="imeiModalContent">
-            <form action="{{ route('vehicle-tracking.assign-imei') }}" method="POST">
-                @csrf
-                <input type="hidden" name="vehicle_id" id="modalVehicleId">
-                
+                <!-- Gerçek form datası -->
+                <input type="hidden" name="vehicle_id" id="finalVehicleId">
+
                 <div class="p-8">
                     <div class="flex justify-between items-center mb-6">
                         <div>
-                            <h3 class="text-xl font-black text-slate-800" id="modalVehiclePlate">34 ABC 123</h3>
+                            <h3 class="text-xl font-black text-slate-800" id="modalTitle">Yeni Cihaz Tanımla</h3>
                             <p class="text-xs font-bold text-slate-400 mt-1">Cihaz Eşleştirme</p>
                         </div>
                         <button type="button" onclick="closeImeiModal()" class="h-8 w-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition flex items-center justify-center">
@@ -330,9 +339,28 @@
                     </div>
 
                     <div class="space-y-4">
+                        <!-- Düzenleme Modunda Plaka Gösterimi -->
+                        <div id="modalVehiclePlateWrapper" class="hidden">
+                            <label class="block text-xs font-black uppercase tracking-wider text-slate-600 mb-2">Seçili Araç</label>
+                            <div class="w-full rounded-2xl border border-slate-200 bg-slate-100 px-5 py-4 text-slate-900 font-black text-sm">
+                                <span id="modalVehiclePlateText"></span>
+                            </div>
+                        </div>
+
+                        <!-- Yeni Ekleme Modunda Araç Seçimi -->
+                        <div id="modalVehicleSelectWrapper">
+                            <label class="block text-xs font-black uppercase tracking-wider text-slate-600 mb-2">Eşleştirilecek Araç</label>
+                            <select id="modalVehicleIdSelect" onchange="document.getElementById('finalVehicleId').value = this.value" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-slate-900 font-bold text-sm focus:border-indigo-500 outline-none">
+                                <option value="">Araç Seçiniz...</option>
+                                @foreach($vehiclesWithoutDevice as $v)
+                                    <option value="{{ $v->id }}">{{ $v->plate }} ({{ $v->brand }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+
                         <div>
                             <label class="block text-xs font-black uppercase tracking-wider text-slate-600 mb-2">Cihaz IMEI Numarası</label>
-                            <input type="text" name="device_imei" id="modalDeviceImei" 
+                            <input type="text" name="device_imei" id="modalDeviceImei" required
                                 class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-slate-900 font-mono text-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition outline-none shadow-inner"
                                 placeholder="Örn: 353210110128749">
                         </div>
@@ -369,7 +397,7 @@
                             <label class="block text-xs font-black uppercase text-slate-600 mb-2">Hedef Araç</label>
                             <select name="vehicle_id" required class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-slate-900 font-bold text-sm focus:border-indigo-500 outline-none">
                                 <option value="">Araç Seçiniz...</option>
-                                @foreach($vehicles as $v)
+                                @foreach($vehiclesWithDevice as $v)
                                     <option value="{{ $v->id }}">{{ $v->plate }}</option>
                                 @endforeach
                             </select>
@@ -433,10 +461,37 @@
         }
 
         // Modals
-        function openImeiModal(id, plate, imei) {
-            document.getElementById('modalVehicleId').value = id;
-            document.getElementById('modalVehiclePlate').textContent = plate;
-            document.getElementById('modalDeviceImei').value = imei || '';
+        function openImeiModal(id = null, plate = null, imei = null) {
+            const title = document.getElementById('modalTitle');
+            const plateWrapper = document.getElementById('modalVehiclePlateWrapper');
+            const selectWrapper = document.getElementById('modalVehicleSelectWrapper');
+            const plateText = document.getElementById('modalVehiclePlateText');
+            const idHidden = document.getElementById('finalVehicleId');
+            const idSelect = document.getElementById('modalVehicleIdSelect');
+            const imeiInput = document.getElementById('modalDeviceImei');
+
+            if (id) {
+                // Düzenleme Modu
+                title.textContent = 'Cihaz Düzenle';
+                plateWrapper.classList.remove('hidden');
+                selectWrapper.classList.add('hidden');
+                
+                plateText.textContent = plate;
+                idHidden.value = id;
+                idSelect.removeAttribute('required');
+                idSelect.value = '';
+                imeiInput.value = imei || '';
+            } else {
+                // Yeni Ekleme Modu
+                title.textContent = 'Yeni Cihaz Tanımla';
+                plateWrapper.classList.add('hidden');
+                selectWrapper.classList.remove('hidden');
+                
+                idHidden.value = '';
+                idSelect.setAttribute('required', 'required');
+                idSelect.value = '';
+                imeiInput.value = '';
+            }
             
             const modal = document.getElementById('imeiModal');
             const content = document.getElementById('imeiModalContent');
