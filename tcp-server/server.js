@@ -16,6 +16,9 @@ const server = net.createServer((socket) => {
 
     socket.on('data', async (data) => {
         try {
+            console.log(`[RAW DATA] HEX: ${data.toString('hex')}`);
+            console.log(`[RAW DATA] ASC: ${data.toString('ascii')}`);
+            
             // Hex veriyi parse et
             const parsedPackets = parser.parseConcox(data);
 
