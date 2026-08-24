@@ -170,10 +170,10 @@
             const defaultCenter = [39.9334, 32.8597];
             map = L.map('map', { zoomControl: false }).setView(defaultCenter, 6);
 
-            // Google Maps Standart Yol Haritası (Sokaklar ve trafik görünümü)
-            L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            // Arvento benzeri premium, sade ve temiz yol haritası (CartoDB Voyager)
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                 maxZoom: 20,
-                attribution: '© Google Maps'
+                attribution: '&copy; OpenStreetMap & CARTO'
             }).addTo(map);
 
             L.control.zoom({ position: 'bottomright' }).addTo(map);
