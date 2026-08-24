@@ -77,39 +77,57 @@
         </div>
     </div>
 
-    <!-- Sol Panel (Araç Listesi) -->
-    <div class="absolute top-24 bottom-4 left-4 w-96 z-10 flex flex-col gap-4 pointer-events-none">
+    <!-- Açılır/Kapanır Sol Sidebar (Premium 3D) -->
+    <div id="leftSidebar" class="absolute top-24 bottom-4 left-4 z-[20] w-20 hover:w-72 transition-all duration-300 ease-in-out flex flex-col pointer-events-none group">
         
-        <!-- İstatistikler -->
-        <div class="glass-panel p-5 rounded-3xl shadow-2xl pointer-events-auto">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest">Filo Özeti</h2>
-                <div class="flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100">
-                    <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
-                    <span class="text-[10px] font-black">CANLI</span>
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div class="bg-white/60 rounded-2xl p-4 border border-white">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Hareketli</p>
-                    <p class="text-3xl font-black text-emerald-600" id="movingCount">0</p>
-                </div>
-                <div class="bg-white/60 rounded-2xl p-4 border border-white">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Duran</p>
-                    <p class="text-3xl font-black text-rose-600" id="stoppedCount">0</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Araç Listesi -->
-        <div class="glass-panel rounded-3xl shadow-2xl flex-1 flex flex-col overflow-hidden pointer-events-auto">
-            <div class="p-5 border-b border-white/50 flex justify-between items-center bg-white/40">
-                <h3 class="font-black text-slate-800 text-sm">Tüm Araçlar</h3>
-                <span class="text-xs font-bold text-slate-500 bg-white px-2 py-1 rounded-lg shadow-sm border border-slate-100">{{ count($vehicles) }}</span>
-            </div>
+        <!-- Sidebar Ana Kutu -->
+        <div class="h-full w-full bg-white/80 backdrop-blur-xl rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.1),_inset_0_2px_0_rgba(255,255,255,1),_inset_0_-2px_0_rgba(0,0,0,0.05)] border border-white flex flex-col overflow-hidden pointer-events-auto transition-all duration-300">
             
-            <div id="vehiclesListContainer" class="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
-                <div class="p-8 text-center text-slate-500 font-bold text-sm">Yükleniyor...</div>
+            <!-- Logo / Üst Kısım -->
+            <div class="h-20 flex items-center px-6 border-b border-slate-100/50">
+                <div class="min-w-[32px] h-8 w-8 rounded-xl bg-indigo-600 shadow-[0_4px_15px_rgba(79,70,229,0.4),_inset_0_2px_0_rgba(255,255,255,0.2)] flex items-center justify-center text-white font-black text-sm transition-all group-hover:scale-110">
+                    FM
+                </div>
+                <div class="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                    <h2 class="text-sm font-black text-slate-800">Filo Yönetimi</h2>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Araç Takip Sistemi</p>
+                </div>
+            </div>
+
+            <!-- Menü Öğeleri -->
+            <div class="flex-1 py-6 px-4 space-y-2 overflow-y-auto custom-scrollbar">
+                
+                <!-- Canlı İzleme (Aktif) -->
+                <a href="#" class="flex items-center px-2 py-3 rounded-2xl bg-slate-100/50 text-indigo-600 transition-all hover:bg-white hover:shadow-md cursor-pointer group/item">
+                    <div class="min-w-[40px] flex justify-center">
+                        <svg class="w-6 h-6 drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+                    </div>
+                    <span class="ml-2 text-sm font-black opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Canlı Harita</span>
+                </a>
+
+                <!-- Tanımlamalar -->
+                <a href="#" class="flex items-center px-2 py-3 rounded-2xl text-slate-500 transition-all hover:bg-white hover:shadow-md hover:text-slate-800 cursor-pointer group/item mt-2">
+                    <div class="min-w-[40px] flex justify-center">
+                        <svg class="w-6 h-6 drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    </div>
+                    <span class="ml-2 text-sm font-black opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Tanımlamalar</span>
+                </a>
+
+            </div>
+
+            <!-- Alt Durum Bilgisi (Sadece Hover'da) -->
+            <div class="p-6 border-t border-slate-100/50 bg-slate-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-slate-500">Sistem Durumu</span>
+                    <span class="flex h-2 w-2 relative">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                </div>
+                <div class="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                    <div class="h-full bg-emerald-500 w-full"></div>
+                </div>
+                <p class="text-[10px] text-slate-400 font-bold mt-2 text-center uppercase tracking-wider">Senkronize</p>
             </div>
         </div>
     </div>
@@ -232,50 +250,8 @@
         }
 
         function updateSidebarList(liveData) {
-            const listContainer = document.getElementById('vehiclesListContainer');
-            let html = '';
-            let movingCount = 0; let stoppedCount = 0;
-
-            allVehicles.forEach(v => {
-                const liveInfo = liveData.find(l => l.Node === v.id);
-                
-                if (liveInfo) {
-                    const isMoving = liveInfo.Speed > 0;
-                    if (isMoving) movingCount++; else stoppedCount++;
-
-                    html += `
-                        <div class="bg-white/80 p-3 rounded-2xl border border-white hover:border-indigo-300 hover:shadow-lg transition-all cursor-pointer flex justify-between items-center group" onclick="focusOnVehicle('${v.id}')">
-                            <div class="flex items-center gap-3">
-                                <div class="w-2 h-10 rounded-full ${isMoving ? 'bg-emerald-500' : 'bg-rose-500'} shadow-sm"></div>
-                                <div>
-                                    <h4 class="font-black text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">${v.plate}</h4>
-                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">${isMoving ? 'HAREKETLİ' : 'DURAN'}</p>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-base font-black ${isMoving ? 'text-emerald-600' : 'text-slate-600'}">${liveInfo.Speed}</span>
-                                <span class="text-[9px] font-bold text-slate-400">km/h</span>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    html += `
-                        <div class="bg-slate-50/50 p-3 rounded-2xl border border-slate-100 flex justify-between items-center opacity-80 hover:opacity-100 transition-all">
-                            <div>
-                                <h4 class="font-black text-slate-600 text-sm">${v.plate}</h4>
-                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">CİHAZ YOK</p>
-                            </div>
-                            <button onclick="openImeiModal(${v.id}, '${v.plate}', '${v.device_imei || ''}')" class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-[10px] font-black text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all shadow-sm">
-                                IMEI EKLE
-                            </button>
-                        </div>
-                    `;
-                }
-            });
-            
-            listContainer.innerHTML = html;
-            document.getElementById('movingCount').innerText = movingCount;
-            document.getElementById('stoppedCount').innerText = stoppedCount;
+            // Şimdilik listeyi gizlediğimiz için bu fonksiyon boş bırakıldı.
+            // Tanımlamalar sekmesinin içi daha sonra tasarlanacak.
         }
 
         function focusOnVehicle(nodeId) {
