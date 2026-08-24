@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-
-use App\Models\VehicleTrackingSetting;
+use App\Models\Fleet\Vehicle;
+use App\Models\Fleet\VehicleLocation;
 
 class VehicleTrackingController extends Controller
 {
@@ -13,15 +13,11 @@ class VehicleTrackingController extends Controller
         abort_unless(auth()->user()->hasPermission('vehicles.view'), 403);
 
         $companyId = auth()->user()->company_id;
-        $setting = VehicleTrackingSetting::where('company_id', $companyId)->where('is_active', true)->first();
         
-        $vehicles = [];
-        if ($setting && $setting->provider === 'arvento') {
-            $arvento = new \App\Services\ArventoService($setting);
-            $vehicles = $arvento->getVehicleStatus();
-        }
+        // Şirkete ait tüm araçları al, cihaz numarası (IMEI) olanları ve son konumlarını getir.
+        $vehicles = Vehicle::where('company_id', $companyId)->get();
 
-        return view('vehicle-tracking.index', compact('setting', 'vehicles'));
+        return view('vehicle-tracking.index', compact('vehicles'));
     }
 
     public function live()
@@ -29,50 +25,73 @@ class VehicleTrackingController extends Controller
         abort_unless(auth()->user()->hasPermission('vehicles.view'), 403);
 
         $companyId = auth()->user()->company_id;
-        $setting = VehicleTrackingSetting::where('company_id', $companyId)->where('is_active', true)->first();
         
-        $vehicles = [];
-        if ($setting && $setting->provider === 'arvento') {
-            $arvento = new \App\Services\ArventoService($setting);
-            $vehicles = $arvento->getVehicleStatus();
+        // Sadece IMEI numarası olan araçları al
+        $vehicles = Vehicle::where('company_id', $companyId)
+            ->whereNotNull('device_imei')
+            ->where('device_imei', '!=', '')
+            ->get();
+
+        $liveData = [];
+        foreach ($vehicles as $vehicle) {
+            // Aracın en son kaydedilen konumunu bul
+            $lastLocation = VehicleLocation::where('vehicle_id', $vehicle->id)
+                ->orderBy('recorded_at', 'desc')
+                ->first();
+
+            if ($lastLocation) {
+                $liveData[] = [
+                    'Node' => $vehicle->id,
+                    'LicensePlate' => $vehicle->license_plate,
+                    'Latitude' => $lastLocation->latitude,
+                    'Longitude' => $lastLocation->longitude,
+                    'Speed' => $lastLocation->speed,
+                    'Course' => $lastLocation->course,
+                    'Datetime' => $lastLocation->recorded_at ? $lastLocation->recorded_at->format('d.m.Y H:i:s') : null,
+                    'Address' => 'Konum: ' . $lastLocation->latitude . ', ' . $lastLocation->longitude, // Geocoding API eklenebilir
+                ];
+            } else {
+                // Konumu yoksa ama cihaz takılıysa varsayılan/bekliyor datası
+                $liveData[] = [
+                    'Node' => $vehicle->id,
+                    'LicensePlate' => $vehicle->license_plate,
+                    'Latitude' => null,
+                    'Longitude' => null,
+                    'Speed' => 0,
+                    'Course' => 0,
+                    'Datetime' => null,
+                    'Address' => 'Cihazdan veri bekleniyor...',
+                ];
+            }
         }
 
-        return response()->json(['vehicles' => $vehicles]);
+        return response()->json(['vehicles' => $liveData]);
     }
 
-    public function store(Request $request)
+    // Modal üzerinden araca IMEI atamak için yeni method
+    public function assignImei(Request $request)
     {
         abort_unless(auth()->user()->hasPermission('vehicles.edit'), 403);
 
-        $companyId = auth()->user()->company_id;
-
         $request->validate([
-            'provider' => 'required|in:arvento,trio_mobil,mobiliz',
-            'username' => 'required|string',
-            'password' => 'required|string',
+            'vehicle_id' => 'required|exists:vehicles,id',
+            'device_imei' => 'nullable|string|max:50',
         ]);
 
-        VehicleTrackingSetting::updateOrCreate(
-            ['company_id' => $companyId],
-            [
-                'provider' => $request->provider,
-                'username' => $request->username,
-                'password' => $request->password,
-                'app_id' => $request->app_id,
-                'app_key' => $request->app_key,
-                'api_key' => $request->api_key,
-                'is_active' => true,
-            ]
-        );
+        $vehicle = Vehicle::where('company_id', auth()->user()->company_id)
+            ->where('id', $request->vehicle_id)
+            ->firstOrFail();
 
-        return back()->with('success', 'Araç takip sistem ayarları başarıyla kaydedildi.');
+        $vehicle->device_imei = $request->device_imei;
+        $vehicle->save();
+
+        return back()->with('success', 'Araç takip cihazı (IMEI) başarıyla kaydedildi.');
     }
 
     public function reports()
     {
         abort_unless(auth()->user()->hasPermission('vehicle-tracking.view'), 403);
         
-        // Varsayılan olarak günlük çalışma raporu sayfasına yönlendir veya boş göster
         return redirect()->route('vehicle-tracking.reports.daily-work');
     }
 
@@ -81,37 +100,11 @@ class VehicleTrackingController extends Controller
         abort_unless(auth()->user()->hasPermission('vehicle-tracking.view'), 403);
 
         $companyId = auth()->user()->company_id;
-        $setting = VehicleTrackingSetting::where('company_id', $companyId)->where('is_active', true)->first();
-        
         $date = $request->input('date', date('Y-m-d'));
+        
+        // Bu kısım yerli cihaza göre ileride özelleştirilecek. Şimdilik boş rapor dönüyor.
         $reports = [];
 
-        if ($setting && $setting->provider === 'arvento') {
-            $arvento = new \App\Services\ArventoService($setting);
-            $mapping = $arvento->getMappedLicensePlates();
-            
-            // Sadece bu şirkete atanmış cihazları al
-            $nodeList = implode(',', array_keys($mapping));
-
-            if (!empty($nodeList)) {
-                $reports = $arvento->getDailyFirstContactReport($date, $nodeList);
-            }
-            
-            // O gün hiç kontak açmayan araçları da listeye ekle
-            foreach ($mapping as $node => $plate) {
-                if (!isset($reports[$node])) {
-                    $reports[$node] = [
-                        'LicensePlate' => $plate,
-                        'Driver' => '-',
-                        'DateTime' => '-',
-                        'Latitude' => 0,
-                        'Longitude' => 0,
-                        'Address' => 'Kontak Açılmadı / Veri Yok',
-                    ];
-                }
-            }
-        }
-
-        return view('vehicle-tracking.reports', compact('setting', 'reports', 'date'));
+        return view('vehicle-tracking.reports', compact('reports', 'date'));
     }
 }

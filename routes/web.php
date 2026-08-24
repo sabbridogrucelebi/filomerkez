@@ -327,9 +327,9 @@ Route::get('/vehicle-tracking/live', [VehicleTrackingController::class, 'live'])
     ->middleware(['auth', 'permission:vehicles.view'])
     ->name('vehicle-tracking.live');
 
-Route::post('/vehicle-tracking', [VehicleTrackingController::class, 'store'])
-    ->middleware(['auth', 'permission:vehicles.view'])
-    ->name('vehicle-tracking.store');
+Route::post('/vehicle-tracking/assign-imei', [VehicleTrackingController::class, 'assignImei'])
+    ->middleware(['auth', 'permission:vehicles.edit'])
+    ->name('vehicle-tracking.assign-imei');
 
 Route::get('/vehicle-tracking/reports', [VehicleTrackingController::class, 'reports'])
     ->middleware('permission:vehicle-tracking.view')
