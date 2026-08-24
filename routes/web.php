@@ -319,38 +319,18 @@ Route::get('/dashboard', function () {
 
 })->middleware(['auth', 'verified', 'permission:dashboard.view'])->name('dashboard');
 
-Route::get('/vehicle-tracking', [VehicleTrackingController::class, 'index'])
-    ->middleware(['auth', 'permission:vehicles.view'])
+Route::get('/vehicle-tracking', [\App\Http\Controllers\LiveTrackingController::class, 'index'])
+    ->middleware(['auth', 'permission:vehicle_tracking.view'])
     ->name('vehicle-tracking.index');
 
-Route::get('/vehicle-tracking/live', [VehicleTrackingController::class, 'live'])
-    ->middleware(['auth', 'permission:vehicles.view'])
+Route::get('/vehicle-tracking/live', [\App\Http\Controllers\LiveTrackingController::class, 'liveData'])
+    ->middleware(['auth', 'permission:vehicle_tracking.view'])
     ->name('vehicle-tracking.live');
 
-Route::post('/vehicle-tracking', [VehicleTrackingController::class, 'store'])
-    ->middleware(['auth', 'permission:vehicles.view'])
-    ->name('vehicle-tracking.store');
-
-Route::get('/vehicle-tracking/reports', [VehicleTrackingController::class, 'reports'])
-    ->middleware('permission:vehicle-tracking.view')
-    ->name('vehicle-tracking.reports');
-
-Route::get('/vehicle-tracking/reports/daily-work', [VehicleTrackingController::class, 'dailyWorkReport'])
-    ->middleware('permission:vehicle-tracking.view')
-    ->name('vehicle-tracking.reports.daily-work');
-
-// --- YENİ BAĞIMSIZ CANLI HARİTA (YERLİ CİHAZLAR) ---
-Route::get('/live-tracking', [\App\Http\Controllers\LiveTrackingController::class, 'index'])
-    ->middleware(['auth', 'permission:vehicle_tracking.view'])
-    ->name('live-tracking.index');
-
-Route::get('/live-tracking/data', [\App\Http\Controllers\LiveTrackingController::class, 'liveData'])
-    ->middleware(['auth', 'permission:vehicle_tracking.view'])
-    ->name('live-tracking.data');
-
-Route::post('/live-tracking/assign-imei', [\App\Http\Controllers\LiveTrackingController::class, 'assignImei'])
+Route::post('/vehicle-tracking/assign-imei', [\App\Http\Controllers\LiveTrackingController::class, 'assignImei'])
     ->middleware(['auth', 'permission:vehicles.edit'])
-    ->name('live-tracking.assign-imei');
+    ->name('vehicle-tracking.assign-imei');
+
 
 
 Route::middleware('auth')->group(function () {

@@ -117,7 +117,7 @@
     <!-- Cihaz Tanımlama Modalı -->
     <div id="imeiModal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm transition-all duration-300">
         <div class="relative w-full max-w-md rounded-[32px] bg-white shadow-2xl overflow-hidden border border-slate-100 scale-95 opacity-0 transition-all duration-300" id="imeiModalContent">
-            <form action="{{ route('live-tracking.assign-imei') }}" method="POST">
+            <form action="{{ route('vehicle-tracking.assign-imei') }}" method="POST">
                 @csrf
                 <input type="hidden" name="vehicle_id" id="modalVehicleId">
                 
@@ -277,7 +277,7 @@
         }
 
         function fetchData() {
-            fetch('{{ route("live-tracking.data") }}')
+            fetch('{{ route("vehicle-tracking.live") }}')
                 .then(response => response.json())
                 .then(data => {
                     if (data.vehicles) {
