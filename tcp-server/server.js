@@ -1,23 +1,14 @@
 require('dotenv').config();
 const net = require('net');
-const mysql = require('mysql2/promise');
+const axios = require('axios');
 const parser = require('./parser');
 
-// MySQL Connection Pool
-const pool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'filomerkez',
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-});
-
-// Store connected devices: { imei: { socket, company_id, vehicle_id } }
+// Store connected devices: { imei: { socket } }
 const devices = {};
 
-const PORT = process.env.TCP_PORT || 5000;
+const PORT = process.env.TCP_PORT || 36025;
+const API_URL = process.env.API_URL || 'https://mehmetcelebiturizm.com/api/v1/vehicle-tracking/telemetry';
+const API_SECRET = process.env.API_SECRET || 'filo-telemetry-2026-secret';
 
 const server = net.createServer((socket) => {
     console.log(`[+] Yeni Cihaz Baglandi: ${socket.remoteAddress}:${socket.remotePort}`);
@@ -39,22 +30,9 @@ const server = net.createServer((socket) => {
                     deviceImei = packet.imei;
                     console.log(`[LOGIN] Cihaz IMEI: ${deviceImei}`);
                     
-                    // Veritabanindan IMEI'ye ait araci bul
-                    const [rows] = await pool.query(
-                        'SELECT id, company_id FROM vehicles WHERE device_imei = ? LIMIT 1', 
-                        [deviceImei]
-                    );
-
-                    if (rows.length > 0) {
-                        devices[deviceImei] = {
-                            socket: socket,
-                            vehicle_id: rows[0].id,
-                            company_id: rows[0].company_id
-                        };
-                        console.log(`[+] Araç eslestirildi: Vehicle ID: ${rows[0].id}, Company ID: ${rows[0].company_id}`);
-                    } else {
-                        console.log(`[!] Sistemde kayitli olmayan cihaz bağlandi: ${deviceImei}`);
-                    }
+                    devices[deviceImei] = {
+                        socket: socket
+                    };
 
                     // Cihaza Login Response gönder
                     const response = parser.createResponse(0x01, packet.serialNumber);
@@ -76,27 +54,30 @@ const server = net.createServer((socket) => {
 
                     console.log(`[LOCATION] IMEI: ${deviceImei} | Enlem: ${loc.lat}, Boylam: ${loc.lng}, Hiz: ${loc.speed} km/s`);
 
-                    if (deviceImei && devices[deviceImei]) {
-                        const { vehicle_id, company_id } = devices[deviceImei];
-                        
-                        // MySQL'e kaydet
-                        await pool.query(
-                            `INSERT INTO vehicle_locations 
-                            (company_id, vehicle_id, imei, latitude, longitude, speed, course, status, recorded_at, created_at, updated_at) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-                            [
-                                company_id,
-                                vehicle_id,
-                                deviceImei,
-                                loc.lat,
-                                loc.lng,
-                                loc.speed,
-                                loc.course,
-                                JSON.stringify(loc.status || {}), // ACC, Batarya vb.
-                                loc.datetime // Cihazin gönderdiği GPS saati
-                            ]
-                        );
+                    if (deviceImei) {
+                        try {
+                            // API'ye HTTP POST gonder
+                            await axios.post(API_URL, {
+                                imei: deviceImei,
+                                latitude: loc.lat,
+                                longitude: loc.lng,
+                                speed: loc.speed,
+                                course: loc.course,
+                                status: loc.status || {},
+                                recorded_at: loc.datetime
+                            }, {
+                                headers: {
+                                    'X-Telemetry-Secret': API_SECRET,
+                                    'Content-Type': 'application/json'
+                                },
+                                timeout: 5000
+                            });
+                            console.log(`[+] Veri API'ye basariyla gonderildi.`);
+                        } catch (apiError) {
+                            console.error(`[-] API'ye gonderilemedi:`, apiError.message);
+                        }
                     }
+
 
                     // Alarm paketi ise cihaza cevap dönmek gerekir
                     if (packet.protocolId === 0x16) {
