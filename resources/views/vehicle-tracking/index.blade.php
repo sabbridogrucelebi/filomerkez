@@ -1,108 +1,196 @@
 @extends('layouts.app')
 
-@section('title', 'Araç Takip Sistemi')
-@section('subtitle', 'Canlı İzleme ve Filo Yönetimi')
+@section('title', 'Araç Takip')
+@section('subtitle', 'Entegrasyon Ayarları ve Canlı Takip')
 
 @section('content')
-<div class="relative w-full h-[calc(100vh-140px)] min-h-[700px] flex gap-6">
-
+<div class="relative w-full space-y-6">
     @if(session('success'))
-        <div class="absolute top-4 left-1/2 -translate-x-1/2 z-[999] rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-emerald-700 font-bold flex items-center gap-3 shadow-xl animate-in slide-in-from-top-4">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+        <div class="rounded-3xl bg-emerald-500/10 border border-emerald-500/20 p-5 text-emerald-400 font-bold flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
+            <div class="h-10 w-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            </div>
             {{ session('success') }}
         </div>
     @endif
 
-    <!-- Sidebar (Vehicle List) -->
-    <div class="w-96 flex flex-col gap-4 relative z-10 h-full">
-        <!-- Stats Card -->
-        <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 flex-shrink-0">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-3">
-                    <div class="h-12 w-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-xl text-indigo-600">🛰️</div>
-                    <div>
-                        <h2 class="text-lg font-black text-slate-800">Filo Durumu</h2>
-                        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">{{ count($vehicles) }} Araç Kayıtlı</p>
+    @if(!$setting)
+        <!-- Welcome Screen -->
+        <div class="relative group w-full">
+            <div class="absolute -inset-1 rounded-[40px] bg-gradient-to-tr from-indigo-500/20 to-purple-600/20 blur opacity-70 group-hover:opacity-100 transition duration-500"></div>
+            <div class="relative rounded-[40px] border border-white bg-white/40 shadow-xl backdrop-blur-xl p-12 text-center">
+                <div class="max-w-3xl mx-auto">
+                    <div class="inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-indigo-500 text-white text-4xl shadow-2xl shadow-indigo-500/40 mb-8 animate-bounce">
+                        🛰️
+                    </div>
+                    <h2 class="text-4xl font-black text-slate-900 mb-6 tracking-tight">Araç Takip Entegrasyonu</h2>
+                    <p class="text-lg text-slate-500 font-medium leading-relaxed mb-12">
+                        Sistemimiz Arvento, Trio Mobil ve Mobiliz servisleri ile tam entegre çalışmaktadır.
+                    </p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+                        @foreach(['arvento' => 'A', 'trio_mobil' => 'T', 'mobiliz' => 'M'] as $provider => $initial)
+                            <button type="button" onclick="selectProvider('{{ $provider }}')" class="group/card relative p-8 rounded-[35px] border-2 border-white bg-white/60 hover:bg-white hover:border-indigo-500 transition-all duration-500 hover:scale-105 shadow-sm hover:shadow-2xl">
+                                <div class="h-16 w-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center mb-6 group-hover/card:bg-indigo-50 transition-colors text-2xl font-black text-slate-400 group-hover/card:text-indigo-500">
+                                    {{ $initial }}
+                                </div>
+                                <h3 class="text-xl font-black text-slate-900 mb-2 capitalize">{{ str_replace('_', ' ', $provider) }}</h3>
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if($setting)
+        <!-- Dashboard Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 w-full">
+            <div class="bg-white/70 backdrop-blur-xl p-6 rounded-[30px] border border-white shadow-sm">
+                <div class="flex items-center gap-4">
+                    <div class="h-12 w-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-xl">🛰️</div>
+                    <div class="overflow-hidden">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sistem</p>
+                        <p class="text-lg font-black text-slate-900 truncate capitalize">{{ str_replace('_', ' ', $setting->provider) }}</p>
                     </div>
                 </div>
             </div>
             
-            <div class="grid grid-cols-2 gap-3 mt-4">
-                <div class="bg-emerald-50 rounded-2xl p-3 border border-emerald-100">
-                    <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1">Hareketli</p>
-                    <p class="text-2xl font-black text-emerald-700" id="movingCount">0</p>
+            <div class="bg-white/70 backdrop-blur-xl p-6 rounded-[30px] border border-white shadow-sm">
+                <div class="flex items-center gap-4">
+                    <div class="h-12 w-12 rounded-2xl bg-emerald-100 flex items-center justify-center text-xl text-emerald-600">🟢</div>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aktif Araç</p>
+                        <p class="text-2xl font-black text-slate-900" id="activeVehicleCount">{{ is_array($vehicles) ? count($vehicles) : 0 }}</p>
+                    </div>
                 </div>
-                <div class="bg-rose-50 rounded-2xl p-3 border border-rose-100">
-                    <p class="text-[10px] font-bold text-rose-600 uppercase tracking-wider mb-1">Duran</p>
-                    <p class="text-2xl font-black text-rose-700" id="stoppedCount">0</p>
+            </div>
+
+            <div class="lg:col-span-2 bg-white/70 backdrop-blur-xl p-6 rounded-[30px] border border-white shadow-sm flex items-center justify-between gap-4">
+                <div class="flex items-center gap-4 overflow-hidden">
+                    <div class="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center text-xl">👤</div>
+                    <div class="overflow-hidden">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Kullanıcı</p>
+                        <p class="text-lg font-black text-slate-900 truncate">{{ $setting->username }}</p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <a href="{{ route('vehicle-tracking.reports') }}" class="shrink-0 px-6 py-3 rounded-2xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition shadow-lg shadow-indigo-500/30 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        Raporlar
+                    </a>
+                    <button type="button" onclick="selectProvider('{{ $setting->provider }}')" class="shrink-0 px-6 py-3 rounded-2xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition shadow-lg shadow-slate-900/10">Ayarları Değiştir</button>
                 </div>
             </div>
         </div>
 
-        <!-- Vehicle List -->
-        <div class="bg-white rounded-3xl border border-slate-200 flex-1 flex flex-col overflow-hidden shadow-sm">
-            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <h3 class="font-bold text-slate-700 text-sm">Araç Listesi</h3>
-                <span class="px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-black" id="liveTag">CANLI</span>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
+            <!-- List -->
+            <div id="vehiclesListContainer" class="lg:col-span-4 space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                @if(is_array($vehicles) && count($vehicles) > 0)
+                    @foreach($vehicles as $vehicle)
+                        <div class="group bg-white/70 backdrop-blur-md p-4 rounded-[24px] border border-white shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer" onclick="focusOnVehicle('{{ $vehicle['Node'] ?? '' }}')">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="flex items-center gap-3 overflow-hidden">
+                                    <div class="h-10 w-10 shrink-0 rounded-[14px] bg-slate-100 flex items-center justify-center text-lg group-hover:bg-indigo-500 group-hover:text-white transition-colors">🚚</div>
+                                    <div class="overflow-hidden">
+                                        <h4 class="text-base font-black text-slate-900 truncate">{{ $vehicle['LicensePlate'] ?? 'Plakasız' }}</h4>
+                                        <p class="text-[9px] font-bold text-slate-400 truncate" title="{{ $vehicle['Address'] ?? '' }}">{{ isset($vehicle['Address']) ? \Illuminate\Support\Str::limit($vehicle['Address'], 35) : 'Konum alınıyor...' }}</p>
+                                    </div>
+                                </div>
+                                <div class="text-right shrink-0">
+                                    <div class="text-base font-black text-indigo-600">{{ $vehicle['Speed'] ?? 0 }} <span class="text-[9px]">km/h</span></div>
+                                    <div class="flex items-center gap-1 justify-end mt-1">
+                                        <div class="h-1.5 w-1.5 rounded-full {{ ($vehicle['Speed'] ?? 0) > 0 ? 'bg-emerald-500' : 'bg-rose-500' }}"></div>
+                                        <span class="text-[8px] font-black {{ ($vehicle['Speed'] ?? 0) > 0 ? 'text-emerald-500' : 'text-rose-500' }} uppercase tracking-wider">{{ ($vehicle['Speed'] ?? 0) > 0 ? 'HAREKETLİ' : 'DURAN' }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                @else
+                    <div class="p-10 text-center bg-white/40 rounded-[30px] border border-white border-dashed">
+                        <p class="text-slate-400 font-bold">Araç verisi bekleniyor...</p>
+                    </div>
+                @endif
             </div>
-            
-            <div id="vehiclesListContainer" class="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
-                <!-- Javascript will populate this -->
-                <div class="p-8 text-center">
-                    <div class="animate-spin-slow inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 text-xl mb-4">🧭</div>
-                    <p class="text-sm font-bold text-slate-400">Veriler Yükleniyor...</p>
+
+            <!-- Map -->
+            <div class="lg:col-span-8 min-h-[600px]">
+                <div class="relative h-full rounded-[40px] border border-white bg-white shadow-2xl overflow-hidden">
+                    <div id="map" class="absolute inset-0 w-full h-full z-0"></div>
+                    
+                    @if(!(is_array($vehicles) && count($vehicles) > 0))
+                        <div class="absolute inset-0 z-10 flex items-center justify-center p-8">
+                            <div class="bg-white/80 backdrop-blur-md p-10 rounded-[40px] border border-white shadow-2xl max-w-sm w-full text-center">
+                                <div class="animate-spin-slow inline-flex h-16 w-16 items-center justify-center rounded-full bg-indigo-500 text-white text-2xl mb-6">🧭</div>
+                                <h3 class="text-xl font-black text-slate-900 mb-2">Harita Hazırlanıyor</h3>
+                                <p class="text-xs text-slate-500 font-medium leading-relaxed">Konum verileri geldiğinde burada görünecek.</p>
+                            </div>
+                        </div>
+                    @endif
+
+                    <div class="absolute top-6 right-6 flex items-center gap-3 bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl shadow-lg border border-white z-10">
+                        <div class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                        </div>
+                        <span class="text-[10px] font-black text-slate-900 uppercase tracking-widest">Canlı</span>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Map Container -->
-    <div class="flex-1 relative rounded-3xl overflow-hidden border border-slate-200 shadow-sm bg-white h-full z-0">
-        <div id="map" class="absolute inset-0 w-full h-full"></div>
-    </div>
-
+    @endif
 </div>
 
-<!-- Assign IMEI Modal -->
-<div id="imeiModal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeImeiModal()"></div>
-    <div class="relative w-full max-w-md rounded-[32px] bg-white shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
-        <form action="{{ route('vehicle-tracking.assign-imei') }}" method="POST">
+<!-- Modal (Fixed at the end to prevent layout push) -->
+<div id="setupForm" class="hidden fixed inset-0 z-[9999] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onclick="closeSetup()"></div>
+    <div class="relative w-full max-w-xl rounded-[40px] bg-white shadow-[0_35px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden border border-white animate-in zoom-in-95 duration-300">
+        <form action="{{ route('vehicle-tracking.store') }}" method="POST">
             @csrf
-            <input type="hidden" name="vehicle_id" id="modalVehicleId">
+            <input type="hidden" name="provider" id="providerInput" value="{{ $setting->provider ?? '' }}">
             
-            <div class="p-8">
-                <div class="flex items-center justify-between mb-6">
-                    <div class="flex items-center gap-3">
-                        <div class="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 text-lg">📱</div>
+            <div class="p-10">
+                <div class="flex items-center justify-between mb-8">
+                    <div class="flex items-center gap-4">
+                        <div class="h-12 w-12 rounded-2xl bg-indigo-500 flex items-center justify-center text-white text-xl shadow-lg">⚙️</div>
                         <div>
-                            <h3 class="text-lg font-black text-slate-800">Cihaz Tanımlama</h3>
-                            <p class="text-xs font-bold text-slate-400" id="modalVehiclePlate">Plaka</p>
+                            <h3 class="text-2xl font-black text-slate-900" id="selectedProviderTitle">Entegrasyon Ayarları</h3>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Lütfen API bilgilerinizi giriniz</p>
                         </div>
                     </div>
-                    <button type="button" onclick="closeImeiModal()" class="h-8 w-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition flex items-center justify-center">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    <button type="button" onclick="closeSetup()" class="h-10 w-10 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100 transition-colors flex items-center justify-center">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 </div>
 
-                <div class="space-y-4">
+                <div class="space-y-5">
                     <div>
-                        <label class="block text-xs font-black uppercase tracking-wider text-slate-500 mb-2">Cihaz IMEI Numarası</label>
-                        <div class="relative">
-                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-                                <span class="text-slate-400 font-mono text-sm">#</span>
-                            </div>
-                            <input type="text" name="device_imei" id="modalDeviceImei" 
-                                class="w-full rounded-2xl border border-slate-200 bg-slate-50 pl-10 pr-4 py-3 text-slate-800 font-mono focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition outline-none"
-                                placeholder="Örn: 353210110128749">
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-4">Kullanıcı Adı</label>
+                        <input type="text" name="username" value="{{ $setting->username ?? '' }}" required class="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-900 font-bold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-4">Şifre (Panel Şifresi)</label>
+                        <input type="password" name="password" required class="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-900 font-bold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-4">PIN1 (App ID)</label>
+                            <input type="text" name="app_id" value="{{ $setting->app_id ?? '' }}" class="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-900 font-bold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none">
                         </div>
-                        <p class="text-[10px] text-slate-400 mt-2">Cihazın arkasındaki etikette yazan 15 haneli numarayı giriniz.</p>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-4">PIN2 (App Key)</label>
+                            <input type="text" name="app_key" value="{{ $setting->app_key ?? '' }}" class="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-900 font-bold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none">
+                        </div>
                     </div>
                 </div>
 
-                <div class="mt-8">
-                    <button type="submit" class="w-full py-4 rounded-2xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 transition shadow-lg shadow-indigo-600/20">
-                        Kaydet ve Bağla
+                <div class="mt-10">
+                    <button type="submit" class="w-full py-5 rounded-[24px] bg-slate-900 text-white font-black text-sm hover:scale-[1.02] transition shadow-2xl">
+                        Ayarları Kaydet ve Bağlan
                     </button>
                 </div>
             </div>
@@ -110,59 +198,25 @@
     </div>
 </div>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
 <style>
     .custom-vehicle-tooltip {
-        background: white !important;
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 8px !important;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
-        padding: 4px 8px !important;
-        font-weight: 800 !important;
-        color: #1e293b !important;
-        font-size: 11px !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
     }
-    .custom-vehicle-tooltip::before { border-top-color: white !important; }
-    
-    .pulse-icon {
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        border: 3px solid white;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    .custom-vehicle-tooltip::before {
+        display: none !important;
     }
-    
-    .pulse-moving {
-        background-color: #10b981;
-        box-shadow: 0 0 0 rgba(16, 185, 129, 0.4);
-        animation: pulse-green 2s infinite;
-    }
-    
-    .pulse-stopped {
-        background-color: #ef4444;
-    }
-
-    @keyframes pulse-green {
-        0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-        70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-    }
-    
-    .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    .animate-spin-slow { animation: spin-slow 8s linear infinite; }
 </style>
-
 <script>
     let map;
     let markers = {};
+    let vehiclesList = @json($vehicles);
     let pollingInterval;
-    
-    // Server'dan render edilen tüm araçları alalım (IMEI olmayanları da listede göstereceğiz)
-    const allVehicles = @json($vehicles);
 
     document.addEventListener("DOMContentLoaded", function() {
         initMap();
@@ -170,168 +224,189 @@
     });
 
     function initMap() {
-        const defaultCenter = [39.9334, 32.8597]; // Türkiye (Ankara)
-        map = L.map('map', { zoomControl: false }).setView(defaultCenter, 6);
+        const defaultCenter = [39.9334, 32.8597]; // Ankara
+        
+        map = L.map('map').setView(defaultCenter, 6);
 
-        // Aydınlık ve temiz Google Streets katmanı
+        // Arvento benzeri Google Maps (veya Basarsoft) görünümü için Google Streets katmanı
         L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
             attribution: '&copy; Google Maps',
             maxZoom: 20
         }).addTo(map);
 
-        // Özel zoom butonları ekle (sağ alta)
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
+        renderVehicles(vehiclesList, true);
     }
 
-    function createIcon(isMoving) {
-        return L.divIcon({
-            className: 'custom-vehicle-marker',
-            html: `<div class="pulse-icon ${isMoving ? 'pulse-moving' : 'pulse-stopped'}"></div>`,
-            iconSize: [16, 16],
-            iconAnchor: [8, 8]
-        });
+    function createIcon(isMoving, course) {
+        if (isMoving) {
+            // Arvento style moving icon (Blue arrow/circle pointing in direction)
+            return L.divIcon({
+                className: 'custom-vehicle-marker',
+                html: `<div style="transform: rotate(${course}deg); width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));">
+                          <svg width="28" height="28" viewBox="0 0 24 24" fill="#0ea5e9" stroke="white" stroke-width="2" stroke-linejoin="round">
+                              <path d="M12 2L4 22l8-5 8 5z"/>
+                          </svg>
+                       </div>`,
+                iconSize: [28, 28],
+                iconAnchor: [14, 14]
+            });
+        } else {
+            // Arvento style stopped icon (Red dot with white border)
+            return L.divIcon({
+                className: 'custom-vehicle-marker',
+                html: `<div style="width: 16px; height: 16px; background-color: #ef4444; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.4);"></div>`,
+                iconSize: [16, 16],
+                iconAnchor: [8, 8]
+            });
+        }
     }
 
-    function renderVehicles(liveData) {
+    function renderVehicles(vehicles, fitBounds = false) {
         const bounds = [];
         
-        liveData.forEach(vehicle => {
+        vehicles.forEach(vehicle => {
             if (vehicle.Latitude && vehicle.Longitude) {
                 const lat = parseFloat(vehicle.Latitude);
                 const lng = parseFloat(vehicle.Longitude);
+                const course = parseFloat(vehicle.Course || 0);
                 const isMoving = vehicle.Speed > 0;
+                const color = isMoving ? '#10b981' : '#ef4444'; 
                 
                 const popupContent = `
-                    <div style="padding: 2px; font-family: sans-serif; min-width: 140px;">
-                        <div style="font-weight: 900; font-size: 15px; margin-bottom: 4px; color: #1e293b;">${vehicle.LicensePlate}</div>
-                        <div style="color: ${isMoving ? '#10b981' : '#ef4444'}; font-size: 13px; font-weight: 800; margin-bottom: 2px;">${vehicle.Speed} km/h</div>
-                        <div style="color: #64748b; font-size: 10px; margin-bottom: 6px;">${vehicle.Datetime || '-'}</div>
+                    <div style="padding: 5px; font-family: sans-serif; min-width: 150px;">
+                        <div style="font-weight: 900; font-size: 16px; margin-bottom: 4px; color: #0f172a;">${vehicle.LicensePlate}</div>
+                        <div style="color: ${color}; font-size: 14px; font-weight: 800; margin-bottom: 2px;">${vehicle.Speed} km/h <span style="font-size: 10px; color: #64748b;">${isMoving ? '(Hareketli)' : '(Duran)'}</span></div>
+                        <div style="color: #64748b; font-size: 11px; margin-bottom: 6px;">Tarih: ${vehicle.Datetime || '-'}</div>
+                        <div style="color: #475569; font-size: 11px; margin-top: 6px; border-top: 1px dashed #cbd5e1; padding-top: 6px; line-height: 1.4;">${vehicle.Address || 'Konum alınamıyor'}</div>
                     </div>
                 `;
 
                 if (markers[vehicle.Node]) {
+                    // Update existing marker
                     markers[vehicle.Node].setLatLng([lat, lng]);
-                    markers[vehicle.Node].setIcon(createIcon(isMoving));
+                    markers[vehicle.Node].setIcon(createIcon(isMoving, course));
                     markers[vehicle.Node].setPopupContent(popupContent);
+                    // Tooltip text doesn't change, but we ensure it stays
                 } else {
+                    // Create new marker
                     const marker = L.marker([lat, lng], {
-                        icon: createIcon(isMoving)
+                        icon: createIcon(isMoving, course),
+                        title: vehicle.LicensePlate
                     }).addTo(map);
 
                     marker.bindPopup(popupContent);
                     
-                    marker.bindTooltip(vehicle.LicensePlate, {
+                    // Add permanent label under the marker
+                    marker.bindTooltip(`
+                        <div style="font-weight: 800; color: #0f172a; text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff;">
+                            ${vehicle.LicensePlate}
+                        </div>
+                    `, {
                         permanent: true,
                         direction: 'bottom',
                         className: 'custom-vehicle-tooltip',
-                        offset: [0, 8]
+                        offset: [0, isMoving ? 10 : 5]
                     });
 
                     markers[vehicle.Node] = marker;
                 }
+                
                 bounds.push([lat, lng]);
             }
         });
         
-        // İlk yüklemede haritayı sınırla
-        if (Object.keys(markers).length === liveData.length && bounds.length > 0) {
-            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+        if (fitBounds && bounds.length > 0) {
+            map.fitBounds(bounds, { padding: [50, 50] });
         }
     }
 
-    function updateSidebarList(liveData) {
+    function updateSidebarList(vehicles) {
         const listContainer = document.getElementById('vehiclesListContainer');
+        if (!listContainer) return;
+
+        if (vehicles.length === 0) {
+            listContainer.innerHTML = `
+                <div class="p-10 text-center bg-white/40 rounded-[30px] border border-white border-dashed">
+                    <p class="text-slate-400 font-bold">Araç verisi bulunamadı.</p>
+                </div>`;
+            return;
+        }
+
         let html = '';
-        
-        let movingCount = 0;
-        let stoppedCount = 0;
+        vehicles.forEach(vehicle => {
+            const isMoving = vehicle.Speed > 0;
+            const statusColor = isMoving ? 'text-emerald-500' : 'text-rose-500';
+            const dotColor = isMoving ? 'bg-emerald-500' : 'bg-rose-500';
+            const statusText = isMoving ? 'HAREKETLİ' : 'DURAN';
 
-        // Tüm araçları (live data + imei olmayanlar) birleştir
-        allVehicles.forEach(v => {
-            // Live data içinde var mı kontrol et
-            const liveInfo = liveData.find(l => l.Node === v.id);
-            
-            if (liveInfo) {
-                // IMEI'si var ve live endpoint'ten dönmüş
-                const isMoving = liveInfo.Speed > 0;
-                if (isMoving) movingCount++;
-                else stoppedCount++;
-
-                html += `
-                    <div class="bg-white p-3 rounded-2xl border border-slate-100 hover:border-indigo-300 hover:shadow-md transition cursor-pointer flex justify-between items-center" onclick="focusOnVehicle('${v.id}')">
-                        <div>
-                            <h4 class="font-black text-slate-800 text-sm">${v.license_plate}</h4>
-                            <p class="text-[10px] text-slate-500 truncate w-40" title="${liveInfo.Address}">${liveInfo.Address || 'Konum bekleniyor...'}</p>
+            html += `
+                <div class="group bg-white/70 backdrop-blur-md p-4 rounded-[24px] border border-white shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer" onclick="focusOnVehicle('${vehicle.Node}')">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <div class="h-10 w-10 shrink-0 rounded-[14px] bg-slate-100 flex items-center justify-center text-lg group-hover:bg-indigo-500 group-hover:text-white transition-colors">🚚</div>
+                            <div class="overflow-hidden">
+                                <h4 class="text-base font-black text-slate-900 truncate">${vehicle.LicensePlate}</h4>
+                                <p class="text-[9px] font-bold text-slate-400 truncate" title="${vehicle.Address || ''}">${vehicle.Address ? vehicle.Address.substring(0, 35) + '...' : 'Konum alınıyor...'}</p>
+                            </div>
                         </div>
-                        <div class="text-right">
-                            <span class="text-xs font-black text-slate-700">${liveInfo.Speed} km</span>
+                        <div class="text-right shrink-0">
+                            <div class="text-base font-black text-indigo-600">${vehicle.Speed || 0} <span class="text-[9px]">km/h</span></div>
                             <div class="flex items-center gap-1 justify-end mt-1">
-                                <div class="w-1.5 h-1.5 rounded-full ${isMoving ? 'bg-emerald-500' : 'bg-rose-500'}"></div>
-                                <span class="text-[8px] font-bold ${isMoving ? 'text-emerald-600' : 'text-rose-600'}">${isMoving ? 'HAREKETLİ' : 'DURAN'}</span>
+                                <div class="h-1.5 w-1.5 rounded-full ${dotColor}"></div>
+                                <span class="text-[8px] font-black ${statusColor} uppercase tracking-wider">${statusText}</span>
                             </div>
                         </div>
                     </div>
-                `;
-            } else {
-                // IMEI'si yok veya live endpoint'te gelmedi
-                html += `
-                    <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex justify-between items-center opacity-70 hover:opacity-100 transition">
-                        <div>
-                            <h4 class="font-black text-slate-600 text-sm">${v.license_plate}</h4>
-                            <p class="text-[10px] text-slate-400">Cihaz Tanımlanmamış</p>
-                        </div>
-                        <button onclick="openImeiModal(${v.id}, '${v.license_plate}', '${v.device_imei || ''}')" class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-[10px] font-bold text-indigo-600 hover:bg-indigo-50 transition shadow-sm">
-                            IMEI EKLE
-                        </button>
-                    </div>
-                `;
-            }
+                </div>
+            `;
         });
         
         listContainer.innerHTML = html;
-        document.getElementById('movingCount').innerText = movingCount;
-        document.getElementById('stoppedCount').innerText = stoppedCount;
+        document.getElementById('activeVehicleCount').innerText = vehicles.length;
     }
 
     function focusOnVehicle(nodeId) {
         const marker = markers[nodeId];
         if (marker) {
-            map.flyTo(marker.getLatLng(), 16, { duration: 1 });
+            map.flyTo(marker.getLatLng(), 15, { duration: 1 });
             setTimeout(() => { marker.openPopup(); }, 1000);
         }
     }
 
     function startLiveTracking() {
-        fetchData();
-        pollingInterval = setInterval(fetchData, 3000);
+        // Update list on initial load
+        updateSidebarList(vehiclesList);
+
+        // Fetch new data every 2 seconds
+        pollingInterval = setInterval(() => {
+            fetch('{{ route("vehicle-tracking.live") }}')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.vehicles && Array.isArray(data.vehicles)) {
+                        renderVehicles(data.vehicles, false); // false = dont zoom out every 2s
+                        updateSidebarList(data.vehicles);
+                    }
+                })
+                .catch(err => console.error("Canlı takip hatası:", err));
+        }, 2000);
     }
 
-    function fetchData() {
-        document.getElementById('liveTag').classList.add('animate-pulse');
-        fetch('{{ route("vehicle-tracking.live") }}')
-            .then(response => response.json())
-            .then(data => {
-                if (data.vehicles) {
-                    renderVehicles(data.vehicles);
-                    updateSidebarList(data.vehicles);
-                }
-                setTimeout(() => { document.getElementById('liveTag').classList.remove('animate-pulse'); }, 500);
-            })
-            .catch(err => console.error("Canlı takip hatası:", err));
+    function selectProvider(provider) {
+        document.getElementById('providerInput').value = provider;
+        document.getElementById('setupForm').classList.remove('hidden');
     }
 
-    // Modal Functions
-    function openImeiModal(vehicleId, plate, currentImei) {
-        document.getElementById('modalVehicleId').value = vehicleId;
-        document.getElementById('modalVehiclePlate').innerText = plate;
-        document.getElementById('modalDeviceImei').value = currentImei;
-        document.getElementById('imeiModal').classList.remove('hidden');
+    function closeSetup() {
+        document.getElementById('setupForm').classList.add('hidden');
     }
 
-    function closeImeiModal() {
-        document.getElementById('imeiModal').classList.add('hidden');
-    }
-
-    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeImeiModal(); });
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSetup(); });
 </script>
+
+<style>
+    @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .animate-spin-slow { animation: spin-slow 8s linear infinite; }
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+</style>
 @endsection
