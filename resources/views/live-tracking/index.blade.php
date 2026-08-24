@@ -168,14 +168,14 @@
         });
 
         function initMap() {
-            // Varsayılan Merkez: Konya
+            // Varsayılan Merkez: Konya (Daha da yakın)
             const defaultCenter = [37.8746, 32.4932];
-            map = L.map('map', { zoomControl: false }).setView(defaultCenter, 11);
+            map = L.map('map', { zoomControl: false }).setView(defaultCenter, 13);
 
-            // Arvento benzeri premium, sade ve temiz yol haritası (CartoDB Voyager)
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            // Google Maps Beyaz (Standart) Yol Haritası
+            L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
                 maxZoom: 20,
-                attribution: '&copy; OpenStreetMap & CARTO'
+                attribution: '© Google Maps'
             }).addTo(map);
 
             L.control.zoom({ position: 'bottomright' }).addTo(map);
