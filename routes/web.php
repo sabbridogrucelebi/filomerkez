@@ -331,6 +331,38 @@ Route::post('/vehicle-tracking/assign-imei', [\App\Http\Controllers\LiveTracking
     ->middleware(['auth', 'permission:vehicles.edit'])
     ->name('vehicle-tracking.assign-imei');
 
+// --- TANIMLAMALAR PANELİ ---
+Route::get('/vehicle-tracking/definitions', [\App\Http\Controllers\LiveTrackingController::class, 'definitions'])
+    ->middleware(['auth', 'permission:vehicle_tracking.view'])
+    ->name('vehicle-tracking.definitions');
+
+// Alarms
+Route::post('/vehicle-tracking/definitions/alarms', [\App\Http\Controllers\LiveTrackingController::class, 'storeAlarm'])
+    ->middleware(['auth', 'permission:vehicle_tracking.view'])
+    ->name('vehicle-tracking.alarms.store');
+Route::patch('/vehicle-tracking/definitions/alarms/{alarm}/toggle', [\App\Http\Controllers\LiveTrackingController::class, 'toggleAlarm'])
+    ->middleware(['auth', 'permission:vehicle_tracking.view'])
+    ->name('vehicle-tracking.alarms.toggle');
+Route::delete('/vehicle-tracking/definitions/alarms/{alarm}', [\App\Http\Controllers\LiveTrackingController::class, 'destroyAlarm'])
+    ->middleware(['auth', 'permission:vehicle_tracking.view'])
+    ->name('vehicle-tracking.alarms.destroy');
+
+// Geofences
+Route::post('/vehicle-tracking/definitions/geofences', [\App\Http\Controllers\LiveTrackingController::class, 'storeGeofence'])
+    ->middleware(['auth', 'permission:vehicle_tracking.view'])
+    ->name('vehicle-tracking.geofences.store');
+Route::delete('/vehicle-tracking/definitions/geofences/{geofence}', [\App\Http\Controllers\LiveTrackingController::class, 'destroyGeofence'])
+    ->middleware(['auth', 'permission:vehicle_tracking.view'])
+    ->name('vehicle-tracking.geofences.destroy');
+
+// Work Schedules
+Route::post('/vehicle-tracking/definitions/schedules', [\App\Http\Controllers\LiveTrackingController::class, 'storeSchedule'])
+    ->middleware(['auth', 'permission:vehicle_tracking.view'])
+    ->name('vehicle-tracking.schedules.store');
+Route::delete('/vehicle-tracking/definitions/schedules/{schedule}', [\App\Http\Controllers\LiveTrackingController::class, 'destroySchedule'])
+    ->middleware(['auth', 'permission:vehicle_tracking.view'])
+    ->name('vehicle-tracking.schedules.destroy');
+
 
 
 Route::middleware('auth')->group(function () {
