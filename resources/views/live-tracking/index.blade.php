@@ -8,14 +8,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <style>
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-        }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
         
         .pulse-icon {
             width: 18px;
@@ -47,6 +41,120 @@
             font-size: 12px !important;
         }
         .custom-vehicle-tooltip::before { display: none !important; }
+
+        /* Sidebar Intro Animation */
+        #blueSidebar {
+            width: 280px;
+            background: linear-gradient(to bottom, #4338ca, #1e40af);
+            border-right: 1px solid rgba(99,102,241,0.4);
+            box-shadow: 6px 0 30px rgba(30,58,138,0.15);
+            transition: transform 0.8s cubic-bezier(0.2,0.8,0.2,1);
+        }
+        #blueSidebar.sidebar-hidden {
+            transform: translateX(-100%);
+        }
+        #blueSidebar.sidebar-visible {
+            transform: translateX(0);
+        }
+
+        /* Navbar */
+        #topNavbar {
+            background: linear-gradient(135deg, #4338ca, #1e40af);
+            border: 1px solid rgba(99,102,241,0.3);
+            box-shadow: 0 8px 32px rgba(30,58,138,0.2);
+            backdrop-filter: blur(20px);
+            transition: transform 0.6s cubic-bezier(0.2,0.8,0.2,1), opacity 0.6s ease;
+        }
+        #topNavbar.navbar-hidden {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+        #topNavbar.navbar-visible {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* 3D Button */
+        .btn-3d {
+            position: relative;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 14px;
+            color: white;
+            font-weight: 800;
+            font-size: 13px;
+            padding: 10px 18px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.15), 0 6px 20px rgba(0,0,0,0.1);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-3d:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 rgba(0,0,0,0.15), 0 10px 30px rgba(0,0,0,0.15);
+        }
+        .btn-3d:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 rgba(0,0,0,0.15);
+        }
+
+        /* Sidebar Menu Item */
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 14px 18px;
+            border-radius: 16px;
+            color: rgba(199,210,254,0.9);
+            font-weight: 800;
+            font-size: 14px;
+            transition: all 0.25s ease;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+        .sidebar-item:hover {
+            background: rgba(255,255,255,0.08);
+            color: white;
+        }
+        .sidebar-item.active {
+            background: rgba(255,255,255,0.12);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.15);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .sidebar-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 28px;
+            background: white;
+            border-radius: 0 4px 4px 0;
+            box-shadow: 0 0 12px rgba(255,255,255,0.6);
+        }
+        .sidebar-item svg {
+            width: 22px;
+            height: 22px;
+            flex-shrink: 0;
+        }
+        .sidebar-item .item-text {
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-item .item-text span:last-child {
+            font-size: 10px;
+            font-weight: 700;
+            color: rgba(165,180,252,0.7);
+            margin-top: 2px;
+        }
     </style>
 </head>
 <body class="h-screen w-screen overflow-hidden bg-slate-100 font-sans antialiased text-slate-800">
@@ -54,95 +162,81 @@
     <!-- Harita Katmanı (Arka Plan) -->
     <div id="map" class="absolute inset-0 w-full h-full z-0"></div>
 
-    <!-- Üst Menü / Navbar (Arama Kutusu ve Panele Dön) -->
-    <div class="absolute top-4 left-24 right-4 z-[900] flex justify-between items-center pointer-events-none">
-        <!-- Arama Kutusu -->
-        <div class="glass-panel h-12 w-96 rounded-2xl flex items-center px-4 shadow-xl pointer-events-auto border border-white/60">
-            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            <input type="text" placeholder="Araç plakası, sürücü veya lokasyon ara..." class="bg-transparent border-none focus:ring-0 text-sm font-bold text-slate-700 placeholder-slate-400 w-full ml-3 outline-none">
+    <!-- Üst Navbar (Mavi Gradient) -->
+    <div id="topNavbar" class="navbar-hidden absolute top-0 left-[280px] right-0 z-[900] h-16 flex justify-between items-center px-6">
+        <!-- Sol: Arama -->
+        <div style="background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.2); border-radius:12px; display:flex; align-items:center; padding:0 16px; height:40px; width:360px;">
+            <svg style="width:18px;height:18px;color:rgba(199,210,254,0.7);flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <input type="text" placeholder="Plaka veya lokasyon ara..." style="background:transparent; border:none; outline:none; color:white; font-weight:700; font-size:13px; margin-left:10px; width:100%;" class="placeholder-indigo-300/60">
         </div>
-        
-        <!-- Sağ Kısım -->
-        <div class="flex items-center gap-3 pointer-events-auto">
+
+        <!-- Sağ: Butonlar -->
+        <div style="display:flex; align-items:center; gap:12px;">
             @if(session('success'))
-                <div class="bg-emerald-500 text-white px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/30 animate-bounce">
+                <div style="background:#10b981; color:white; padding:8px 16px; border-radius:12px; font-weight:800; font-size:12px; display:flex; align-items:center; gap:6px; box-shadow:0 4px 15px rgba(16,185,129,0.4);">
                     ✅ {{ session('success') }}
                 </div>
             @endif
-            <!-- 3D Premium Panele Dön Butonu -->
-            <a href="{{ route('dashboard') }}" class="group relative flex items-center justify-center h-12 px-6 rounded-2xl bg-white text-slate-700 font-black text-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(0,0,0,0.1),_0_6px_6px_rgba(0,0,0,0.1),_inset_0_-4px_0_rgba(226,232,240,1)] shadow-[0_4px_6px_rgba(0,0,0,0.05),_0_1px_3px_rgba(0,0,0,0.1),_inset_0_-4px_0_rgba(241,245,249,1)] active:translate-y-1 active:shadow-none border border-slate-100">
-                <svg class="w-5 h-5 mr-2 text-slate-400 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                Filomerkez Paneline Dön
+            <!-- Panele Dön 3D Buton -->
+            <a href="{{ route('dashboard') }}" class="btn-3d">
+                <svg style="width:18px;height:18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"></path></svg>
+                Panele Dön
             </a>
         </div>
     </div>
 
-    <!-- Mavi Premium Full-Height Sidebar -->
-    <div id="blueSidebar" class="absolute top-0 bottom-0 left-0 z-[1000] w-[88px] hover:w-[320px] bg-gradient-to-b from-indigo-600 to-blue-700 shadow-[20px_0_40px_rgba(30,58,138,0.2)] transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] flex flex-col group overflow-hidden border-r border-indigo-500/50">
+    <!-- Mavi Premium Full-Height Sidebar (Her Zaman Açık, Yazılar Okunur) -->
+    <div id="blueSidebar" class="sidebar-hidden absolute top-0 bottom-0 left-0 z-[1000] flex flex-col overflow-hidden">
         
-        <!-- Üst Kısım: Logo ve Başlık -->
-        <div class="h-24 flex items-center px-6 border-b border-indigo-400/20 shrink-0">
-            <div class="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-white shadow-[0_8px_16px_rgba(0,0,0,0.2)] shrink-0 transition-transform duration-500 group-hover:rotate-3 group-hover:scale-105">
-                <span class="text-indigo-600 font-black text-sm tracking-tighter">FM</span>
-                <div class="absolute -right-1 -top-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-indigo-600 shadow-sm"></div>
+        <!-- Üst Kısım: Logo -->
+        <div style="height:80px; display:flex; align-items:center; padding:0 24px; border-bottom:1px solid rgba(99,102,241,0.2); flex-shrink:0;">
+            <div style="position:relative; width:42px; height:42px; border-radius:14px; background:white; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px rgba(0,0,0,0.2); flex-shrink:0;">
+                <span style="color:#4338ca; font-weight:900; font-size:15px; letter-spacing:-1px;">FM</span>
+                <div style="position:absolute; right:-4px; top:-4px; width:12px; height:12px; background:#34d399; border-radius:50%; border:2px solid #4338ca;"></div>
             </div>
-            <div class="ml-5 flex flex-col opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100 whitespace-nowrap">
-                <h1 class="text-xl font-black text-white tracking-tight leading-none mb-1">FiloMerkez</h1>
-                <p class="text-[10px] font-extrabold text-indigo-200 uppercase tracking-[0.2em]">Premium Takip</p>
+            <div style="margin-left:16px;">
+                <h1 style="font-size:20px; font-weight:900; color:white; letter-spacing:-0.5px; line-height:1; margin:0 0 4px 0;">FiloMerkez</h1>
+                <p style="font-size:10px; font-weight:800; color:rgba(165,180,252,0.8); text-transform:uppercase; letter-spacing:3px; margin:0;">Premium Takip</p>
             </div>
         </div>
 
         <!-- Ana Menü -->
-        <div class="flex-1 py-8 px-4 flex flex-col gap-2 overflow-y-auto custom-scrollbar">
+        <div style="flex:1; padding:28px 16px; display:flex; flex-direction:column; gap:8px; overflow-y:auto;" class="custom-scrollbar">
             
             <!-- Canlı Harita (Aktif) -->
-            <button class="relative w-full flex items-center px-4 py-4 rounded-2xl bg-white/10 text-white transition-all duration-300 group/menuitem overflow-hidden border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
-                <div class="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover/menuitem:opacity-100 transition-opacity"></div>
-                <div class="relative flex items-center justify-center min-w-[24px] shrink-0 text-white">
-                    <svg class="w-6 h-6 drop-shadow-sm" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+            <button class="sidebar-item active" style="position:relative;">
+                <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+                <div class="item-text">
+                    <span>Canlı Harita</span>
+                    <span>Tüm filoyu anlık izle</span>
                 </div>
-                <div class="ml-6 flex flex-col text-left opacity-0 group-hover:opacity-100 transition-opacity duration-500 whitespace-nowrap text-white">
-                    <span class="text-sm font-black tracking-wide">Canlı Harita</span>
-                    <span class="text-[10px] font-bold text-indigo-200 mt-0.5">Tüm filoyu anlık izle</span>
-                </div>
-                <!-- Aktif İndikatör -->
-                <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full shadow-[0_0_10px_rgba(255,255,255,0.8)]"></div>
             </button>
 
             <!-- Tanımlamalar -->
-            <button onclick="alert('Tanımlamalar arayüzü eklenecek')" class="relative w-full flex items-center px-4 py-4 rounded-2xl text-indigo-200 hover:text-white hover:bg-white/5 transition-all duration-300 group/menuitem overflow-hidden mt-2">
-                <div class="relative flex items-center justify-center min-w-[24px] shrink-0 group-hover/menuitem:scale-110 transition-transform">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                </div>
-                <div class="ml-6 flex flex-col text-left opacity-0 group-hover:opacity-100 transition-opacity duration-500 whitespace-nowrap">
-                    <span class="text-sm font-black tracking-wide">Cihaz Tanımlamaları</span>
-                    <span class="text-[10px] font-bold text-indigo-300 mt-0.5">IMEI ve Araç eşleştirme</span>
+            <button class="sidebar-item" onclick="alert('Tanımlamalar arayüzü eklenecek')">
+                <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <div class="item-text">
+                    <span>Cihaz Tanımlamaları</span>
+                    <span>IMEI ve Araç eşleştirme</span>
                 </div>
             </button>
 
         </div>
 
         <!-- Alt Durum Kutusu -->
-        <div class="px-6 pb-8 pt-4 shrink-0">
-            <div class="p-4 rounded-2xl bg-black/20 border border-white/10 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 whitespace-nowrap transform translate-y-4 group-hover:translate-y-0 backdrop-blur-md">
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-xs font-bold text-white">Sunucu Bağlantısı</span>
-                    <span class="flex h-2.5 w-2.5 relative">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400"></span>
+        <div style="padding:16px 20px 28px 20px; flex-shrink:0;">
+            <div style="padding:16px; border-radius:16px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); backdrop-filter:blur(10px);">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                    <span style="font-size:12px; font-weight:700; color:white;">Sunucu Bağlantısı</span>
+                    <span style="position:relative; display:flex; width:10px; height:10px;">
+                        <span class="animate-ping" style="position:absolute;width:100%;height:100%;border-radius:50%;background:#34d399;opacity:0.75;"></span>
+                        <span style="position:relative;display:inline-flex;border-radius:50%;width:10px;height:10px;background:#34d399;"></span>
                     </span>
                 </div>
-                <div class="h-1.5 w-full bg-white/10 rounded-full overflow-hidden mb-2">
-                    <div class="h-full bg-gradient-to-r from-emerald-400 to-emerald-300 w-full animate-pulse"></div>
+                <div style="height:6px; width:100%; background:rgba(255,255,255,0.1); border-radius:999px; overflow:hidden; margin-bottom:8px;">
+                    <div class="animate-pulse" style="height:100%; background:linear-gradient(90deg,#34d399,#6ee7b7); width:100%;"></div>
                 </div>
-                <p class="text-[10px] text-emerald-300 font-black tracking-widest uppercase">TCP Canlı Akış Aktif</p>
-            </div>
-            <!-- Kapalı Haldeki Status Noktası -->
-            <div class="absolute bottom-10 left-0 right-0 flex justify-center group-hover:opacity-0 transition-opacity duration-300">
-                <span class="flex h-3 w-3 relative">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.8)]"></span>
-                </span>
+                <p style="font-size:10px; color:#6ee7b7; font-weight:900; letter-spacing:2px; text-transform:uppercase;">TCP Canlı Akış Aktif</p>
             </div>
         </div>
     </div>
@@ -198,6 +292,16 @@
             initMap();
             fetchData();
             setInterval(fetchData, 3000);
+
+            // 5 saniye intro animasyonu: sidebar ve navbar kayarak gelir
+            setTimeout(function() {
+                document.getElementById('blueSidebar').classList.remove('sidebar-hidden');
+                document.getElementById('blueSidebar').classList.add('sidebar-visible');
+            }, 500);
+            setTimeout(function() {
+                document.getElementById('topNavbar').classList.remove('navbar-hidden');
+                document.getElementById('topNavbar').classList.add('navbar-visible');
+            }, 800);
         });
 
         function initMap() {
