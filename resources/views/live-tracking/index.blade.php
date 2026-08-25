@@ -1446,7 +1446,18 @@
             const hizHtml = `${vehicle.Speed} <span class="text-xs text-slate-400 font-bold">km/s</span>`;
             document.getElementById('advTabHiz').innerHTML = hizHtml;
             document.getElementById('advTabMesafe').innerText = (vehicle.DailyDistance || '0.0') + ' km';
-            document.getElementById('advTabKontak').innerText = vehicle.ACC ? 'AÇIK' : 'KAPALI';
+            // Kontak Durumu ve Rengi (Hız varsa kesin açıktır)
+            const isAccOn = vehicle.ACC || vehicle.Speed > 0;
+            const kontakEl = document.getElementById('advTabKontak');
+            if (isAccOn) {
+                kontakEl.innerText = 'AÇIK';
+                kontakEl.className = 'text-sm font-black text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]';
+                kontakEl.style.color = '#34d399'; // Fallback
+            } else {
+                kontakEl.innerText = 'KAPALI';
+                kontakEl.className = 'text-sm font-black text-rose-400 drop-shadow-[0_0_10px_rgba(251,113,133,0.5)]';
+                kontakEl.style.color = '#fb7185'; // Fallback
+            }
             
             // Ekstra Sensör ve Veriler
             document.getElementById('advTabMaxHiz').innerText = (vehicle.MaxSpeed || vehicle.Speed || 0) + ' km/s';
@@ -1456,7 +1467,7 @@
             // Altitude & Satellites (Eğer API'den geliyorsa)
             document.getElementById('advTabAltitude').innerText = (vehicle.Altitude || '0') + ' m';
             document.getElementById('advTabSatellites').innerText = vehicle.Satellites || '0';
-            document.getElementById('advTabIgnitionStatus').innerText = vehicle.ACC ? 'Açık' : 'Kapalı';
+            document.getElementById('advTabIgnitionStatus').innerText = isAccOn ? 'Açık' : 'Kapalı';
             
             // Adres Getir
             if (vehicle.Latitude && vehicle.Longitude) {
