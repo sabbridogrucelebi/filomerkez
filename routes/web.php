@@ -336,6 +336,10 @@ Route::get('/vehicle-tracking/definitions', [\App\Http\Controllers\LiveTrackingC
     ->middleware(['auth', 'permission:vehicle_tracking.view'])
     ->name('vehicle-tracking.definitions');
 
+Route::post('/vehicle-tracking/assign-imei', [\App\Http\Controllers\LiveTrackingController::class, 'assignImei'])
+    ->middleware(['auth', 'permission:vehicles.edit'])
+    ->name('vehicle-tracking.assign-imei');
+
 // Alarms
 Route::post('/vehicle-tracking/definitions/alarms', [\App\Http\Controllers\LiveTrackingController::class, 'storeAlarm'])
     ->middleware(['auth', 'permission:vehicle_tracking.view'])
