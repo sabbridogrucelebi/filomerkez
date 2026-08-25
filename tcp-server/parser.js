@@ -79,7 +79,21 @@ function parseLocation(buffer) {
     const hour = buffer[3];
     const minute = buffer[4];
     const second = buffer[5];
-    const datetime = `20${year.toString().padStart(2, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`;
+    
+    // Cihaz UTC (GMT+0) zamanı gönderir
+    const date = new Date(Date.UTC(2000 + year, month - 1, day, hour, minute, second));
+    
+    // Türkiye saati (UTC+3) için 3 saat ekle
+    date.setUTCHours(date.getUTCHours() + 3);
+
+    const trYear = date.getUTCFullYear();
+    const trMonth = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+    const trDay = date.getUTCDate().toString().padStart(2, '0');
+    const trHour = date.getUTCHours().toString().padStart(2, '0');
+    const trMinute = date.getUTCMinutes().toString().padStart(2, '0');
+    const trSecond = date.getUTCSeconds().toString().padStart(2, '0');
+
+    const datetime = `${trYear}-${trMonth}-${trDay} ${trHour}:${trMinute}:${trSecond}`;
 
     // Latitude & Longitude
     const latDec = buffer.readUInt32BE(7);
