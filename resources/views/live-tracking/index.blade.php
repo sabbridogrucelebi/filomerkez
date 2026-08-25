@@ -363,6 +363,57 @@
             });
         }
 
+        function getPopupHTML(vehicle, isMoving, addressHtml = 'Adres yükleniyor...') {
+            return `
+                <div style="font-family: sans-serif; min-width: 160px; padding: 2px;">
+                    <div style="font-weight: 900; font-size: 16px; margin-bottom: 4px; color: #0f172a;">${vehicle.LicensePlate}</div>
+                    <div style="color: ${isMoving ? '#10b981' : '#ef4444'}; font-size: 14px; font-weight: 900; margin-bottom: 4px;">${vehicle.Speed} km/h</div>
+                    <div style="color: #64748b; font-size: 10px;">${vehicle.Datetime || '-'}</div>
+                    <div class="address-field" style="color: #475569; font-size: 11px; margin-top: 6px; line-height: 1.3; border-top: 1px solid #e2e8f0; padding-top: 4px;">${addressHtml}</div>
+                </div>
+            `;
+        }
+
+        function updateMarkerAddressUI(marker, addressStr) {
+            if (!marker.isPopupOpen()) return;
+            const popupNode = marker.getPopup().getElement();
+            if (popupNode) {
+                const addrEl = popupNode.querySelector('.address-field');
+                if (addrEl) addrEl.innerText = addressStr;
+            }
+        }
+
+        function fetchAddressForMarker(marker, lat, lng) {
+            const coordKey = lat.toFixed(4) + ',' + lng.toFixed(4);
+            if (marker.lastAddressCoord === coordKey && marker.lastAddressStr) {
+                updateMarkerAddressUI(marker, marker.lastAddressStr);
+                return;
+            }
+            
+            const now = Date.now();
+            if (marker.lastAddressFetchTime && (now - marker.lastAddressFetchTime < 3000)) return; 
+            marker.lastAddressFetchTime = now;
+
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=tr`)
+                .then(res => res.json())
+                .then(data => {
+                    let display = data.display_name;
+                    if(data.address) {
+                        const a = data.address;
+                        const parts = [];
+                        if(a.road) parts.push(a.road);
+                        if(a.suburb) parts.push(a.suburb);
+                        if(a.town || a.city) parts.push(a.town || a.city);
+                        if(parts.length > 0) display = parts.join(', ');
+                    }
+                    marker.lastAddressCoord = coordKey;
+                    marker.lastAddressStr = display;
+                    updateMarkerAddressUI(marker, display);
+                }).catch(() => {
+                    updateMarkerAddressUI(marker, 'Adres alınamadı');
+                });
+        }
+
         function renderVehicles(liveData) {
             let bounds = [];
             liveData.forEach(vehicle => {
@@ -371,27 +422,36 @@
                     const lng = parseFloat(vehicle.Longitude);
                     const isMoving = vehicle.Speed > 0;
                     bounds.push([lat, lng]);
-                    
-                    const popupContent = `
-                        <div style="font-family: sans-serif; min-width: 160px; padding: 2px;">
-                            <div style="font-weight: 900; font-size: 16px; margin-bottom: 4px; color: #0f172a;">${vehicle.LicensePlate}</div>
-                            <div style="color: ${isMoving ? '#10b981' : '#ef4444'}; font-size: 14px; font-weight: 900; margin-bottom: 4px;">${vehicle.Speed} km/h</div>
-                            <div style="color: #64748b; font-size: 10px;">${vehicle.Datetime || '-'}</div>
-                        </div>
-                    `;
 
                     if (markers[vehicle.Node]) {
-                        markers[vehicle.Node].setLatLng([lat, lng]);
-                        markers[vehicle.Node].setIcon(createIcon(isMoving));
-                        markers[vehicle.Node].setPopupContent(popupContent);
+                        const marker = markers[vehicle.Node];
+                        marker.setLatLng([lat, lng]);
+                        marker.setIcon(createIcon(isMoving));
+                        
+                        if (marker.isPopupOpen()) {
+                            const popupNode = marker.getPopup().getElement();
+                            const addrEl = popupNode ? popupNode.querySelector('.address-field') : null;
+                            const currentAddr = addrEl ? addrEl.innerText : 'Adres yükleniyor...';
+                            marker.setPopupContent(getPopupHTML(vehicle, isMoving, currentAddr));
+                            fetchAddressForMarker(marker, lat, lng);
+                        } else {
+                            marker.setPopupContent(getPopupHTML(vehicle, isMoving, marker.lastAddressStr || 'Adres yükleniyor...'));
+                        }
                     } else {
                         const marker = L.marker([lat, lng], {
                             icon: createIcon(isMoving)
                         }).addTo(map);
-                        marker.bindPopup(popupContent);
+                        
+                        marker.bindPopup(getPopupHTML(vehicle, isMoving, 'Adres yükleniyor...'));
                         marker.bindTooltip(vehicle.LicensePlate, {
                             permanent: true, direction: 'bottom', className: 'custom-vehicle-tooltip', offset: [0, 10]
                         });
+                        
+                        marker.on('popupopen', function() {
+                            const currentLatLng = marker.getLatLng();
+                            fetchAddressForMarker(marker, currentLatLng.lat, currentLatLng.lng);
+                        });
+
                         markers[vehicle.Node] = marker;
                     }
                 }
