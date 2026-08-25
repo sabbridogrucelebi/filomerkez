@@ -240,12 +240,12 @@
         <!-- Üst Kısım: Logo -->
         <div style="height:90px; display:flex; align-items:center; padding:0 24px; border-bottom:1px solid rgba(255,255,255,0.05); flex-shrink:0;">
             <div style="position:relative; width:46px; height:46px; border-radius:16px; background:linear-gradient(135deg, #fff, #f8fafc); display:flex; align-items:center; justify-content:center; box-shadow:0 10px 25px rgba(0,0,0,0.3); flex-shrink:0;">
-                <span style="color:#4f46e5; font-weight:900; font-size:18px; letter-spacing:-1px;">FM</span>
+                <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                 <div style="position:absolute; right:-4px; top:-4px; width:14px; height:14px; background:#10b981; border-radius:50%; border:2px solid #1e1b4b; box-shadow:0 0 10px rgba(16,185,129,0.5);"></div>
             </div>
             <div style="margin-left:16px;">
-                <h1 style="font-size:22px; font-weight:900; color:white; letter-spacing:-0.5px; line-height:1; margin:0 0 4px 0; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">FiloMerkez</h1>
-                <p style="font-size:10px; font-weight:800; color:rgba(199,210,254,0.9); text-transform:uppercase; letter-spacing:4px; margin:0;">Premium Takip</p>
+                <h1 style="font-size:22px; font-weight:900; color:white; letter-spacing:-0.5px; line-height:1; margin:0 0 4px 0; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">FiloTakip</h1>
+                <p style="font-size:10px; font-weight:800; color:rgba(199,210,254,0.9); text-transform:uppercase; letter-spacing:1px; margin:0;">Araç Takip Sistemi</p>
             </div>
         </div>
 
@@ -1330,16 +1330,18 @@
         const globalSearchInput = document.getElementById('globalVehicleSearch');
         const globalSearchResults = document.getElementById('globalSearchResults');
 
-        globalSearchInput.addEventListener('input', function(e) {
-            const val = e.target.value.toLowerCase().trim();
-            globalSearchResults.innerHTML = '';
-            
-            if (val.length === 0) {
-                globalSearchResults.classList.add('hidden');
-                return;
-            }
-            
-            const results = globalVehicles.filter(v => v.LicensePlate && v.LicensePlate.toLowerCase().includes(val));
+        document.addEventListener("DOMContentLoaded", function() {
+            if (globalSearchInput) {
+                globalSearchInput.addEventListener('input', function(e) {
+                    const val = e.target.value.toLowerCase().trim();
+                    globalSearchResults.innerHTML = '';
+                    
+                    if (val.length === 0) {
+                        globalSearchResults.classList.add('hidden');
+                        return;
+                    }
+                    
+                    const results = globalVehicles.filter(v => v.LicensePlate && v.LicensePlate.toLowerCase().includes(val));
             
             if (results.length > 0) {
                 globalSearchResults.classList.remove('hidden');
@@ -1373,6 +1375,8 @@
                 globalSearchResults.innerHTML = '<li class="px-4 py-3 text-xs font-bold text-slate-500 text-center uppercase tracking-widest">Araç bulunamadı</li>';
             }
         });
+        }
+    });
 
         document.addEventListener('click', function(e) {
             if (!document.getElementById('globalSearchWrapper').contains(e.target)) {
