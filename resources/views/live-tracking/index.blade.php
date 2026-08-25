@@ -840,7 +840,7 @@
             }
             markers = {};
 
-            const url = `/vehicle-tracking/history?vehicle_id=${vehicleId}&date_filter=${dateFilter}&start_date=${startDate}&end_date=${endDate}`;
+            const url = `{{ url('/vehicle-tracking/history') }}?vehicle_id=${vehicleId}&date_filter=${dateFilter}&start_date=${startDate}&end_date=${endDate}`;
 
             fetch(url)
                 .then(res => res.json())
