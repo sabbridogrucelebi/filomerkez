@@ -206,9 +206,9 @@
     <div id="map" class="absolute inset-0 w-full h-full z-0"></div>
 
     <!-- Üst Yüzen Arama (Floating Navbar) -->
-    <div id="topNavbar" class="absolute top-6 z-[900] flex flex-col items-center pointer-events-none transition-all duration-500" style="left: 50%; transform: translateX(-50%); width: 450px; margin-left: 140px;">
+    <div id="topNavbar" class="absolute top-6 z-[900] flex flex-col items-center transition-all duration-500" style="left: 50%; transform: translateX(-50%); width: 450px; margin-left: 140px;">
         <!-- Arama Kutusu -->
-        <div class="relative pointer-events-auto rounded-2xl w-full" id="globalSearchWrapper">
+        <div class="relative rounded-2xl w-full" id="globalSearchWrapper">
             <div class="bg-slate-900/90 backdrop-blur-2xl border border-white/20 rounded-2xl flex items-center px-5 h-14 w-full relative z-[1002] shadow-[0_15px_40px_rgba(0,0,0,0.5)] transition-all focus-within:shadow-[0_15px_40px_rgba(99,102,241,0.5)] focus-within:border-indigo-400/80">
                 <svg class="w-5 h-5 text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 <input id="globalVehicleSearch" type="text" autocomplete="off" placeholder="Plaka veya lokasyon ara..." class="bg-transparent border-none outline-none text-white font-bold text-sm ml-3 w-full placeholder-slate-400 focus:ring-0">
@@ -221,7 +221,7 @@
     </div>
 
     <!-- Sağ Üst: Butonlar -->
-    <div class="absolute top-6 right-6 z-[900] flex items-center gap-4 pointer-events-auto">
+    <div id="topRightButtons" class="absolute top-6 right-6 z-[900] flex items-center gap-4 pointer-events-auto">
         @if(session('success'))
             <div class="bg-emerald-500/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl font-black text-sm flex items-center gap-2 shadow-[0_10px_25px_rgba(16,185,129,0.5)] border border-emerald-400/50">
                 ✅ {{ session('success') }}
@@ -823,7 +823,8 @@
                 'rightHistoryPanel', 
                 'arventoTripPanel', 
                 'arventoPlayerControls',
-                'imeiModal'
+                'imeiModal',
+                'topRightButtons'
             ];
             uiElements.forEach(id => {
                 const el = document.getElementById(id);
