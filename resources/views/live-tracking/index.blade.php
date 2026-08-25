@@ -43,14 +43,14 @@
             100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); }
         }
         .custom-vehicle-tooltip {
-            background: white !important;
+            background: transparent !important;
             border: none !important;
-            border-radius: 12px !important;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
-            padding: 6px 12px !important;
-            font-weight: 800 !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            font-weight: 900 !important;
             color: #0f172a !important;
-            font-size: 12px !important;
+            font-size: 13px !important;
+            text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0px 0px 8px rgba(255,255,255,0.8);
         }
         .custom-vehicle-tooltip::before { display: none !important; }
 
@@ -206,32 +206,32 @@
     <div id="map" class="absolute inset-0 w-full h-full z-0"></div>
 
     <!-- Üst Yüzen Arama (Floating Navbar) -->
-    <div id="topNavbar" class="absolute top-6 left-[300px] right-6 z-[900] flex justify-between items-start pointer-events-none">
-        <!-- Sol: Arama -->
-        <div class="relative pointer-events-auto rounded-2xl" style="width: 400px;" id="globalSearchWrapper">
-            <div class="bg-slate-900/80 backdrop-blur-xl border border-white/20 rounded-2xl flex items-center px-5 h-14 w-full relative z-[1002] shadow-[0_10px_30px_rgba(0,0,0,0.4)] transition-all focus-within:shadow-[0_10px_40px_rgba(99,102,241,0.5)] focus-within:border-indigo-400/50">
-                <svg class="w-5 h-5 text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                <input id="globalVehicleSearch" type="text" autocomplete="off" placeholder="Plaka veya lokasyon ara..." class="bg-transparent border-none outline-none text-white font-bold text-sm ml-3 w-full placeholder-slate-400">
+    <div id="topNavbar" class="absolute top-6 z-[900] flex flex-col items-center pointer-events-none transition-all duration-500" style="left: 50%; transform: translateX(-50%); width: 450px; margin-left: 140px;">
+        <!-- Arama Kutusu -->
+        <div class="relative pointer-events-auto rounded-2xl w-full" id="globalSearchWrapper">
+            <div class="bg-slate-900/90 backdrop-blur-2xl border border-white/20 rounded-2xl flex items-center px-5 h-14 w-full relative z-[1002] shadow-[0_15px_40px_rgba(0,0,0,0.5)] transition-all focus-within:shadow-[0_15px_40px_rgba(99,102,241,0.5)] focus-within:border-indigo-400/80">
+                <svg class="w-5 h-5 text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <input id="globalVehicleSearch" type="text" autocomplete="off" placeholder="Plaka veya lokasyon ara..." class="bg-transparent border-none outline-none text-white font-bold text-sm ml-3 w-full placeholder-slate-400 focus:ring-0">
             </div>
             <!-- Arama Sonuçları Dropdown -->
-            <ul id="globalSearchResults" class="absolute left-0 right-0 mt-3 bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden hidden z-[1001] custom-scrollbar" style="max-height: 350px; overflow-y: auto;">
+            <ul id="globalSearchResults" class="absolute left-0 right-0 mt-3 bg-slate-900/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] overflow-hidden hidden z-[1001] custom-scrollbar" style="max-height: 350px; overflow-y: auto;">
                 <!-- JS ile Doldurulacak -->
             </ul>
         </div>
+    </div>
 
-        <!-- Sağ: Butonlar -->
-        <div class="flex items-center gap-4 pointer-events-auto">
-            @if(session('success'))
-                <div class="bg-emerald-500/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl font-black text-sm flex items-center gap-2 shadow-[0_10px_25px_rgba(16,185,129,0.5)] border border-emerald-400/50">
-                    ✅ {{ session('success') }}
-                </div>
-            @endif
-            <!-- Panele Dön 3D Buton -->
-            <a href="{{ route('dashboard') }}" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-5 py-3.5 rounded-2xl shadow-[0_10px_25px_rgba(79,70,229,0.5)] font-black text-sm flex items-center gap-2 border border-white/20 hover:-translate-y-1 transition-all duration-300">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"></path></svg>
-                Panele Dön
-            </a>
-        </div>
+    <!-- Sağ Üst: Butonlar -->
+    <div class="absolute top-6 right-6 z-[900] flex items-center gap-4 pointer-events-auto">
+        @if(session('success'))
+            <div class="bg-emerald-500/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl font-black text-sm flex items-center gap-2 shadow-[0_10px_25px_rgba(16,185,129,0.5)] border border-emerald-400/50">
+                ✅ {{ session('success') }}
+            </div>
+        @endif
+        <!-- Panele Dön 3D Buton -->
+        <a href="{{ route('dashboard') }}" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-5 py-3.5 rounded-2xl shadow-[0_10px_25px_rgba(79,70,229,0.5)] font-black text-sm flex items-center gap-2 border border-white/20 hover:-translate-y-1 transition-all duration-300">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"></path></svg>
+            Panele Dön
+        </a>
     </div>
 
     <!-- Mavi Premium Full-Height Sidebar (Glassmorphism) -->
