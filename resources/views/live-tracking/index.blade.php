@@ -71,6 +71,15 @@
             transform: translateX(0);
         }
 
+        /* Premium 3D Glassmorphism - All Panels */
+        .premium-glass-panel {
+            background: linear-gradient(145deg, rgba(30, 58, 138, 0.85), rgba(15, 23, 42, 0.95)) !important;
+            backdrop-filter: blur(25px) !important;
+            -webkit-backdrop-filter: blur(25px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 20px 50px rgba(0, 0, 0, 0.5) !important;
+        }
+
         /* Premium 3D Glassmorphism - Navbar */
         #topNavbar {
             background: linear-gradient(145deg, rgba(30, 58, 138, 0.8), rgba(15, 23, 42, 0.9));
@@ -344,7 +353,7 @@
     <!-- ========================================== -->
     <!-- SOL ARAÇ DETAY PANELİ (AŞAMA 2 & 3 & 4) -->
     <!-- ========================================== -->
-    <div id="advancedVehiclePanel" class="hidden absolute flex flex-col bg-slate-900/80 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-3xl border border-white/10 overflow-hidden transition-all duration-500" style="left: 310px; top: 16px; bottom: 16px; width: 380px; z-index: 9999;">
+    <div id="advancedVehiclePanel" class="hidden absolute flex flex-col premium-glass-panel rounded-3xl overflow-hidden transition-all duration-500" style="left: 310px; top: 16px; bottom: 16px; width: 380px; z-index: 9999;">
         <!-- Başlık Kısmı (Plaka ve Butonlar) -->
         <div class="px-6 py-5 border-b border-white/10 flex justify-between items-center relative overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-transparent pointer-events-none"></div>
@@ -553,7 +562,7 @@
     <!-- ========================================== -->
     <!-- SAĞ GEÇMİŞ KAYITLARI PANELİ (AŞAMA 5) -->
     <!-- ========================================== -->
-    <div id="rightHistoryPanel" class="fixed z-[9999] flex flex-col bg-slate-900/80 backdrop-blur-2xl shadow-[-20px_0_50px_rgba(0,0,0,0.5)] border border-white/10 rounded-3xl overflow-hidden transition-transform duration-500" style="top: 16px; bottom: 16px; right: 16px; width: 400px; transform: translateX(120%);">
+    <div id="rightHistoryPanel" class="fixed z-[9999] flex flex-col premium-glass-panel rounded-3xl overflow-hidden transition-transform duration-500" style="top: 16px; bottom: 16px; right: 16px; width: 400px; transform: translateX(120%);">
         <!-- Başlık -->
         <div class="px-6 py-5 border-b border-white/10 flex justify-between items-center relative overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-l from-indigo-500/10 to-transparent pointer-events-none"></div>
@@ -590,7 +599,7 @@
             </div>
         </div>
     </div>
-    <div id="arventoTopBar" class="hidden absolute w-[700px] left-1/2 -translate-x-1/2 bg-slate-900/80 backdrop-blur-2xl rounded-full shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-white/10 px-4 py-2 flex items-center gap-3 transition-all" style="top: 80px; margin-left: 140px; z-index: 9999;">
+    <div id="arventoTopBar" class="hidden absolute w-[700px] left-1/2 -translate-x-1/2 premium-glass-panel rounded-full px-4 py-2 flex items-center gap-3 transition-all" style="top: 80px; margin-left: 140px; z-index: 9999;">
         <!-- Kapat Butonu -->
         <button onclick="exitHistoryMode()" class="w-12 h-12 rounded-full bg-white/5 hover:bg-rose-500/20 flex items-center justify-center text-slate-300 hover:text-rose-400 hover:border-rose-500/50 border border-white/10 transition-all shadow-inner group shrink-0">
             <svg class="w-6 h-6 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
@@ -644,7 +653,7 @@
     </div>
 
     <!-- Detaylı Tarih Seçici Modalı (Gizli) -->
-    <div id="customDatePanel" class="hidden absolute w-80 bg-slate-900/80 backdrop-blur-2xl rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-white/10 p-6 transition-all" style="top: 150px; left: 50%; transform: translateX(-50%); margin-left: 140px; z-index: 9999;">
+    <div id="customDatePanel" class="hidden absolute w-80 premium-glass-panel rounded-3xl p-6 transition-all" style="top: 150px; left: 50%; transform: translateX(-50%); margin-left: 140px; z-index: 9999;">
         <h4 class="font-black text-white text-sm mb-4 tracking-wide text-shadow-sm flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]"></div>Özel Tarih Aralığı</h4>
         <div class="space-y-4">
             <div>
@@ -659,7 +668,7 @@
     </div>
 
     <!-- Özet ve Sefer Listesi Paneli (Sol Tarafta Floating) -->
-    <div id="arventoTripPanel" class="hidden absolute w-80 max-h-[70vh] flex flex-col bg-slate-900/80 backdrop-blur-2xl rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-white/10 overflow-hidden transition-all" style="left: 300px; top: 80px; z-index: 9999;">
+    <div id="arventoTripPanel" class="hidden absolute w-80 max-h-[70vh] flex flex-col premium-glass-panel rounded-3xl overflow-hidden transition-all" style="left: 300px; top: 80px; z-index: 9999;">
         <!-- Özet Kartı -->
         <div class="relative overflow-hidden bg-gradient-to-br from-indigo-600/80 to-purple-700/80 p-6 border-b border-white/10">
             <div class="absolute -right-10 -top-10 w-32 h-32 bg-white/20 rounded-full blur-3xl"></div>
@@ -704,7 +713,7 @@
     </div>
 
     <!-- Oynatıcı Slider ve Durdur Butonları (Sol Alt / Orta) -->
-    <div id="arventoSliderContainer" class="hidden absolute right-[120px] bg-slate-900/80 backdrop-blur-2xl rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-white/10 p-4 flex items-center gap-5 transition-all" style="bottom: 40px; left: 304px; z-index: 9999;">
+    <div id="arventoSliderContainer" class="hidden absolute right-[120px] premium-glass-panel rounded-3xl p-4 flex items-center gap-5 transition-all" style="bottom: 40px; left: 304px; z-index: 9999;">
         <div class="flex items-center gap-3 shrink-0">
             <button onclick="togglePlayback()" id="playPauseBtn" class="w-14 h-14 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shadow-[0_0_20px_rgba(99,102,241,0.5)] border border-indigo-400 hover:scale-105 transition-all group overflow-hidden relative">
                 <div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
