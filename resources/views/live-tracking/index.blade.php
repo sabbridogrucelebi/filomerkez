@@ -350,16 +350,37 @@
         });
 
         function initMap() {
-            // Varsayılan Merkez: Konya (Daha da yakın)
+            // Varsayılan Merkez: Konya
             const defaultCenter = [37.8746, 32.4932];
             map = L.map('map', { zoomControl: false }).setView(defaultCenter, 13);
 
             // Google Maps Beyaz (Standart) Yol Haritası
-            L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            const googleStreets = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
                 maxZoom: 20,
                 attribution: '© Google Maps'
-            }).addTo(map);
+            });
 
+            // Google Hybrid (Uydu)
+            const googleHybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+                maxZoom: 20,
+                attribution: '© Google Maps'
+            });
+
+            // Google Traffic (Trafik)
+            const googleTraffic = L.tileLayer('https://mt1.google.com/vt/lyrs=m@221097413,traffic,transit,bike&x={x}&y={y}&z={z}', {
+                maxZoom: 20,
+                attribution: '© Google Maps'
+            });
+
+            googleStreets.addTo(map);
+
+            const baseMaps = {
+                "Standart Harita": googleStreets,
+                "Uydu Görünümü": googleHybrid,
+                "Trafik Yoğunluğu": googleTraffic
+            };
+
+            L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
             L.control.zoom({ position: 'bottomright' }).addTo(map);
         }
 
