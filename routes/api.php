@@ -58,6 +58,8 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\CheckCompanyStatus::clas
 */
 Route::prefix('v1')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
+    // Internal Microservice Endpoint (protected by X-Telemetry-Secret header)
+    Route::post('/vehicle-tracking/telemetry', [\App\Http\Controllers\Api\V1\VehicleTelemetryApiController::class, 'store']);
 });
 
 Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckCompanyStatus::class])->group(function () {
@@ -233,7 +235,6 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckCompa
     // Vehicle Tracking
     Route::get('/vehicle-tracking/live', [\App\Http\Controllers\Api\V1\VehicleTrackingApiController::class, 'live']);
     Route::get('/vehicle-tracking/reports/daily-work', [\App\Http\Controllers\Api\V1\VehicleTrackingApiController::class, 'dailyWorkReport']);
-    Route::post('/vehicle-tracking/telemetry', [\App\Http\Controllers\Api\V1\VehicleTelemetryApiController::class, 'store']);
 
     // Company Users
     Route::get('/company-users', [\App\Http\Controllers\Api\V1\CompanyUserApiController::class, 'index']);
