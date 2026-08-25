@@ -79,8 +79,9 @@ class LiveTrackingController extends Controller
 
         $request->validate([
             'vehicle_id' => 'required|exists:vehicles,id',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
+            'date_filter' => 'nullable|string', // e.g. today, yesterday, last_1_hour
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
         ]);
 
         $companyId = auth()->user()->company_id;
@@ -89,9 +90,47 @@ class LiveTrackingController extends Controller
             ->where('id', $request->vehicle_id)
             ->firstOrFail();
 
-        // Convert requested local time to UTC for DB query
-        $startDateUtc = \Carbon\Carbon::parse($request->start_date)->subHours(3);
-        $endDateUtc = \Carbon\Carbon::parse($request->end_date)->subHours(3);
+        $startDateUtc = null;
+        $endDateUtc = null;
+
+        if ($request->date_filter) {
+            $nowLocal = \Carbon\Carbon::now()->addHours(3);
+            switch ($request->date_filter) {
+                case 'last_1_hour':
+                    $startDateUtc = \Carbon\Carbon::now()->subHour();
+                    $endDateUtc = \Carbon\Carbon::now();
+                    break;
+                case 'today':
+                    $startDateUtc = $nowLocal->copy()->startOfDay()->subHours(3);
+                    $endDateUtc = $nowLocal->copy()->endOfDay()->subHours(3);
+                    break;
+                case 'yesterday':
+                    $startDateUtc = $nowLocal->copy()->subDay()->startOfDay()->subHours(3);
+                    $endDateUtc = $nowLocal->copy()->subDay()->endOfDay()->subHours(3);
+                    break;
+                case 'last_3_hours':
+                    $startDateUtc = \Carbon\Carbon::now()->subHours(3);
+                    $endDateUtc = \Carbon\Carbon::now();
+                    break;
+                case 'last_3_days':
+                    $startDateUtc = $nowLocal->copy()->subDays(2)->startOfDay()->subHours(3);
+                    $endDateUtc = $nowLocal->copy()->endOfDay()->subHours(3);
+                    break;
+                default:
+                    if ($request->start_date && $request->end_date) {
+                        $startDateUtc = \Carbon\Carbon::parse($request->start_date)->subHours(3);
+                        $endDateUtc = \Carbon\Carbon::parse($request->end_date)->subHours(3);
+                    }
+                    break;
+            }
+        } else if ($request->start_date && $request->end_date) {
+            $startDateUtc = \Carbon\Carbon::parse($request->start_date)->subHours(3);
+            $endDateUtc = \Carbon\Carbon::parse($request->end_date)->subHours(3);
+        } else {
+            // Default to today
+            $startDateUtc = \Carbon\Carbon::now()->addHours(3)->startOfDay()->subHours(3);
+            $endDateUtc = \Carbon\Carbon::now();
+        }
 
         $locations = VehicleLocation::where('vehicle_id', $vehicle->id)
             ->whereBetween('recorded_at', [$startDateUtc, $endDateUtc])
@@ -99,9 +138,16 @@ class LiveTrackingController extends Controller
             ->get();
 
         $historyData = [];
+        $trips = [];
+        
+        $currentTrip = null;
+        $prevLat = null;
+        $prevLng = null;
+
         foreach ($locations as $loc) {
             $acc = isset($loc->status['acc']) ? (bool) $loc->status['acc'] : false;
             $localTime = $loc->recorded_at ? $loc->recorded_at->copy()->addHours(3) : null;
+            $timeFormatted = $localTime ? $localTime->format('d.m.Y H:i:s') : null;
             
             $historyData[] = [
                 'lat' => $loc->latitude,
@@ -109,12 +155,90 @@ class LiveTrackingController extends Controller
                 'speed' => $loc->speed,
                 'course' => $loc->course,
                 'acc' => $acc,
-                'time' => $localTime ? $localTime->format('d.m.Y H:i:s') : null,
+                'time' => $timeFormatted,
                 'timestamp' => $localTime ? $localTime->timestamp : 0,
             ];
+
+            // Trip Logic
+            if ($acc) {
+                if (!$currentTrip) {
+                    $currentTrip = [
+                        'start_time' => $timeFormatted,
+                        'end_time' => null,
+                        'start_lat' => $loc->latitude,
+                        'start_lng' => $loc->longitude,
+                        'end_lat' => null,
+                        'end_lng' => null,
+                        'distance_km' => 0,
+                        'max_speed' => $loc->speed,
+                        'speed_sum' => $loc->speed,
+                        'point_count' => 1,
+                        'duration_seconds' => 0,
+                        'start_timestamp' => $localTime ? $localTime->timestamp : 0,
+                        'end_timestamp' => null
+                    ];
+                    $prevLat = $loc->latitude;
+                    $prevLng = $loc->longitude;
+                } else {
+                    // Calculate distance using Haversine
+                    if ($prevLat !== null && $prevLng !== null) {
+                        $currentTrip['distance_km'] += $this->haversineGreatCircleDistance($prevLat, $prevLng, $loc->latitude, $loc->longitude);
+                    }
+                    if ($loc->speed > $currentTrip['max_speed']) $currentTrip['max_speed'] = $loc->speed;
+                    $currentTrip['speed_sum'] += $loc->speed;
+                    $currentTrip['point_count']++;
+                    
+                    $prevLat = $loc->latitude;
+                    $prevLng = $loc->longitude;
+                }
+            } else {
+                if ($currentTrip) {
+                    // Close the trip
+                    $currentTrip['end_time'] = $timeFormatted;
+                    $currentTrip['end_lat'] = $loc->latitude;
+                    $currentTrip['end_lng'] = $loc->longitude;
+                    $currentTrip['end_timestamp'] = $localTime ? $localTime->timestamp : 0;
+                    $currentTrip['duration_seconds'] = $currentTrip['end_timestamp'] - $currentTrip['start_timestamp'];
+                    $currentTrip['avg_speed'] = $currentTrip['point_count'] > 0 ? round($currentTrip['speed_sum'] / $currentTrip['point_count'], 1) : 0;
+                    
+                    // Only save trips longer than 1 minute or with some distance
+                    if ($currentTrip['duration_seconds'] > 60 || $currentTrip['distance_km'] > 0.1) {
+                        $trips[] = $currentTrip;
+                    }
+                    $currentTrip = null;
+                }
+            }
         }
 
-        return response()->json(['success' => true, 'history' => $historyData]);
+        // Close any ongoing trip at the end of the query range
+        if ($currentTrip && count($historyData) > 0) {
+            $lastLoc = end($historyData);
+            $currentTrip['end_time'] = $lastLoc['time'];
+            $currentTrip['end_lat'] = $lastLoc['lat'];
+            $currentTrip['end_lng'] = $lastLoc['lng'];
+            $currentTrip['end_timestamp'] = $lastLoc['timestamp'];
+            $currentTrip['duration_seconds'] = $currentTrip['end_timestamp'] - $currentTrip['start_timestamp'];
+            $currentTrip['avg_speed'] = $currentTrip['point_count'] > 0 ? round($currentTrip['speed_sum'] / $currentTrip['point_count'], 1) : 0;
+            $trips[] = $currentTrip;
+        }
+
+        return response()->json([
+            'success' => true, 
+            'history' => $historyData,
+            'trips' => array_reverse($trips) // newest trips first
+        ]);
+    }
+
+    private function haversineGreatCircleDistance($latitudeFrom, $longitudeFrom, $latitudeTo, $longitudeTo, $earthRadius = 6371)
+    {
+        $latFrom = deg2rad($latitudeFrom);
+        $lonFrom = deg2rad($longitudeFrom);
+        $latTo = deg2rad($latitudeTo);
+        $lonTo = deg2rad($longitudeTo);
+        $latDelta = $latTo - $latFrom;
+        $lonDelta = $lonTo - $lonFrom;
+        $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) + cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
+        return $angle * $earthRadius;
     }
 
     // Modal üzerinden araca IMEI atamak için method

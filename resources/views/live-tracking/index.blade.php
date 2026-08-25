@@ -334,65 +334,120 @@
         </div>
     </div>
 
-    <!-- Geçmiş İzleme Paneli (Sol Tarafta Floating) -->
-    <div id="historyPanel" class="hidden absolute z-[1001] w-80 bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 p-5 transition-all" style="left: 300px; top: 80px;">
-        <h3 class="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
-            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            Geçmiş İzleme
-        </h3>
-        
-        <div class="space-y-4">
-            <div>
-                <label class="block text-xs font-bold text-slate-500 mb-1">Araç Seçin</label>
-                <select id="historyVehicleSelect" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500">
-                    <option value="">Araç Seçiniz</option>
-                    @foreach($vehicles as $v)
-                        @if($v->device_imei)
-                        <option value="{{ $v->id }}">{{ $v->plate }}</option>
-                        @endif
-                    @endforeach
-                </select>
+    <!-- Arvento Tarzı Premium Geçmiş İzleme UI (Top Bar) -->
+    <div id="arventoTopBar" class="hidden absolute z-[1001] w-[600px] left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md rounded-full shadow-2xl border border-slate-200 px-6 py-3 flex items-center gap-4 transition-all" style="top: 24px;">
+        <!-- Kapat Butonu -->
+        <button onclick="exitHistoryMode()" class="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        </button>
+
+        <div class="font-black text-slate-800 text-lg mr-4">Geçmiş</div>
+
+        <!-- Tarih Seçici -->
+        <div class="flex-1 relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
             </div>
-            
+            <select id="arventoDateSelect" onchange="checkCustomDateFilter()" class="block w-full pl-9 pr-3 py-2 text-sm font-bold text-slate-700 bg-white border border-slate-200 rounded-full appearance-none outline-none focus:border-indigo-500 shadow-sm cursor-pointer">
+                <option value="today">Bugün</option>
+                <option value="yesterday">Dün</option>
+                <option value="last_1_hour">Son 1 Saat</option>
+                <option value="last_3_hours">Son 3 Saat</option>
+                <option value="last_3_days">Son 3 Gün</option>
+                <option value="custom">Detaylı Zaman Aralığı</option>
+            </select>
+        </div>
+
+        <!-- Araç Seçici -->
+        <div class="flex-1 relative">
+            <select id="arventoVehicleSelect" class="block w-full pl-4 pr-8 py-2 text-sm font-bold text-slate-700 bg-white border border-slate-200 rounded-full appearance-none outline-none focus:border-indigo-500 shadow-sm cursor-pointer">
+                <option value="">Plaka Seçin</option>
+                @foreach($vehicles as $v)
+                    @if($v->device_imei)
+                    <option value="{{ $v->id }}">{{ $v->plate }}</option>
+                    @endif
+                @endforeach
+            </select>
+        </div>
+
+        <button onclick="fetchHistoryData()" class="px-5 py-2 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm transition-all shadow-lg shadow-indigo-600/30">Getir</button>
+    </div>
+
+    <!-- Detaylı Tarih Seçici Modalı (Gizli) -->
+    <div id="customDatePanel" class="hidden absolute z-[1001] w-80 bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 p-5 transition-all" style="top: 90px; left: 50%; transform: translateX(-50%);">
+        <h4 class="font-black text-slate-800 text-sm mb-3">Özel Tarih Aralığı</h4>
+        <div class="space-y-3">
             <div>
-                <label class="block text-xs font-bold text-slate-500 mb-1">Başlangıç Tarihi ve Saati</label>
-                <input type="datetime-local" id="historyStartDate" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Başlangıç</label>
+                <input type="datetime-local" id="historyStartDate" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none">
             </div>
-            
             <div>
-                <label class="block text-xs font-bold text-slate-500 mb-1">Bitiş Tarihi ve Saati</label>
-                <input type="datetime-local" id="historyEndDate" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500">
-            </div>
-            
-            <div class="pt-2 flex gap-2">
-                <button onclick="closeHistoryPanel()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 rounded-xl text-sm transition-all">İptal</button>
-                <button onclick="fetchHistoryData()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-xl text-sm transition-all shadow-lg shadow-indigo-600/30">Getir</button>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Bitiş</label>
+                <input type="datetime-local" id="historyEndDate" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none">
             </div>
         </div>
     </div>
 
-    <!-- History Player (Alt Kısımda) -->
-    <div id="historyPlayer" class="hidden absolute left-1/2 -translate-x-1/2 z-[1001] w-full max-w-2xl bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 p-4 transition-all flex flex-col gap-3" style="bottom: 24px;">
-        <div class="flex items-center justify-between px-2">
-            <div class="text-sm font-black text-slate-800" id="playerVehiclePlate">34 ABC 123</div>
-            <div class="text-xs font-bold text-indigo-600" id="playerCurrentTime">--:--:--</div>
+    <!-- Özet ve Sefer Listesi Paneli (Sol Tarafta Floating) -->
+    <div id="arventoTripPanel" class="hidden absolute z-[1001] w-80 max-h-[70vh] flex flex-col bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden transition-all" style="left: 20px; top: 100px;">
+        <!-- Özet Kartı -->
+        <div class="bg-indigo-600 p-5 text-white">
+            <div class="text-xs font-bold text-indigo-200 uppercase tracking-widest mb-1">Toplam Günlük Özet</div>
+            <div class="text-3xl font-black mb-4" id="summaryTotalDistance">0 km</div>
+            
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                    <div class="text-indigo-200 text-[10px] font-bold uppercase">Maks Hız</div>
+                    <div class="font-black" id="summaryMaxSpeed">0 km/s</div>
+                </div>
+                <div>
+                    <div class="text-indigo-200 text-[10px] font-bold uppercase">Ortalama Hız</div>
+                    <div class="font-black" id="summaryAvgSpeed">0 km/s</div>
+                </div>
+            </div>
         </div>
         
-        <div class="flex items-center gap-4">
-            <button onclick="togglePlayback()" id="playPauseBtn" class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white shadow-lg hover:scale-105 transition-all">
-                ▶
-            </button>
-            
-            <input type="range" id="playerSlider" min="0" max="100" value="0" class="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
-            
-            <select id="playerSpeed" class="bg-slate-100 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 outline-none" onchange="changePlaybackSpeed()">
-                <option value="1">1x Hız</option>
-                <option value="2">2x Hız</option>
-                <option value="5">5x Hız</option>
-                <option value="10">10x Hız</option>
-            </select>
-            
-            <button onclick="exitHistoryMode()" class="px-3 py-1.5 bg-red-100 text-red-600 font-bold text-xs rounded-lg hover:bg-red-200 transition-all">Çıkış</button>
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-white">
+            <span class="font-black text-slate-800 text-sm">Sefer Listesi</span>
+            <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg" id="summaryTripCount">0 Sefer</span>
+        </div>
+        
+        <!-- Liste -->
+        <div id="tripListContainer" class="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar bg-slate-50">
+            <!-- Sefer öğeleri buraya JS ile basılacak -->
+        </div>
+    </div>
+
+    <!-- Hız ve Oynatma Butonları (Sağ Alt Köşe) -->
+    <div id="arventoPlayerControls" class="hidden absolute z-[1001] right-6 flex flex-col items-center gap-3 transition-all" style="bottom: 40px;">
+        <!-- Hız Çarpanları -->
+        <div class="flex flex-col-reverse gap-2" id="speedMultipliers">
+            <button onclick="setPlaybackSpeed(100)" class="w-12 h-12 rounded-full bg-white/90 backdrop-blur-md shadow-xl border border-slate-100 text-xs font-black text-slate-600 hover:bg-indigo-600 hover:text-white transition-all speed-btn">100x</button>
+            <button onclick="setPlaybackSpeed(75)" class="w-12 h-12 rounded-full bg-white/90 backdrop-blur-md shadow-xl border border-slate-100 text-xs font-black text-slate-600 hover:bg-indigo-600 hover:text-white transition-all speed-btn">75x</button>
+            <button onclick="setPlaybackSpeed(50)" class="w-12 h-12 rounded-full bg-white/90 backdrop-blur-md shadow-xl border border-slate-100 text-xs font-black text-slate-600 hover:bg-indigo-600 hover:text-white transition-all speed-btn">50x</button>
+            <button onclick="setPlaybackSpeed(25)" class="w-12 h-12 rounded-full bg-white/90 backdrop-blur-md shadow-xl border border-slate-100 text-xs font-black text-slate-600 hover:bg-indigo-600 hover:text-white transition-all speed-btn">25x</button>
+            <button onclick="setPlaybackSpeed(10)" class="w-12 h-12 rounded-full bg-white/90 backdrop-blur-md shadow-xl border border-slate-100 text-xs font-black text-slate-600 hover:bg-indigo-600 hover:text-white transition-all speed-btn">10x</button>
+            <button onclick="setPlaybackSpeed(5)" class="w-12 h-12 rounded-full bg-white/90 backdrop-blur-md shadow-xl border border-slate-100 text-xs font-black text-slate-600 hover:bg-indigo-600 hover:text-white transition-all speed-btn">5x</button>
+            <button onclick="setPlaybackSpeed(1)" class="w-14 h-14 rounded-full bg-indigo-600 shadow-xl shadow-indigo-600/40 text-sm font-black text-white hover:scale-105 transition-all speed-btn active-speed">1x</button>
+        </div>
+    </div>
+
+    <!-- Oynatıcı Slider ve Durdur Butonları (Sol Alt / Orta) -->
+    <div id="arventoSliderContainer" class="hidden absolute z-[1001] left-6 right-[120px] bg-white/90 backdrop-blur-md rounded-full shadow-2xl border border-slate-200 p-3 flex items-center gap-4 transition-all" style="bottom: 40px;">
+        <button onclick="togglePlayback()" id="playPauseBtn" class="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30 hover:scale-105 transition-all shrink-0">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+        </button>
+        
+        <button onclick="stopPlayback()" class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-slate-200 transition-all shrink-0">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd"></path></svg>
+        </button>
+
+        <div class="flex-1 flex flex-col justify-center px-4">
+            <div class="flex justify-between text-[10px] font-bold text-slate-500 mb-1">
+                <span id="playerCurrentTime">--:--</span>
+                <span id="playerCurrentSpeed" class="text-indigo-600">0 km/s</span>
+            </div>
+            <input type="range" id="playerSlider" min="0" max="100" value="0" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
         </div>
     </div>
 
@@ -654,51 +709,69 @@
         // ==========================================
         // GEÇMİŞ İZLEME (HISTORY PLAYBACK) LOGIC
         // ==========================================
+        // ==========================================
+        // GEÇMİŞ İZLEME (HISTORY PLAYBACK) LOGIC (ARVENTO STYLE)
+        // ==========================================
         let isHistoryMode = false;
         let historyData = [];
+        let tripData = [];
         let historyPolyline = null;
         let historyMarker = null;
         let playbackInterval = null;
         let currentPlaybackIndex = 0;
-        let playbackSpeed = 1; // 1x, 2x vb.
+        let playbackSpeed = 1; // 1x, 5x, 10x
         let isPlaying = false;
-        let originalLiveInterval = null;
+        let activeTripIndex = null;
 
         function openHistoryPanel() {
-            document.getElementById('historyPanel').classList.remove('hidden');
+            document.getElementById('arventoTopBar').classList.remove('hidden');
         }
 
-        function closeHistoryPanel() {
-            document.getElementById('historyPanel').classList.add('hidden');
+        function checkCustomDateFilter() {
+            const val = document.getElementById('arventoDateSelect').value;
+            if (val === 'custom') {
+                document.getElementById('customDatePanel').classList.remove('hidden');
+            } else {
+                document.getElementById('customDatePanel').classList.add('hidden');
+            }
         }
 
         function fetchHistoryData() {
-            const vehicleId = document.getElementById('historyVehicleSelect').value;
+            const vehicleId = document.getElementById('arventoVehicleSelect').value;
+            const dateFilter = document.getElementById('arventoDateSelect').value;
             const startDate = document.getElementById('historyStartDate').value;
             const endDate = document.getElementById('historyEndDate').value;
 
-            if (!vehicleId || !startDate || !endDate) {
-                alert('Lütfen araç, başlangıç ve bitiş tarihlerini seçiniz.');
+            if (!vehicleId) {
+                alert('Lütfen bir araç seçiniz.');
+                return;
+            }
+
+            if (dateFilter === 'custom' && (!startDate || !endDate)) {
+                alert('Lütfen özel tarih aralığı için başlangıç ve bitiş tarihlerini giriniz.');
                 return;
             }
 
             // Canlı takibi durdur
             isHistoryMode = true;
-            document.getElementById('historyPanel').classList.add('hidden');
+            document.getElementById('customDatePanel').classList.add('hidden');
             
-            // Tüm mevcut canlı markerları temizle
+            // Markerları temizle
             markerClusterGroup.clearLayers();
             for (let key in markers) {
                 map.removeLayer(markers[key]);
             }
             markers = {};
 
-            fetch(`/vehicle-tracking/history?vehicle_id=${vehicleId}&start_date=${startDate}&end_date=${endDate}`)
+            const url = `/vehicle-tracking/history?vehicle_id=${vehicleId}&date_filter=${dateFilter}&start_date=${startDate}&end_date=${endDate}`;
+
+            fetch(url)
                 .then(res => res.json())
                 .then(data => {
                     if (data.success && data.history.length > 0) {
                         historyData = data.history;
-                        initPlaybackUI();
+                        tripData = data.trips || [];
+                        initArventoPlaybackUI();
                     } else {
                         alert('Seçilen tarih aralığında araca ait konum verisi bulunamadı.');
                         exitHistoryMode();
@@ -711,25 +784,46 @@
                 });
         }
 
-        function initPlaybackUI() {
-            document.getElementById('historyPlayer').classList.remove('hidden');
-            document.getElementById('historyPlayer').classList.add('flex');
+        function initArventoPlaybackUI() {
+            document.getElementById('arventoTripPanel').classList.remove('hidden');
+            document.getElementById('arventoPlayerControls').classList.remove('hidden');
+            document.getElementById('arventoSliderContainer').classList.remove('hidden');
+            document.getElementById('arventoSliderContainer').classList.add('flex');
             
-            const select = document.getElementById('historyVehicleSelect');
-            document.getElementById('playerVehiclePlate').innerText = select.options[select.selectedIndex].text;
-            
+            // Özet Kartı Hesaplama
+            let totalKm = 0;
+            let maxSpd = 0;
+            let spdSum = 0;
+            let tripCnt = tripData.length;
+
+            tripData.forEach(t => {
+                totalKm += (t.distance_km || 0);
+                if (t.max_speed > maxSpd) maxSpd = t.max_speed;
+                spdSum += (t.avg_speed || 0);
+            });
+
+            const avgSpd = tripCnt > 0 ? (spdSum / tripCnt).toFixed(1) : 0;
+
+            document.getElementById('summaryTotalDistance').innerText = totalKm.toFixed(1) + ' km';
+            document.getElementById('summaryMaxSpeed').innerText = maxSpd + ' km/s';
+            document.getElementById('summaryAvgSpeed').innerText = avgSpd + ' km/s';
+            document.getElementById('summaryTripCount').innerText = tripCnt + ' Sefer';
+
+            renderTripList();
+
+            // Tüm rotayı çiz
+            const latlngs = historyData.map(loc => [parseFloat(loc.lat), parseFloat(loc.lng)]);
+            if (historyPolyline) map.removeLayer(historyPolyline);
+            historyPolyline = L.polyline(latlngs, {color: '#2563eb', weight: 5, opacity: 0.8}).addTo(map);
+            map.fitBounds(historyPolyline.getBounds());
+
+            // Slider
             const slider = document.getElementById('playerSlider');
             slider.max = historyData.length - 1;
             slider.value = 0;
             currentPlaybackIndex = 0;
 
-            // Çizgi oluştur
-            const latlngs = historyData.map(loc => [parseFloat(loc.lat), parseFloat(loc.lng)]);
-            if (historyPolyline) map.removeLayer(historyPolyline);
-            historyPolyline = L.polyline(latlngs, {color: '#4f46e5', weight: 4, opacity: 0.7}).addTo(map);
-            map.fitBounds(historyPolyline.getBounds());
-
-            // Başlangıç marker'ı
+            // Marker
             if (historyMarker) map.removeLayer(historyMarker);
             const firstLoc = historyData[0];
             historyMarker = L.marker([parseFloat(firstLoc.lat), parseFloat(firstLoc.lng)], {
@@ -745,20 +839,95 @@
             });
         }
 
+        function renderTripList() {
+            const container = document.getElementById('tripListContainer');
+            container.innerHTML = '';
+
+            tripData.forEach((trip, index) => {
+                const durationMins = Math.floor(trip.duration_seconds / 60);
+                const html = `
+                    <div class="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm hover:shadow-md transition-all cursor-pointer" onclick="playTrip(${index})">
+                        <div class="flex items-start gap-3">
+                            <div class="flex flex-col items-center mt-1">
+                                <div class="w-3 h-3 rounded-full border-2 border-indigo-600 bg-white"></div>
+                                <div class="w-0.5 h-10 bg-slate-200 my-1"></div>
+                                <div class="w-3 h-3 rounded-full bg-indigo-600 border-2 border-indigo-200"></div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-[10px] text-slate-400 font-bold">${trip.start_time}</div>
+                                <div class="text-xs font-bold text-slate-700 truncate w-48">${trip.start_lat}, ${trip.start_lng}</div>
+                                
+                                <div class="flex items-center gap-3 my-2 text-[10px] font-black text-slate-500">
+                                    <span class="flex items-center gap-1 text-indigo-600"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> ${durationMins}dk</span>
+                                    <span>${(trip.distance_km || 0).toFixed(1)} km</span>
+                                    <span>Maks: ${trip.max_speed}</span>
+                                </div>
+
+                                <div class="text-[10px] text-slate-400 font-bold">${trip.end_time}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        function playTrip(tripIndex) {
+            const trip = tripData[tripIndex];
+            // Find start index in historyData
+            const startIndex = historyData.findIndex(h => h.timestamp === trip.start_timestamp);
+            if (startIndex !== -1) {
+                stopPlayback();
+                currentPlaybackIndex = startIndex;
+                document.getElementById('playerSlider').value = currentPlaybackIndex;
+                updateHistoryMarker();
+                updatePlayerUI();
+                
+                // Odaklan
+                map.flyTo([trip.start_lat, trip.start_lng], 16, {duration: 1.5});
+                setTimeout(() => { togglePlayback(); }, 1500);
+            }
+        }
+
+        function setPlaybackSpeed(speed) {
+            playbackSpeed = speed;
+            document.querySelectorAll('.speed-btn').forEach(btn => {
+                btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-indigo-600/40', 'active-speed');
+                btn.classList.add('bg-white/90', 'text-slate-600');
+            });
+            event.target.classList.remove('bg-white/90', 'text-slate-600');
+            event.target.classList.add('bg-indigo-600', 'text-white', 'shadow-indigo-600/40', 'active-speed');
+
+            if (isPlaying) {
+                clearInterval(playbackInterval);
+                playbackInterval = setInterval(playNextFrame, 1000 / playbackSpeed);
+            }
+        }
+
         function togglePlayback() {
             const btn = document.getElementById('playPauseBtn');
             if (isPlaying) {
                 clearInterval(playbackInterval);
                 isPlaying = false;
-                btn.innerText = '▶';
+                btn.innerHTML = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>'; // Play
             } else {
                 isPlaying = true;
-                btn.innerText = '⏸';
+                btn.innerHTML = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>'; // Pause
+                
                 if (currentPlaybackIndex >= historyData.length - 1) {
                     currentPlaybackIndex = 0;
                 }
                 playbackInterval = setInterval(playNextFrame, 1000 / playbackSpeed);
             }
+        }
+
+        function stopPlayback() {
+            if (isPlaying) togglePlayback();
+            currentPlaybackIndex = 0;
+            document.getElementById('playerSlider').value = 0;
+            updateHistoryMarker();
+            updatePlayerUI();
+            map.fitBounds(historyPolyline.getBounds());
         }
 
         function playNextFrame() {
@@ -768,15 +937,7 @@
                 updateHistoryMarker();
                 updatePlayerUI();
             } else {
-                togglePlayback(); // Sona gelince durdur
-            }
-        }
-
-        function changePlaybackSpeed() {
-            playbackSpeed = parseInt(document.getElementById('playerSpeed').value);
-            if (isPlaying) {
-                clearInterval(playbackInterval);
-                playbackInterval = setInterval(playNextFrame, 1000 / playbackSpeed);
+                togglePlayback();
             }
         }
 
@@ -785,7 +946,6 @@
             historyMarker.setLatLng([parseFloat(loc.lat), parseFloat(loc.lng)]);
             historyMarker.setIcon(createIcon({ Speed: loc.speed, ACC: loc.acc }));
             
-            // Eğer marker ekranın dışına çıkıyorsa haritayı kaydır
             if (!map.getBounds().contains(historyMarker.getLatLng())) {
                 map.panTo(historyMarker.getLatLng());
             }
@@ -793,7 +953,8 @@
 
         function updatePlayerUI() {
             const loc = historyData[currentPlaybackIndex];
-            document.getElementById('playerCurrentTime').innerText = loc.time + ' (' + loc.speed + ' km/h)';
+            document.getElementById('playerCurrentTime').innerText = loc.time;
+            document.getElementById('playerCurrentSpeed').innerText = loc.speed + ' km/s';
         }
 
         function exitHistoryMode() {
@@ -801,16 +962,20 @@
             clearInterval(playbackInterval);
             isPlaying = false;
             
-            document.getElementById('historyPlayer').classList.add('hidden');
-            document.getElementById('historyPlayer').classList.remove('flex');
+            document.getElementById('arventoTopBar').classList.add('hidden');
+            document.getElementById('customDatePanel').classList.add('hidden');
+            document.getElementById('arventoTripPanel').classList.add('hidden');
+            document.getElementById('arventoPlayerControls').classList.add('hidden');
+            document.getElementById('arventoSliderContainer').classList.add('hidden');
+            document.getElementById('arventoSliderContainer').classList.remove('flex');
             
             if (historyPolyline) map.removeLayer(historyPolyline);
             if (historyMarker) map.removeLayer(historyMarker);
             
             historyData = [];
+            tripData = [];
             currentPlaybackIndex = 0;
             
-            // Canlı haritaya geri dön
             window.location.reload();
         }
     </script>
