@@ -567,7 +567,7 @@
             
             // Eğer araç hareket ediyorsa veya kontak açıksa yön okunu göster
             if (statusClass !== 'pulse-stopped') {
-                arrowHtml = `<div style="position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 8px solid ${arrowColor}; drop-shadow(0 2px 2px rgba(0,0,0,0.3)); z-index: -1;"></div>`;
+                arrowHtml = `<div style="position: absolute; top: -18px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-bottom: 22px solid ${arrowColor}; drop-shadow(0 3px 4px rgba(0,0,0,0.4)); z-index: -1;"></div>`;
             }
 
             return L.divIcon({
