@@ -40,6 +40,10 @@ class LiveTrackingController extends Controller
 
             if ($lastLocation) {
                 $acc = isset($lastLocation->status['acc']) ? (bool) $lastLocation->status['acc'] : false;
+                
+                // Veritabanındaki UTC saate 3 saat ekleyerek Türkiye saatini bul
+                $localTime = $lastLocation->recorded_at ? $lastLocation->recorded_at->copy()->addHours(3) : null;
+                
                 $liveData[] = [
                     'Node' => $vehicle->id,
                     'LicensePlate' => $vehicle->plate,
@@ -48,7 +52,7 @@ class LiveTrackingController extends Controller
                     'Speed' => $lastLocation->speed,
                     'Course' => $lastLocation->course,
                     'ACC' => $acc,
-                    'Datetime' => $lastLocation->recorded_at ? $lastLocation->recorded_at->format('d.m.Y H:i:s') : null,
+                    'Datetime' => $localTime ? $localTime->format('d.m.Y H:i:s') : null,
                     'Address' => 'Konum: ' . $lastLocation->latitude . ', ' . $lastLocation->longitude,
                 ];
             } else {
