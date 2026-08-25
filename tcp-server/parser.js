@@ -81,22 +81,37 @@ function parseLocation(buffer) {
     const second = buffer[5];
     const datetime = `20${year.toString().padStart(2, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`;
 
-    // Latitude & Longitude
-    const latDec = buffer.readUInt32BE(7);
-    const lngDec = buffer.readUInt32BE(11);
-    const lat = latDec / 30000 / 60;
-    const lng = lngDec / 30000 / 60;
+    // Latitude & Longitude - GT06 Concox Protokolü
+    // Raw deger / 30000 = DDmm.mmmm formatı (Derece ve Dakika)
+    // Örnek: 68166000 / 30000 = 2272.20 → 22 derece, 72.20 dakika → Yanlış!
+    // Doğrusu: tüm değer dakika olarak: 2272.20 dakika → 2272.20 / 60 = 37.87 derece
+    // ANCAK bazı cihazlarda değer DDmm.mmmm formatında gelir:
+    // 2272.20 → DD=22, mm.mmmm=72.20 → ama 72 dakika olmaz (max 59)
+    // Bu yüzden doğru formül: raw / 1800000.0 (= raw / 30000 / 60)
+    
+    const latRaw = buffer.readUInt32BE(7);
+    const lngRaw = buffer.readUInt32BE(11);
 
     // Speed
     const speed = buffer[15];
 
     // Course & Status
     const courseStatus = buffer.readUInt16BE(16);
-    const course = courseStatus & 0x03FF; // Ilk 10 bit
-    const acc = (courseStatus & 0x2000) >> 13; // 13. bit (0x2000) ACC durumudur
+    const course = courseStatus & 0x03FF; // İlk 10 bit
+    const isNorth = (courseStatus & 0x0400) !== 0; // Bit 10: 1=Kuzey, 0=Güney (PDF Sayfa 15)
+    const isWest = (courseStatus & 0x0800) !== 0;   // Bit 11: 0=Doğu, 1=Batı (PDF Sayfa 15)
+    const acc = (courseStatus & 0x2000) >> 13;
     const gpsFix = (courseStatus & 0x1000) >> 12;
 
-    // Gerçek LBS ve status bitleri PDF'e göre çok daha detayli ama temelleri aldik.
+    // Koordinat dönüşümü: raw / 1800000.0
+    let lat = latRaw / 1800000.0;
+    let lng = lngRaw / 1800000.0;
+
+    // Yarımküre düzeltmesi
+    if (!isNorth) lat = -lat;
+    if (isWest) lng = -lng;
+
+    console.log(`[GPS DEBUG] Raw Lat: ${latRaw}, Raw Lng: ${lngRaw}, Parsed: ${lat.toFixed(6)}, ${lng.toFixed(6)}, CourseStatus: 0x${courseStatus.toString(16).padStart(4, '0')}`);
 
     return {
         datetime,
