@@ -1456,10 +1456,18 @@
                 kontakEl.style.color = '#34d399'; // Emerald (Moving)
                 ignitionStatusEl.innerText = 'Açık';
             } else if (vehicle.ACC) {
-                kontakEl.innerText = 'RÖLANTİ';
-                kontakEl.className = 'text-sm font-black drop-shadow-[0_0_10px_rgba(251,146,60,0.5)]';
-                kontakEl.style.color = '#fb923c'; // Orange (Idling)
-                ignitionStatusEl.innerText = 'Rölanti';
+                // Hız 0 ama Kontak Açık. Voltaj 13.0V'dan düşükse motor çalışmıyordur.
+                if (vehicle.Voltage && vehicle.Voltage < 13.0) {
+                    kontakEl.innerText = 'KONTAK AÇIK';
+                    kontakEl.className = 'text-sm font-black drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]';
+                    kontakEl.style.color = '#c084fc'; // Purple (Ignition On, Engine Off)
+                    ignitionStatusEl.innerText = 'Akü (Motor Kapalı)';
+                } else {
+                    kontakEl.innerText = 'RÖLANTİ';
+                    kontakEl.className = 'text-sm font-black drop-shadow-[0_0_10px_rgba(251,146,60,0.5)]';
+                    kontakEl.style.color = '#fb923c'; // Orange (Idling)
+                    ignitionStatusEl.innerText = 'Rölanti';
+                }
             } else {
                 kontakEl.innerText = 'KAPALI';
                 kontakEl.className = 'text-sm font-black drop-shadow-[0_0_10px_rgba(251,113,133,0.5)]';

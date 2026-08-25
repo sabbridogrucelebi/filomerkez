@@ -92,6 +92,7 @@ class LiveTrackingController extends Controller
                     'Address' => 'Konum: ' . $lastLocation->latitude . ', ' . $lastLocation->longitude,
                     'DailyDistance' => $stats['DailyDistance'],
                     'MaxSpeed' => $stats['MaxSpeed'],
+                    'Voltage' => isset($lastLocation->status['voltage']) ? (float)$lastLocation->status['voltage'] : null,
                 ];
             } else {
                 $liveData[] = [
