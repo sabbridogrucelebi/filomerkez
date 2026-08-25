@@ -39,6 +39,7 @@ class LiveTrackingController extends Controller
                 ->first();
 
             if ($lastLocation) {
+                $acc = isset($lastLocation->status['acc']) ? (bool) $lastLocation->status['acc'] : false;
                 $liveData[] = [
                     'Node' => $vehicle->id,
                     'LicensePlate' => $vehicle->plate,
@@ -46,6 +47,7 @@ class LiveTrackingController extends Controller
                     'Longitude' => $lastLocation->longitude,
                     'Speed' => $lastLocation->speed,
                     'Course' => $lastLocation->course,
+                    'ACC' => $acc,
                     'Datetime' => $lastLocation->recorded_at ? $lastLocation->recorded_at->format('d.m.Y H:i:s') : null,
                     'Address' => 'Konum: ' . $lastLocation->latitude . ', ' . $lastLocation->longitude,
                 ];
@@ -57,6 +59,7 @@ class LiveTrackingController extends Controller
                     'Longitude' => null,
                     'Speed' => 0,
                     'Course' => 0,
+                    'ACC' => false,
                     'Datetime' => null,
                     'Address' => 'Cihazdan veri bekleniyor...',
                 ];

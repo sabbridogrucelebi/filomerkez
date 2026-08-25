@@ -19,16 +19,25 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
         .pulse-moving {
-            background-color: #10b981;
-            animation: pulse-green 2s infinite;
+            background-color: #06b6d4;
+            animation: pulse-cyan 2s infinite;
+        }
+        .pulse-idle {
+            background-color: #a855f7;
+            animation: pulse-purple 2s infinite;
         }
         .pulse-stopped {
             background-color: #ef4444;
         }
-        @keyframes pulse-green {
-            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        @keyframes pulse-cyan {
+            0% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.7); }
+            70% { box-shadow: 0 0 0 12px rgba(6, 182, 212, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0); }
+        }
+        @keyframes pulse-purple {
+            0% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.7); }
+            70% { box-shadow: 0 0 0 12px rgba(168, 85, 247, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); }
         }
         .custom-vehicle-tooltip {
             background: white !important;
@@ -354,21 +363,31 @@
             L.control.zoom({ position: 'bottomright' }).addTo(map);
         }
 
-        function createIcon(isMoving) {
+        function createIcon(vehicle) {
+            let statusClass = 'pulse-stopped';
+            if (vehicle.ACC) {
+                statusClass = vehicle.Speed > 0 ? 'pulse-moving' : 'pulse-idle';
+            }
             return L.divIcon({
                 className: 'custom-vehicle-marker',
-                html: `<div class="pulse-icon ${isMoving ? 'pulse-moving' : 'pulse-stopped'}"></div>`,
+                html: `<div class="pulse-icon ${statusClass}"></div>`,
                 iconSize: [18, 18],
                 iconAnchor: [9, 9]
             });
         }
 
-        function getPopupHTML(vehicle, isMoving, addressHtml = 'Adres yükleniyor...') {
+        function getPopupHTML(vehicle, addressHtml = 'Adres yükleniyor...') {
+            let speedColor = '#ef4444';
+            if (vehicle.ACC) {
+                speedColor = vehicle.Speed > 0 ? '#06b6d4' : '#a855f7';
+            }
+            const timeStr = vehicle.Datetime ? vehicle.Datetime : '-';
+
             return `
                 <div style="font-family: sans-serif; min-width: 160px; padding: 2px;">
                     <div style="font-weight: 900; font-size: 16px; margin-bottom: 4px; color: #0f172a;">${vehicle.LicensePlate}</div>
-                    <div style="color: ${isMoving ? '#10b981' : '#ef4444'}; font-size: 14px; font-weight: 900; margin-bottom: 4px;">${vehicle.Speed} km/h</div>
-                    <div style="color: #64748b; font-size: 10px;">${vehicle.Datetime || '-'}</div>
+                    <div style="color: ${speedColor}; font-size: 14px; font-weight: 900; margin-bottom: 4px;">${vehicle.Speed} km/h</div>
+                    <div style="color: #64748b; font-size: 10px; margin-bottom: 2px;">Son Sinyal: <span style="font-weight:700; color:#334155;">${timeStr}</span></div>
                     <div class="address-field" style="color: #475569; font-size: 11px; margin-top: 6px; line-height: 1.3; border-top: 1px solid #e2e8f0; padding-top: 4px;">${addressHtml}</div>
                 </div>
             `;
@@ -426,23 +445,23 @@
                     if (markers[vehicle.Node]) {
                         const marker = markers[vehicle.Node];
                         marker.setLatLng([lat, lng]);
-                        marker.setIcon(createIcon(isMoving));
+                        marker.setIcon(createIcon(vehicle));
                         
                         if (marker.isPopupOpen()) {
                             const popupNode = marker.getPopup().getElement();
                             const addrEl = popupNode ? popupNode.querySelector('.address-field') : null;
                             const currentAddr = addrEl ? addrEl.innerText : 'Adres yükleniyor...';
-                            marker.setPopupContent(getPopupHTML(vehicle, isMoving, currentAddr));
+                            marker.setPopupContent(getPopupHTML(vehicle, currentAddr));
                             fetchAddressForMarker(marker, lat, lng);
                         } else {
-                            marker.setPopupContent(getPopupHTML(vehicle, isMoving, marker.lastAddressStr || 'Adres yükleniyor...'));
+                            marker.setPopupContent(getPopupHTML(vehicle, marker.lastAddressStr || 'Adres yükleniyor...'));
                         }
                     } else {
                         const marker = L.marker([lat, lng], {
-                            icon: createIcon(isMoving)
+                            icon: createIcon(vehicle)
                         }).addTo(map);
                         
-                        marker.bindPopup(getPopupHTML(vehicle, isMoving, 'Adres yükleniyor...'));
+                        marker.bindPopup(getPopupHTML(vehicle, 'Adres yükleniyor...'));
                         marker.bindTooltip(vehicle.LicensePlate, {
                             permanent: true, direction: 'bottom', className: 'custom-vehicle-tooltip', offset: [0, 10]
                         });
