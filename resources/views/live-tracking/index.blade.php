@@ -743,41 +743,43 @@
         </div>
     </div>
 
-    <!-- Hız ve Oynatma Butonları (Sağ Alt Köşe) -->
-    <div id="arventoPlayerControls" class="hidden absolute right-6 flex flex-col items-center gap-3 transition-all" style="bottom: 40px; z-index: 9999;">
-        <!-- Hız Çarpanları -->
-        <div class="flex flex-col-reverse gap-2" id="speedMultipliers">
-            <button onclick="setPlaybackSpeed(100)" class="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-xl shadow-[0_0_15px_rgba(0,0,0,0.3)] border border-white/10 text-[10px] font-black text-slate-400 hover:bg-indigo-500 hover:text-white hover:border-indigo-400 transition-all speed-btn">100x</button>
-            <button onclick="setPlaybackSpeed(75)" class="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-xl shadow-[0_0_15px_rgba(0,0,0,0.3)] border border-white/10 text-[10px] font-black text-slate-400 hover:bg-indigo-500 hover:text-white hover:border-indigo-400 transition-all speed-btn">75x</button>
-            <button onclick="setPlaybackSpeed(50)" class="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-xl shadow-[0_0_15px_rgba(0,0,0,0.3)] border border-white/10 text-[10px] font-black text-slate-400 hover:bg-indigo-500 hover:text-white hover:border-indigo-400 transition-all speed-btn">50x</button>
-            <button onclick="setPlaybackSpeed(25)" class="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-xl shadow-[0_0_15px_rgba(0,0,0,0.3)] border border-white/10 text-[10px] font-black text-slate-400 hover:bg-indigo-500 hover:text-white hover:border-indigo-400 transition-all speed-btn">25x</button>
-            <button onclick="setPlaybackSpeed(10)" class="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-xl shadow-[0_0_15px_rgba(0,0,0,0.3)] border border-white/10 text-[10px] font-black text-slate-400 hover:bg-indigo-500 hover:text-white hover:border-indigo-400 transition-all speed-btn">10x</button>
-            <button onclick="setPlaybackSpeed(5)" class="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-xl shadow-[0_0_15px_rgba(0,0,0,0.3)] border border-white/10 text-[10px] font-black text-slate-400 hover:bg-indigo-500 hover:text-white hover:border-indigo-400 transition-all speed-btn">5x</button>
-            <button onclick="setPlaybackSpeed(1)" class="w-14 h-14 rounded-2xl bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.6)] border border-indigo-400 text-[11px] font-black text-white hover:scale-105 transition-all speed-btn active-speed relative overflow-hidden"><div class="absolute inset-0 bg-white/20 opacity-0 hover:opacity-100 transition-opacity"></div>1x</button>
-        </div>
-    </div>
+    <!-- Hız ve Oynatma Butonları (Sağ Alt Köşe) - İPTAL EDİLDİ, SLIDER İÇİNE ALINDI -->
 
     <!-- Oynatıcı Slider ve Durdur Butonları (Orta Alt) -->
-    <div id="arventoSliderContainer" class="hidden absolute premium-glass-panel rounded-3xl p-4 flex items-center gap-5 transition-all" style="bottom: 40px; left: 50%; transform: translateX(-50%); margin-left: 140px; width: 600px; max-width: 80%; z-index: 9999;">
-        <div class="flex items-center gap-3 shrink-0">
-            <button onclick="togglePlayback()" id="playPauseBtn" class="w-14 h-14 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shadow-[0_0_20px_rgba(99,102,241,0.5)] border border-indigo-400 hover:scale-105 transition-all group overflow-hidden relative">
-                <div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <svg class="w-6 h-6 relative z-10" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
-            </button>
-            
-            <button onclick="stopPlayback()" class="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center text-slate-300 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/50 border border-white/10 shadow-[0_0_15px_rgba(0,0,0,0.3)] transition-all shrink-0">
-                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd"></path></svg>
-            </button>
+    <div id="arventoSliderContainer" class="hidden absolute premium-glass-panel rounded-3xl p-4 flex-col gap-3 transition-all" style="bottom: 40px; left: 450px; right: 430px; margin: 0 auto; max-width: 700px; z-index: 9999;">
+        <!-- Hız Seçici (Üst Kısım) -->
+        <div class="flex items-center justify-center gap-2 mb-1" id="speedMultipliers">
+            <button onclick="setPlaybackSpeed(1)" class="w-10 h-8 rounded-lg bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.6)] border border-indigo-400 text-[10px] font-black text-white hover:scale-105 transition-all speed-btn active-speed">1x</button>
+            <button onclick="setPlaybackSpeed(5)" class="w-10 h-8 rounded-lg bg-white/5 border border-white/10 text-[10px] font-black text-slate-400 hover:bg-indigo-500 hover:text-white transition-all speed-btn">5x</button>
+            <button onclick="setPlaybackSpeed(10)" class="w-10 h-8 rounded-lg bg-white/5 border border-white/10 text-[10px] font-black text-slate-400 hover:bg-indigo-500 hover:text-white transition-all speed-btn">10x</button>
+            <button onclick="setPlaybackSpeed(25)" class="w-10 h-8 rounded-lg bg-white/5 border border-white/10 text-[10px] font-black text-slate-400 hover:bg-indigo-500 hover:text-white transition-all speed-btn">25x</button>
+            <button onclick="setPlaybackSpeed(50)" class="w-10 h-8 rounded-lg bg-white/5 border border-white/10 text-[10px] font-black text-slate-400 hover:bg-indigo-500 hover:text-white transition-all speed-btn">50x</button>
+            <button onclick="setPlaybackSpeed(75)" class="w-10 h-8 rounded-lg bg-white/5 border border-white/10 text-[10px] font-black text-slate-400 hover:bg-indigo-500 hover:text-white transition-all speed-btn">75x</button>
+            <button onclick="setPlaybackSpeed(100)" class="w-10 h-8 rounded-lg bg-white/5 border border-white/10 text-[10px] font-black text-slate-400 hover:bg-indigo-500 hover:text-white transition-all speed-btn">100x</button>
         </div>
-
-        <div class="flex-1 flex flex-col justify-center px-2">
-            <div class="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">
-                <span id="playerCurrentTime" class="text-indigo-300 drop-shadow-md">--:--</span>
-                <span id="playerCurrentSpeed" class="text-emerald-400 drop-shadow-md">0 km/s</span>
+        
+        <!-- Alt Kısım: Play, Slider, Info -->
+        <div class="flex items-center gap-5 w-full">
+            <div class="flex items-center gap-2 shrink-0">
+                <button onclick="togglePlayback()" id="playPauseBtn" class="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shadow-[0_0_20px_rgba(99,102,241,0.5)] border border-indigo-400 hover:scale-105 transition-all group overflow-hidden relative">
+                    <div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <svg class="w-5 h-5 relative z-10" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                </button>
+                
+                <button onclick="stopPlayback()" class="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-slate-300 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/50 border border-white/10 shadow-[0_0_15px_rgba(0,0,0,0.3)] transition-all shrink-0">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd"></path></svg>
+                </button>
             </div>
-            <!-- Özelleştirilmiş Range Slider -->
-            <div class="relative w-full h-2">
-                <input type="range" id="playerSlider" min="0" max="100" value="0" class="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer outline-none z-10 relative" style="background: linear-gradient(to right, #6366f1 0%, #6366f1 0%, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.1) 100%);">
+
+            <div class="flex-1 flex flex-col justify-center px-2">
+                <div class="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">
+                    <span id="playerCurrentTime" class="text-indigo-300 drop-shadow-md">--:--</span>
+                    <span id="playerCurrentSpeed" class="text-emerald-400 drop-shadow-md">0 km/s</span>
+                </div>
+                <!-- Özelleştirilmiş Range Slider -->
+                <div class="relative w-full h-2">
+                    <input type="range" id="playerSlider" min="0" max="100" value="0" class="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer outline-none z-10 relative" style="background: linear-gradient(to right, #6366f1 0%, #6366f1 0%, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.1) 100%);">
+                </div>
             </div>
         </div>
     </div>
@@ -1310,12 +1312,17 @@
 
         function setPlaybackSpeed(speed) {
             playbackSpeed = speed;
-            document.querySelectorAll('.speed-btn').forEach(btn => {
-                btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-indigo-600/40', 'active-speed');
-                btn.classList.add('bg-white/90', 'text-slate-600');
+            
+            document.querySelectorAll('#speedMultipliers .speed-btn').forEach(btn => {
+                btn.classList.remove('bg-indigo-500', 'shadow-[0_0_15px_rgba(99,102,241,0.6)]', 'border-indigo-400', 'text-white', 'active-speed');
+                btn.classList.add('bg-white/5', 'border-white/10', 'text-slate-400');
             });
-            event.target.classList.remove('bg-white/90', 'text-slate-600');
-            event.target.classList.add('bg-indigo-600', 'text-white', 'shadow-indigo-600/40', 'active-speed');
+            
+            const targetBtn = Array.from(document.querySelectorAll('#speedMultipliers .speed-btn')).find(btn => btn.innerText === speed + 'x');
+            if(targetBtn) {
+                targetBtn.classList.remove('bg-white/5', 'border-white/10', 'text-slate-400');
+                targetBtn.classList.add('active-speed', 'bg-indigo-500', 'shadow-[0_0_15px_rgba(99,102,241,0.6)]', 'border-indigo-400', 'text-white');
+            }
 
             if (isPlaying) {
                 clearInterval(playbackInterval);
@@ -1416,7 +1423,6 @@
             document.getElementById('arventoTopBar').classList.add('hidden');
             document.getElementById('customDatePanel').classList.add('hidden');
             document.getElementById('arventoTripPanel').classList.add('hidden');
-            document.getElementById('arventoPlayerControls').classList.add('hidden');
             document.getElementById('arventoSliderContainer').classList.add('hidden');
             document.getElementById('arventoSliderContainer').classList.remove('flex');
             
@@ -1688,7 +1694,6 @@
             document.getElementById('advHistorySummary').classList.remove('hidden');
             
             // Player UI
-            document.getElementById('arventoPlayerControls').classList.remove('hidden');
             document.getElementById('arventoSliderContainer').classList.remove('hidden');
             document.getElementById('arventoSliderContainer').classList.add('flex');
             
