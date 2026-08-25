@@ -552,14 +552,32 @@
 
         function createIcon(vehicle) {
             let statusClass = 'pulse-stopped'; // Varsayılan Kırmızı
+            let arrowColor = '#ef4444';
+            
             if (vehicle.Speed > 0) {
                 statusClass = 'pulse-moving'; // Hareketli (Mavi/Turkuaz)
+                arrowColor = '#06b6d4';
             } else if (vehicle.ACC) {
                 statusClass = 'pulse-idle'; // Hız 0 ama Kontak Açık (Mor)
+                arrowColor = '#a855f7';
             }
+            
+            let course = vehicle.Course || 0;
+            let arrowHtml = '';
+            
+            // Eğer araç hareket ediyorsa veya kontak açıksa yön okunu göster
+            if (statusClass !== 'pulse-stopped') {
+                arrowHtml = `<div style="position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 8px solid ${arrowColor}; drop-shadow(0 2px 2px rgba(0,0,0,0.3)); z-index: -1;"></div>`;
+            }
+
             return L.divIcon({
                 className: 'custom-vehicle-marker',
-                html: `<div class="pulse-icon ${statusClass}"></div>`,
+                html: `
+                    <div style="position: relative; width: 18px; height: 18px; transform: rotate(${course}deg);">
+                        ${arrowHtml}
+                        <div class="pulse-icon ${statusClass}" style="position: absolute; inset: 0;"></div>
+                    </div>
+                `,
                 iconSize: [18, 18],
                 iconAnchor: [9, 9]
             });
