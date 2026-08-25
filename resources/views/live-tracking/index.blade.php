@@ -7,6 +7,9 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
@@ -325,6 +328,7 @@
     <script>
         let map;
         let markers = {};
+        let markerClusterGroup;
         let isFirstLoad = true;
         const allVehicles = @json($vehicles);
 
@@ -398,6 +402,14 @@
 
             L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
             L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+            // Kümeleme (Clustering) Grubunu Başlat
+            markerClusterGroup = L.markerClusterGroup({
+                disableClusteringAtZoom: 16, // Yaklaşınca kümeleri dağıt
+                spiderfyOnMaxZoom: true,
+                maxClusterRadius: 50
+            });
+            map.addLayer(markerClusterGroup);
         }
 
         function createIcon(vehicle) {
@@ -500,7 +512,7 @@
                     } else {
                         const marker = L.marker([lat, lng], {
                             icon: createIcon(vehicle)
-                        }).addTo(map);
+                        });
                         
                         marker.bindPopup(getPopupHTML(vehicle, 'Adres yükleniyor...'));
                         marker.bindTooltip(vehicle.LicensePlate, {
@@ -513,6 +525,7 @@
                         });
 
                         markers[vehicle.Node] = marker;
+                        markerClusterGroup.addLayer(marker);
                     }
                 }
             });
