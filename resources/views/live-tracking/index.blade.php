@@ -519,10 +519,9 @@
                 </div>
                 Bu modül arayüzü yakında aktif edilecektir.
             </div>
-        </div>
-        
-        <!-- Geçmiş Özeti (History Summary - Sadece Geçmiş Modunda Açılır) -->
-        <div id="advHistorySummary" class="hidden flex-1 overflow-y-auto bg-transparent p-6 flex flex-col gap-6 custom-scrollbar" style="min-height: 400px; max-height: calc(100vh - 280px);">
+
+            <!-- Geçmiş Özeti (History Summary - Sadece Geçmiş Modunda Açılır) -->
+            <div id="advHistorySummary" class="hidden flex-1 overflow-y-auto bg-transparent p-6 flex flex-col gap-6 custom-scrollbar" style="min-height: 400px;">
             <div class="relative overflow-hidden bg-gradient-to-br from-indigo-500/20 to-purple-500/20 p-5 rounded-3xl border border-indigo-500/30 shadow-inner">
                 <div class="absolute -right-4 -top-4 w-20 h-20 bg-indigo-500/30 rounded-full blur-2xl"></div>
                 <p class="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-1 relative z-10">Toplam Mesafe</p>
@@ -591,7 +590,7 @@
             <button onclick="document.getElementById('rightHistoryPanel').style.transform = 'translateX(0)';" class="mt-2 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-black text-indigo-400 hover:text-indigo-300 text-center w-full transition-colors border border-white/5">SEFER LİSTESİNİ GÖR</button>
             
             <!-- Pasta Grafik -->
-            <div class="mt-auto pt-6 border-t border-white/10 flex items-center justify-between">
+            <div class="pt-2 border-t border-white/10 flex items-center justify-between pb-6">
                 <div class="w-24 h-24 rounded-full shadow-[0_0_20px_rgba(0,0,0,0.5)] border-4 border-slate-800" id="advSumPieChart" style="background: conic-gradient(#ef4444 0% 0%, #3b82f6 0% 0%, #f43f5e 0% 0%);"></div>
                 <div class="flex flex-col gap-3 text-[10px] font-bold">
                     <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div> <span class="text-white w-14">Hareketli</span> <span id="advSumMovPct" class="text-blue-300 font-black">-%</span></div>
@@ -600,7 +599,10 @@
                 </div>
             </div>
         </div>
+        <!-- End of advHistorySummary -->
+        
     </div>
+    <!-- End of advPanelTabsContainer -->
 
     <!-- ========================================== -->
     <!-- SAĞ GEÇMİŞ KAYITLARI PANELİ (AŞAMA 5) -->
