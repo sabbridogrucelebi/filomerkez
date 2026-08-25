@@ -712,8 +712,8 @@
         </div>
     </div>
 
-    <!-- Oynatıcı Slider ve Durdur Butonları (Sol Alt / Orta) -->
-    <div id="arventoSliderContainer" class="hidden absolute right-[120px] premium-glass-panel rounded-3xl p-4 flex items-center gap-5 transition-all" style="bottom: 40px; left: 304px; z-index: 9999;">
+    <!-- Oynatıcı Slider ve Durdur Butonları (Orta Alt) -->
+    <div id="arventoSliderContainer" class="hidden absolute premium-glass-panel rounded-3xl p-4 flex items-center gap-5 transition-all" style="bottom: 40px; left: 50%; transform: translateX(-50%); margin-left: 140px; width: 600px; max-width: 80%; z-index: 9999;">
         <div class="flex items-center gap-3 shrink-0">
             <button onclick="togglePlayback()" id="playPauseBtn" class="w-14 h-14 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shadow-[0_0_20px_rgba(99,102,241,0.5)] border border-indigo-400 hover:scale-105 transition-all group overflow-hidden relative">
                 <div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -1446,17 +1446,25 @@
             const hizHtml = `${vehicle.Speed} <span class="text-xs text-slate-400 font-bold">km/s</span>`;
             document.getElementById('advTabHiz').innerHTML = hizHtml;
             document.getElementById('advTabMesafe').innerText = (vehicle.DailyDistance || '0.0') + ' km';
-            // Kontak Durumu ve Rengi (Hız varsa kesin açıktır)
-            const isAccOn = vehicle.ACC || vehicle.Speed > 0;
+            // Kontak Durumu ve Rengi
             const kontakEl = document.getElementById('advTabKontak');
-            if (isAccOn) {
+            const ignitionStatusEl = document.getElementById('advTabIgnitionStatus');
+            
+            if (vehicle.Speed > 0) {
                 kontakEl.innerText = 'AÇIK';
-                kontakEl.className = 'text-sm font-black text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]';
-                kontakEl.style.color = '#34d399'; // Fallback
+                kontakEl.className = 'text-sm font-black drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]';
+                kontakEl.style.color = '#34d399'; // Emerald (Moving)
+                ignitionStatusEl.innerText = 'Açık';
+            } else if (vehicle.ACC) {
+                kontakEl.innerText = 'RÖLANTİ';
+                kontakEl.className = 'text-sm font-black drop-shadow-[0_0_10px_rgba(251,146,60,0.5)]';
+                kontakEl.style.color = '#fb923c'; // Orange (Idling)
+                ignitionStatusEl.innerText = 'Rölanti';
             } else {
                 kontakEl.innerText = 'KAPALI';
-                kontakEl.className = 'text-sm font-black text-rose-400 drop-shadow-[0_0_10px_rgba(251,113,133,0.5)]';
-                kontakEl.style.color = '#fb7185'; // Fallback
+                kontakEl.className = 'text-sm font-black drop-shadow-[0_0_10px_rgba(251,113,133,0.5)]';
+                kontakEl.style.color = '#fb7185'; // Rose (Off)
+                ignitionStatusEl.innerText = 'Kapalı';
             }
             
             // Ekstra Sensör ve Veriler
@@ -1467,7 +1475,6 @@
             // Altitude & Satellites (Eğer API'den geliyorsa)
             document.getElementById('advTabAltitude').innerText = (vehicle.Altitude || '0') + ' m';
             document.getElementById('advTabSatellites').innerText = vehicle.Satellites || '0';
-            document.getElementById('advTabIgnitionStatus').innerText = isAccOn ? 'Açık' : 'Kapalı';
             
             // Adres Getir
             if (vehicle.Latitude && vehicle.Longitude) {
