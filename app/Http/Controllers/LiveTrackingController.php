@@ -145,7 +145,10 @@ class LiveTrackingController extends Controller
         $prevLng = null;
 
         foreach ($locations as $loc) {
-            $acc = isset($loc->status['acc']) ? (bool) $loc->status['acc'] : false;
+            $rawAcc = isset($loc->status['acc']) ? (bool) $loc->status['acc'] : false;
+            // Eğer cihazdan ACC bilgisi gelmiyorsa ama hız sıfırdan büyükse aracı kontak açık say!
+            $acc = $rawAcc || ($loc->speed > 0);
+            
             $localTime = $loc->recorded_at ? $loc->recorded_at->copy()->addHours(3) : null;
             $timeFormatted = $localTime ? $localTime->format('d.m.Y H:i:s') : null;
             

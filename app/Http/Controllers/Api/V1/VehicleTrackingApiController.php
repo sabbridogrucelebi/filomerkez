@@ -172,7 +172,8 @@ class VehicleTrackingApiController extends Controller
 
         foreach ($locations as $loc) {
             $statusArr = is_string($loc->status) ? json_decode($loc->status, true) : $loc->status;
-            $acc = isset($statusArr['acc']) ? (bool) $statusArr['acc'] : false;
+            $rawAcc = isset($statusArr['acc']) ? (bool) $statusArr['acc'] : false;
+            $acc = $rawAcc || ($loc->speed > 0);
             $localTime = $loc->recorded_at ? $loc->recorded_at->copy()->addHours(3) : null;
             $timeFormatted = $localTime ? $localTime->format('Y-m-d H:i:s') : null;
             
