@@ -536,7 +536,7 @@
                 <!-- JS ile Doldurulacak -->
             </div>
             
-            <button onclick="document.getElementById('rightHistoryPanel').classList.remove('translate-x-[120%]');" class="mt-2 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-black text-indigo-400 hover:text-indigo-300 text-center w-full transition-colors border border-white/5">SEFER LİSTESİNİ GÖR</button>
+            <button onclick="document.getElementById('rightHistoryPanel').style.transform = 'translateX(0)';" class="mt-2 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-black text-indigo-400 hover:text-indigo-300 text-center w-full transition-colors border border-white/5">SEFER LİSTESİNİ GÖR</button>
             
             <!-- Pasta Grafik -->
             <div class="mt-auto pt-6 border-t border-white/10 flex items-center justify-between">
@@ -553,12 +553,12 @@
     <!-- ========================================== -->
     <!-- SAĞ GEÇMİŞ KAYITLARI PANELİ (AŞAMA 5) -->
     <!-- ========================================== -->
-    <div id="rightHistoryPanel" class="fixed z-[9999] flex flex-col bg-slate-900/80 backdrop-blur-2xl shadow-[-20px_0_50px_rgba(0,0,0,0.5)] border border-white/10 rounded-3xl overflow-hidden transition-transform duration-500 translate-x-[120%]" style="top: 16px; bottom: 16px; right: 16px; width: 400px;">
+    <div id="rightHistoryPanel" class="fixed z-[9999] flex flex-col bg-slate-900/80 backdrop-blur-2xl shadow-[-20px_0_50px_rgba(0,0,0,0.5)] border border-white/10 rounded-3xl overflow-hidden transition-transform duration-500" style="top: 16px; bottom: 16px; right: 16px; width: 400px; transform: translateX(120%);">
         <!-- Başlık -->
         <div class="px-6 py-5 border-b border-white/10 flex justify-between items-center relative overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-l from-indigo-500/10 to-transparent pointer-events-none"></div>
             <div class="flex items-center gap-4 relative z-10">
-                <button onclick="document.getElementById('rightHistoryPanel').classList.add('translate-x-[120%]');" class="w-8 h-8 rounded-xl bg-white/5 hover:bg-slate-700 flex justify-center items-center text-slate-400 hover:text-white transition-all border border-transparent hover:border-white/20 mr-1">
+                <button onclick="document.getElementById('rightHistoryPanel').style.transform = 'translateX(120%)';" class="w-8 h-8 rounded-xl bg-white/5 hover:bg-slate-700 flex justify-center items-center text-slate-400 hover:text-white transition-all border border-transparent hover:border-white/20 mr-1">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
                 </button>
                 <div class="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
@@ -1345,18 +1345,18 @@
                 globalSearchResults.classList.remove('hidden');
                 results.forEach(vehicle => {
                     const li = document.createElement('li');
-                    li.className = 'px-4 py-3 border-b border-slate-100 hover:bg-indigo-50 cursor-pointer flex justify-between items-center transition-colors';
+                    li.className = 'px-4 py-3 border-b border-white/5 hover:bg-indigo-500/20 cursor-pointer flex justify-between items-center transition-colors group';
                     
-                    let dotColor = 'bg-red-500';
-                    if (vehicle.Speed > 0) dotColor = 'bg-cyan-500';
-                    else if (vehicle.ACC) dotColor = 'bg-purple-500';
+                    let dotColor = 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]';
+                    if (vehicle.Speed > 0) dotColor = 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]';
+                    else if (vehicle.ACC) dotColor = 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]';
                     
                     li.innerHTML = `
                         <div class="flex items-center gap-3">
-                            <div class="w-2.5 h-2.5 rounded-full ${dotColor} shadow-sm"></div>
-                            <span class="font-bold text-slate-700 text-sm">${vehicle.LicensePlate}</span>
+                            <div class="w-2.5 h-2.5 rounded-full ${dotColor}"></div>
+                            <span class="font-bold text-slate-300 group-hover:text-white text-sm transition-colors">${vehicle.LicensePlate}</span>
                         </div>
-                        <span class="text-xs font-semibold text-slate-400">Seç</span>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity">Seç</span>
                     `;
                     li.addEventListener('click', () => {
                         globalSearchInput.value = vehicle.LicensePlate;
@@ -1370,7 +1370,7 @@
                 });
             } else {
                 globalSearchResults.classList.remove('hidden');
-                globalSearchResults.innerHTML = '<li class="px-4 py-3 text-sm text-slate-500 text-center">Araç bulunamadı</li>';
+                globalSearchResults.innerHTML = '<li class="px-4 py-3 text-xs font-bold text-slate-500 text-center uppercase tracking-widest">Araç bulunamadı</li>';
             }
         });
 
@@ -1557,7 +1557,7 @@
             document.getElementById('arventoSliderContainer').classList.add('flex');
             
             // Sağ Paneli Aç
-            document.getElementById('rightHistoryPanel').classList.remove('translate-x-full');
+            document.getElementById('rightHistoryPanel').style.transform = 'translateX(0)';
             document.getElementById('advHistoryCount').innerText = historyData.length;
             
             let totalKm = 0, maxSpd = 0, spdSum = 0, movSec = 0, idleSec = 0, stopSec = 0;
