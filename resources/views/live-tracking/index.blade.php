@@ -335,7 +335,7 @@
     </div>
 
     <!-- Arvento Tarzı Premium Geçmiş İzleme UI (Top Bar) -->
-    <div id="arventoTopBar" class="hidden absolute z-[1001] w-[600px] left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md rounded-full shadow-2xl border border-slate-200 px-6 py-3 flex items-center gap-4 transition-all" style="top: 24px;">
+    <div id="arventoTopBar" class="hidden absolute w-[600px] left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md rounded-full shadow-2xl border border-slate-200 px-6 py-3 flex items-center gap-4 transition-all" style="top: 80px; margin-left: 140px; z-index: 9999;">
         <!-- Kapat Butonu -->
         <button onclick="exitHistoryMode()" class="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-all">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
@@ -374,7 +374,7 @@
     </div>
 
     <!-- Detaylı Tarih Seçici Modalı (Gizli) -->
-    <div id="customDatePanel" class="hidden absolute z-[1001] w-80 bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 p-5 transition-all" style="top: 90px; left: 50%; transform: translateX(-50%);">
+    <div id="customDatePanel" class="hidden absolute w-80 bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 p-5 transition-all" style="top: 150px; left: 50%; transform: translateX(-50%); margin-left: 140px; z-index: 9999;">
         <h4 class="font-black text-slate-800 text-sm mb-3">Özel Tarih Aralığı</h4>
         <div class="space-y-3">
             <div>
@@ -389,7 +389,7 @@
     </div>
 
     <!-- Özet ve Sefer Listesi Paneli (Sol Tarafta Floating) -->
-    <div id="arventoTripPanel" class="hidden absolute z-[1001] w-80 max-h-[70vh] flex flex-col bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden transition-all" style="left: 20px; top: 100px;">
+    <div id="arventoTripPanel" class="hidden absolute w-80 max-h-[70vh] flex flex-col bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden transition-all" style="left: 300px; top: 80px; z-index: 9999;">
         <!-- Özet Kartı -->
         <div class="bg-indigo-600 p-5 text-white">
             <div class="text-xs font-bold text-indigo-200 uppercase tracking-widest mb-1">Toplam Günlük Özet</div>
@@ -419,7 +419,7 @@
     </div>
 
     <!-- Hız ve Oynatma Butonları (Sağ Alt Köşe) -->
-    <div id="arventoPlayerControls" class="hidden absolute z-[1001] right-6 flex flex-col items-center gap-3 transition-all" style="bottom: 40px;">
+    <div id="arventoPlayerControls" class="hidden absolute right-6 flex flex-col items-center gap-3 transition-all" style="bottom: 40px; z-index: 9999;">
         <!-- Hız Çarpanları -->
         <div class="flex flex-col-reverse gap-2" id="speedMultipliers">
             <button onclick="setPlaybackSpeed(100)" class="w-12 h-12 rounded-full bg-white/90 backdrop-blur-md shadow-xl border border-slate-100 text-xs font-black text-slate-600 hover:bg-indigo-600 hover:text-white transition-all speed-btn">100x</button>
@@ -433,7 +433,7 @@
     </div>
 
     <!-- Oynatıcı Slider ve Durdur Butonları (Sol Alt / Orta) -->
-    <div id="arventoSliderContainer" class="hidden absolute z-[1001] left-6 right-[120px] bg-white/90 backdrop-blur-md rounded-full shadow-2xl border border-slate-200 p-3 flex items-center gap-4 transition-all" style="bottom: 40px;">
+    <div id="arventoSliderContainer" class="hidden absolute right-[120px] bg-white/90 backdrop-blur-md rounded-full shadow-2xl border border-slate-200 p-3 flex items-center gap-4 transition-all" style="bottom: 40px; left: 304px; z-index: 9999;">
         <button onclick="togglePlayback()" id="playPauseBtn" class="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30 hover:scale-105 transition-all shrink-0">
             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
         </button>
