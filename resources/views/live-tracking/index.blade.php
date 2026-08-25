@@ -1698,6 +1698,37 @@
             const container = document.getElementById('advHistoryListContainer');
             container.innerHTML = '';
             
+            // Başlangıç ve Bitiş Bilgilerini Doldur
+            if (historyData.length > 0) {
+                const firstLoc = historyData[0];
+                const lastLoc = historyData[historyData.length - 1];
+                const startAddr = firstLoc.lat + ', ' + firstLoc.lng;
+                const endAddr = lastLoc.lat + ', ' + lastLoc.lng;
+                
+                const routeDiv = document.getElementById('advSumRouteDetails');
+                routeDiv.classList.remove('hidden');
+                routeDiv.innerHTML = `
+                    <div class="relative">
+                        <div class="absolute -left-[23px] top-1 w-3 h-3 rounded-full bg-orange-500 ring-4 ring-slate-900 shadow-[0_0_10px_rgba(249,115,22,0.8)]"></div>
+                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Başlangıç</div>
+                        <div class="text-xs font-bold text-slate-200 line-clamp-2" id="routeStartAddr" title="${startAddr}">${startAddr}</div>
+                        <div class="text-[10px] font-bold text-slate-500 mt-1">${firstLoc.time}</div>
+                    </div>
+                    <div class="relative mt-2">
+                        <div class="absolute -left-[23px] top-1 w-3 h-3 rounded-full bg-amber-500 ring-4 ring-slate-900 shadow-[0_0_10px_rgba(245,158,11,0.8)]"></div>
+                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Bitiş</div>
+                        <div class="text-xs font-bold text-slate-200 line-clamp-2" id="routeEndAddr" title="${endAddr}">${endAddr}</div>
+                        <div class="text-[10px] font-bold text-slate-500 mt-1">${lastLoc.time}</div>
+                    </div>
+                `;
+                
+                // Fetch real addresses using Nominatim (arka planda çalışır, gecikme yapmaz)
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${firstLoc.lat}&lon=${firstLoc.lng}&zoom=18&addressdetails=1&accept-language=tr`)
+                    .then(res => res.json()).then(data => { if(data.display_name) document.getElementById('routeStartAddr').innerText = data.display_name; });
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lastLoc.lat}&lon=${lastLoc.lng}&zoom=18&addressdetails=1&accept-language=tr`)
+                    .then(res => res.json()).then(data => { if(data.display_name) document.getElementById('routeEndAddr').innerText = data.display_name; });
+            }
+            
             historyData.forEach((loc, idx) => {
                 // Pie Chart verileri (Basit Tahmin: 0 hız stop, >0 mov)
                 if(loc.speed > 0) movSec += 30; // varsayılan saniye
