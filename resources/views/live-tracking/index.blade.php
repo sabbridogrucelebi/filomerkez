@@ -1401,15 +1401,174 @@
         }
         
         function startAdvancedHistoryPlayback() {
-            // Şimdilik sadece "Geçmiş İzleme" summary'i göstersin (Mock Test)
-            switchAdvPanelTab('advHistorySummary'); // aslında tab değil ama mantık olarak açacağız
-            document.getElementById('advHistorySummary').classList.remove('hidden');
-            document.getElementById('tab-history').classList.add('hidden');
+            const vehicleId = currentAdvVehicle ? currentAdvVehicle.Id : null;
+            if (!vehicleId) return alert('Lütfen bir araç seçiniz.');
+
+            const fastFilter = document.getElementById('advHistoryFastFilter').value;
+            let startDate = '', endDate = '';
             
-            // Sağ Paneli de aç test amaçlı
-            // document.getElementById('rightHistoryPanel').classList.remove('translate-x-full');
-            console.log("Geçmiş izleme başlatıldı: ", currentAdvVehicle.LicensePlate);
-            // TODO: Aşama 4 ve 5'te buraları gerçek verilerle bağlayacağız.
+            // Yerel saati düzeltmek için timezone offset'i çıkarıyoruz
+            const tzoffset = (new Date()).getTimezoneOffset() * 60000; 
+            const now = new Date(Date.now() - tzoffset);
+
+            if (fastFilter === 'last_1_hour') {
+                endDate = now.toISOString().slice(0,16);
+                now.setHours(now.getHours() - 1);
+                startDate = now.toISOString().slice(0,16);
+            } else if (fastFilter === 'last_3_hours') {
+                endDate = now.toISOString().slice(0,16);
+                now.setHours(now.getHours() - 3);
+                startDate = now.toISOString().slice(0,16);
+            } else if (fastFilter === 'today') {
+                endDate = now.toISOString().slice(0,16);
+                now.setUTCHours(0,0,0,0);
+                startDate = now.toISOString().slice(0,16);
+            } else if (fastFilter === 'yesterday') {
+                const yest = new Date(Date.now() - tzoffset);
+                yest.setDate(yest.getDate() - 1);
+                yest.setUTCHours(0,0,0,0);
+                startDate = yest.toISOString().slice(0,16);
+                yest.setUTCHours(23,59,59,999);
+                endDate = yest.toISOString().slice(0,16);
+            } else if (fastFilter === 'last_3_days') {
+                endDate = now.toISOString().slice(0,16);
+                now.setDate(now.getDate() - 3);
+                startDate = now.toISOString().slice(0,16);
+            } else if (fastFilter === 'custom') {
+                startDate = document.getElementById('advHistoryStart').value;
+                endDate = document.getElementById('advHistoryEnd').value;
+            }
+
+            if (!startDate || !endDate) return alert('Geçerli bir tarih aralığı bulunamadı.');
+
+            isHistoryMode = true;
+            
+            markerClusterGroup.clearLayers();
+            for (let key in markers) {
+                map.removeLayer(markers[key]);
+            }
+            markers = {};
+
+            const url = `{{ url('/vehicle-tracking/history') }}?vehicle_id=${vehicleId}&date_filter=custom&start_date=${startDate}&end_date=${endDate}`;
+
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.history.length > 0) {
+                        historyData = data.history;
+                        tripData = data.trips || [];
+                        initAdvancedPlaybackUI();
+                    } else {
+                        alert('Seçilen tarih aralığında veri bulunamadı.');
+                        exitHistoryMode();
+                    }
+                })
+                .catch(err => {
+                    console.error('Geçmiş veri çekilirken hata:', err);
+                    alert('Hata oluştu.');
+                    exitHistoryMode();
+                });
+        }
+        
+        function initAdvancedPlaybackUI() {
+            switchAdvPanelTab('advHistorySummary');
+            document.getElementById('advHistorySummary').classList.remove('hidden');
+            
+            // Player UI
+            document.getElementById('arventoPlayerControls').classList.remove('hidden');
+            document.getElementById('arventoSliderContainer').classList.remove('hidden');
+            document.getElementById('arventoSliderContainer').classList.add('flex');
+            
+            // Sağ Paneli Aç
+            document.getElementById('rightHistoryPanel').classList.remove('translate-x-full');
+            document.getElementById('advHistoryCount').innerText = historyData.length;
+            
+            let totalKm = 0, maxSpd = 0, spdSum = 0, movSec = 0, idleSec = 0, stopSec = 0;
+            const container = document.getElementById('advHistoryListContainer');
+            container.innerHTML = '';
+            
+            historyData.forEach((loc, idx) => {
+                // Pie Chart verileri (Basit Tahmin: 0 hız stop, >0 mov)
+                if(loc.speed > 0) movSec += 30; // varsayılan saniye
+                else if(loc.acc) idleSec += 30;
+                else stopSec += 30;
+                
+                // Sağ panele liste elemanı ekle
+                const speedColor = loc.speed > 0 ? 'text-cyan-600' : 'text-red-500';
+                const dotColor = loc.speed > 0 ? 'bg-cyan-500' : (loc.acc ? 'bg-purple-500' : 'bg-red-500');
+                
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="bg-white border border-slate-100 rounded-xl p-3 flex items-center gap-3 cursor-pointer hover:border-indigo-300 transition-colors" onclick="playTripFromIndex(${idx})">
+                        <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center font-bold text-slate-400 text-[10px] border border-slate-200 shadow-inner">${idx+1}</div>
+                        <div class="flex-1">
+                            <div class="text-[10px] text-slate-400 font-bold mb-1">${loc.time}</div>
+                            <div class="text-xs font-bold text-slate-700 truncate w-40">${loc.lat}, ${loc.lng}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xs font-black ${speedColor}">${loc.speed} km/s</div>
+                            <div class="w-2 h-2 rounded-full ${dotColor} inline-block mt-1"></div>
+                        </div>
+                    </div>
+                `);
+            });
+
+            tripData.forEach(t => {
+                totalKm += (t.distance_km || 0);
+                if (t.max_speed > maxSpd) maxSpd = t.max_speed;
+                spdSum += (t.avg_speed || 0);
+            });
+            const avgSpd = tripData.length > 0 ? (spdSum / tripData.length).toFixed(1) : 0;
+            
+            // Özet Panelini Güncelle
+            document.getElementById('advSumTotalKm').innerHTML = `${totalKm.toFixed(1)}<span class="text-sm text-slate-500 font-bold ml-1">km</span>`;
+            document.getElementById('advSumAvgSpd').innerHTML = `${avgSpd}<span class="text-xs text-slate-400 font-bold ml-1">km/sa</span>`;
+            document.getElementById('advSumMaxSpd').innerHTML = `${maxSpd}<span class="text-xs text-slate-400 font-bold ml-1">km/sa</span>`;
+            
+            // Pasta Grafik Güncelle (Conic Gradient)
+            const totalSec = movSec + stopSec + idleSec || 1;
+            const movPct = Math.round((movSec / totalSec) * 100);
+            const stopPct = Math.round((stopSec / totalSec) * 100);
+            const idlePct = Math.round((idleSec / totalSec) * 100);
+            
+            document.getElementById('advSumMovPct').innerText = `%${movPct}`;
+            document.getElementById('advSumStpPct').innerText = `%${stopPct}`;
+            document.getElementById('advSumIdlPct').innerText = `%${idlePct}`;
+            
+            const p1 = movPct;
+            const p2 = p1 + stopPct;
+            document.getElementById('advSumPieChart').style.background = `conic-gradient(#3b82f6 0% ${p1}%, #ef4444 ${p1}% ${p2}%, #f472b6 ${p2}% 100%)`;
+            
+            // Haritada Çiz
+            const latlngs = historyData.map(loc => [parseFloat(loc.lat), parseFloat(loc.lng)]);
+            if (historyPolyline) map.removeLayer(historyPolyline);
+            historyPolyline = L.polyline(latlngs, {color: '#6366f1', weight: 6, opacity: 0.9, lineCap: 'round'}).addTo(map);
+            map.fitBounds(historyPolyline.getBounds());
+            
+            const slider = document.getElementById('playerSlider');
+            slider.max = historyData.length - 1;
+            slider.value = 0;
+            currentPlaybackIndex = 0;
+            
+            if (historyMarker) map.removeLayer(historyMarker);
+            const firstLoc = historyData[0];
+            historyMarker = L.marker([parseFloat(firstLoc.lat), parseFloat(firstLoc.lng)], {
+                icon: createIcon({ Speed: firstLoc.speed, ACC: firstLoc.acc, Course: firstLoc.course })
+            }).addTo(map);
+            
+            updatePlayerUI();
+            slider.addEventListener('input', function() {
+                currentPlaybackIndex = parseInt(this.value);
+                updateHistoryMarker();
+                updatePlayerUI();
+            });
+        }
+        
+        function playTripFromIndex(idx) {
+            currentPlaybackIndex = idx;
+            document.getElementById('playerSlider').value = idx;
+            updateHistoryMarker();
+            updatePlayerUI();
+            map.flyTo([historyData[idx].lat, historyData[idx].lng], 16, {duration: 1});
         }
     </script>
 </body>
