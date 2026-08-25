@@ -1,18 +1,17 @@
-// CRC-16-CCITT (Kermit) tablosu / hesaplayicisi
+// CRC-16/X.25 (ITU) hesaplayicisi - Concox standardi
 function getCrc16(buffer) {
     let crc = 0xFFFF;
     for (let i = 0; i < buffer.length; i++) {
-        crc ^= buffer[i] << 8;
+        crc ^= buffer[i];
         for (let j = 0; j < 8; j++) {
-            if ((crc & 0x8000) > 0) {
-                crc = (crc << 1) ^ 0x1021;
+            if ((crc & 1) !== 0) {
+                crc = (crc >> 1) ^ 0x8408;
             } else {
-                crc = crc << 1;
+                crc >>= 1;
             }
         }
     }
-    crc = crc & 0xFFFF;
-    return crc;
+    return (~crc) & 0xFFFF;
 }
 
 function parseConcox(buffer) {
