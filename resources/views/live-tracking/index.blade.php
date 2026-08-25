@@ -247,11 +247,20 @@
         <div style="flex:1; padding:28px 16px; display:flex; flex-direction:column; gap:8px; overflow-y:auto;" class="custom-scrollbar">
             
             <!-- Canlı Harita (Aktif) -->
-            <button class="sidebar-item active" style="position:relative;">
+            <button class="sidebar-item active" style="position:relative;" onclick="window.location.reload();">
                 <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
                 <div class="item-text">
                     <span>Canlı Harita</span>
                     <span>Tüm filoyu anlık izle</span>
+                </div>
+            </button>
+
+            <!-- Geçmiş İzleme -->
+            <button class="sidebar-item" style="position:relative;" onclick="openHistoryPanel()">
+                <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <div class="item-text">
+                    <span>Geçmiş İzleme</span>
+                    <span>Rota ve Video Playback</span>
                 </div>
             </button>
 
@@ -322,6 +331,68 @@
                     </div>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Geçmiş İzleme Paneli (Sol Tarafta Floating) -->
+    <div id="historyPanel" class="hidden absolute top-[80px] left-[300px] z-[1001] w-80 bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 p-5 transition-all">
+        <h3 class="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            Geçmiş İzleme
+        </h3>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-500 mb-1">Araç Seçin</label>
+                <select id="historyVehicleSelect" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500">
+                    <option value="">Araç Seçiniz</option>
+                    @foreach($vehicles as $v)
+                        @if($v->device_imei)
+                        <option value="{{ $v->id }}">{{ $v->plate }}</option>
+                        @endif
+                    @endforeach
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-xs font-bold text-slate-500 mb-1">Başlangıç Tarihi ve Saati</label>
+                <input type="datetime-local" id="historyStartDate" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500">
+            </div>
+            
+            <div>
+                <label class="block text-xs font-bold text-slate-500 mb-1">Bitiş Tarihi ve Saati</label>
+                <input type="datetime-local" id="historyEndDate" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500">
+            </div>
+            
+            <div class="pt-2 flex gap-2">
+                <button onclick="closeHistoryPanel()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 rounded-xl text-sm transition-all">İptal</button>
+                <button onclick="fetchHistoryData()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-xl text-sm transition-all shadow-lg shadow-indigo-600/30">Getir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Player (Alt Kısımda) -->
+    <div id="historyPlayer" class="hidden absolute bottom-6 left-1/2 -translate-x-1/2 z-[1001] w-full max-w-2xl bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 p-4 transition-all flex flex-col gap-3">
+        <div class="flex items-center justify-between px-2">
+            <div class="text-sm font-black text-slate-800" id="playerVehiclePlate">34 ABC 123</div>
+            <div class="text-xs font-bold text-indigo-600" id="playerCurrentTime">--:--:--</div>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <button onclick="togglePlayback()" id="playPauseBtn" class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white shadow-lg hover:scale-105 transition-all">
+                ▶
+            </button>
+            
+            <input type="range" id="playerSlider" min="0" max="100" value="0" class="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+            
+            <select id="playerSpeed" class="bg-slate-100 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 outline-none" onchange="changePlaybackSpeed()">
+                <option value="1">1x Hız</option>
+                <option value="2">2x Hız</option>
+                <option value="5">5x Hız</option>
+                <option value="10">10x Hız</option>
+            </select>
+            
+            <button onclick="exitHistoryMode()" class="px-3 py-1.5 bg-red-100 text-red-600 font-bold text-xs rounded-lg hover:bg-red-200 transition-all">Çıkış</button>
         </div>
     </div>
 
@@ -551,6 +622,7 @@
         }
 
         function fetchData() {
+            if (isHistoryMode) return;
             fetch('{{ route("vehicle-tracking.live") }}?_t=' + Date.now())
                 .then(response => response.json())
                 .then(data => {
@@ -579,6 +651,168 @@
         }
 
         window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeImeiModal(); });
+        // ==========================================
+        // GEÇMİŞ İZLEME (HISTORY PLAYBACK) LOGIC
+        // ==========================================
+        let isHistoryMode = false;
+        let historyData = [];
+        let historyPolyline = null;
+        let historyMarker = null;
+        let playbackInterval = null;
+        let currentPlaybackIndex = 0;
+        let playbackSpeed = 1; // 1x, 2x vb.
+        let isPlaying = false;
+        let originalLiveInterval = null;
+
+        function openHistoryPanel() {
+            document.getElementById('historyPanel').classList.remove('hidden');
+        }
+
+        function closeHistoryPanel() {
+            document.getElementById('historyPanel').classList.add('hidden');
+        }
+
+        function fetchHistoryData() {
+            const vehicleId = document.getElementById('historyVehicleSelect').value;
+            const startDate = document.getElementById('historyStartDate').value;
+            const endDate = document.getElementById('historyEndDate').value;
+
+            if (!vehicleId || !startDate || !endDate) {
+                alert('Lütfen araç, başlangıç ve bitiş tarihlerini seçiniz.');
+                return;
+            }
+
+            // Canlı takibi durdur
+            isHistoryMode = true;
+            document.getElementById('historyPanel').classList.add('hidden');
+            
+            // Tüm mevcut canlı markerları temizle
+            markerClusterGroup.clearLayers();
+            for (let key in markers) {
+                map.removeLayer(markers[key]);
+            }
+            markers = {};
+
+            fetch(`/vehicle-tracking/history?vehicle_id=${vehicleId}&start_date=${startDate}&end_date=${endDate}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.history.length > 0) {
+                        historyData = data.history;
+                        initPlaybackUI();
+                    } else {
+                        alert('Seçilen tarih aralığında araca ait konum verisi bulunamadı.');
+                        exitHistoryMode();
+                    }
+                })
+                .catch(err => {
+                    console.error('Geçmiş veri çekilirken hata:', err);
+                    alert('Geçmiş veri çekilirken hata oluştu.');
+                    exitHistoryMode();
+                });
+        }
+
+        function initPlaybackUI() {
+            document.getElementById('historyPlayer').classList.remove('hidden');
+            document.getElementById('historyPlayer').classList.add('flex');
+            
+            const select = document.getElementById('historyVehicleSelect');
+            document.getElementById('playerVehiclePlate').innerText = select.options[select.selectedIndex].text;
+            
+            const slider = document.getElementById('playerSlider');
+            slider.max = historyData.length - 1;
+            slider.value = 0;
+            currentPlaybackIndex = 0;
+
+            // Çizgi oluştur
+            const latlngs = historyData.map(loc => [parseFloat(loc.lat), parseFloat(loc.lng)]);
+            if (historyPolyline) map.removeLayer(historyPolyline);
+            historyPolyline = L.polyline(latlngs, {color: '#4f46e5', weight: 4, opacity: 0.7}).addTo(map);
+            map.fitBounds(historyPolyline.getBounds());
+
+            // Başlangıç marker'ı
+            if (historyMarker) map.removeLayer(historyMarker);
+            const firstLoc = historyData[0];
+            historyMarker = L.marker([parseFloat(firstLoc.lat), parseFloat(firstLoc.lng)], {
+                icon: createIcon({ Speed: firstLoc.speed, ACC: firstLoc.acc })
+            }).addTo(map);
+            
+            updatePlayerUI();
+
+            slider.addEventListener('input', function() {
+                currentPlaybackIndex = parseInt(this.value);
+                updateHistoryMarker();
+                updatePlayerUI();
+            });
+        }
+
+        function togglePlayback() {
+            const btn = document.getElementById('playPauseBtn');
+            if (isPlaying) {
+                clearInterval(playbackInterval);
+                isPlaying = false;
+                btn.innerText = '▶';
+            } else {
+                isPlaying = true;
+                btn.innerText = '⏸';
+                if (currentPlaybackIndex >= historyData.length - 1) {
+                    currentPlaybackIndex = 0;
+                }
+                playbackInterval = setInterval(playNextFrame, 1000 / playbackSpeed);
+            }
+        }
+
+        function playNextFrame() {
+            if (currentPlaybackIndex < historyData.length - 1) {
+                currentPlaybackIndex++;
+                document.getElementById('playerSlider').value = currentPlaybackIndex;
+                updateHistoryMarker();
+                updatePlayerUI();
+            } else {
+                togglePlayback(); // Sona gelince durdur
+            }
+        }
+
+        function changePlaybackSpeed() {
+            playbackSpeed = parseInt(document.getElementById('playerSpeed').value);
+            if (isPlaying) {
+                clearInterval(playbackInterval);
+                playbackInterval = setInterval(playNextFrame, 1000 / playbackSpeed);
+            }
+        }
+
+        function updateHistoryMarker() {
+            const loc = historyData[currentPlaybackIndex];
+            historyMarker.setLatLng([parseFloat(loc.lat), parseFloat(loc.lng)]);
+            historyMarker.setIcon(createIcon({ Speed: loc.speed, ACC: loc.acc }));
+            
+            // Eğer marker ekranın dışına çıkıyorsa haritayı kaydır
+            if (!map.getBounds().contains(historyMarker.getLatLng())) {
+                map.panTo(historyMarker.getLatLng());
+            }
+        }
+
+        function updatePlayerUI() {
+            const loc = historyData[currentPlaybackIndex];
+            document.getElementById('playerCurrentTime').innerText = loc.time + ' (' + loc.speed + ' km/h)';
+        }
+
+        function exitHistoryMode() {
+            isHistoryMode = false;
+            clearInterval(playbackInterval);
+            isPlaying = false;
+            
+            document.getElementById('historyPlayer').classList.add('hidden');
+            document.getElementById('historyPlayer').classList.remove('flex');
+            
+            if (historyPolyline) map.removeLayer(historyPolyline);
+            if (historyMarker) map.removeLayer(historyMarker);
+            
+            historyData = [];
+            currentPlaybackIndex = 0;
+            
+            // Canlı haritaya geri dön
+            window.location.reload();
+        }
     </script>
 </body>
 </html>
