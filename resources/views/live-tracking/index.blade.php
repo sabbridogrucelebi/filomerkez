@@ -813,6 +813,25 @@
                 maxClusterRadius: 50
             });
             map.addLayer(markerClusterGroup);
+
+            // Arayüz elemanları üzerindeki tıklamaların haritaya geçmesini engelle
+            const uiElements = [
+                'blueSidebar', 
+                'globalSearchWrapper', 
+                'topNavbar',
+                'advancedVehiclePanel', 
+                'rightHistoryPanel', 
+                'arventoTripPanel', 
+                'arventoPlayerControls',
+                'imeiModal'
+            ];
+            uiElements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    L.DomEvent.disableClickPropagation(el);
+                    L.DomEvent.disableScrollPropagation(el);
+                }
+            });
         }
 
         function createIcon(vehicle) {
