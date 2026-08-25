@@ -7,7 +7,7 @@ const parser = require('./parser');
 const devices = {};
 
 const PORT = process.env.TCP_PORT || 36025;
-const API_URL = process.env.API_URL || 'https://mehmetcelebiturizm.com/api/v1/vehicle-tracking/telemetry';
+const API_URL = process.env.API_URL || 'https://mehmetcelebiturizm.com/app/api/v1/vehicle-tracking/telemetry';
 const API_SECRET = process.env.API_SECRET || 'filo-telemetry-2026-secret';
 
 const server = net.createServer((socket) => {
