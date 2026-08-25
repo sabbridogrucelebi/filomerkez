@@ -44,6 +44,42 @@ class LiveTrackingController extends Controller
                 // Veritabanındaki UTC saate 3 saat ekleyerek Türkiye saatini bul
                 $localTime = $lastLocation->recorded_at ? $lastLocation->recorded_at->copy()->addHours(3) : null;
                 
+                // Günlük KM ve Maks Hız Hesaplama (Cache ile 60 saniye)
+                $stats = \Illuminate\Support\Facades\Cache::remember('vehicle_daily_stats_'.$vehicle->id, 60, function() use ($vehicle) {
+                    $todayStart = \Carbon\Carbon::now()->addHours(3)->startOfDay()->subHours(3);
+                    $locations = \App\Models\VehicleLocation::where('vehicle_id', $vehicle->id)
+                        ->where('recorded_at', '>=', $todayStart)
+                        ->orderBy('recorded_at', 'asc')
+                        ->get(['latitude', 'longitude', 'speed']);
+                        
+                    $distance = 0;
+                    $maxSpeed = 0;
+                    $prevLat = null;
+                    $prevLng = null;
+                    
+                    foreach ($locations as $loc) {
+                        if ($loc->speed > $maxSpeed) $maxSpeed = $loc->speed;
+                        
+                        if ($prevLat !== null && $prevLng !== null) {
+                            $latFrom = deg2rad($prevLat);
+                            $lonFrom = deg2rad($prevLng);
+                            $latTo = deg2rad($loc->latitude);
+                            $lonTo = deg2rad($loc->longitude);
+                            $latDelta = $latTo - $latFrom;
+                            $lonDelta = $lonTo - $lonFrom;
+                            $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) + cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
+                            $distance += $angle * 6371;
+                        }
+                        $prevLat = $loc->latitude;
+                        $prevLng = $loc->longitude;
+                    }
+                    
+                    return [
+                        'DailyDistance' => round($distance, 1),
+                        'MaxSpeed' => round($maxSpeed, 1)
+                    ];
+                });
+                
                 $liveData[] = [
                     'Node' => $vehicle->id,
                     'LicensePlate' => $vehicle->plate,
@@ -54,6 +90,8 @@ class LiveTrackingController extends Controller
                     'ACC' => $acc,
                     'Datetime' => $localTime ? $localTime->format('d.m.Y H:i:s') : null,
                     'Address' => 'Konum: ' . $lastLocation->latitude . ', ' . $lastLocation->longitude,
+                    'DailyDistance' => $stats['DailyDistance'],
+                    'MaxSpeed' => $stats['MaxSpeed'],
                 ];
             } else {
                 $liveData[] = [
@@ -66,6 +104,8 @@ class LiveTrackingController extends Controller
                     'ACC' => false,
                     'Datetime' => null,
                     'Address' => 'Cihazdan veri bekleniyor...',
+                    'DailyDistance' => 0,
+                    'MaxSpeed' => 0,
                 ];
             }
         }

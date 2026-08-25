@@ -423,24 +423,24 @@
                 <!-- 3D Animasyonlu KPI Kartları -->
                 <div class="grid grid-cols-2 gap-4 mt-1">
                     <!-- KM KPI -->
-                    <div class="relative overflow-hidden bg-gradient-to-br from-blue-600/80 to-indigo-800/80 backdrop-blur-xl rounded-3xl p-5 shadow-[0_15px_35px_rgba(37,99,235,0.4)] border border-blue-400/30 transform hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(37,99,235,0.6)] transition-all duration-300 group cursor-default">
+                    <div class="relative overflow-hidden premium-glass-panel rounded-3xl p-5 shadow-[0_15px_35px_rgba(37,99,235,0.4)] border border-blue-400/30 transform hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(37,99,235,0.6)] transition-all duration-300 group cursor-default">
                         <div class="absolute -right-4 -top-4 w-20 h-20 bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
                         <div class="relative z-10 flex flex-col h-full justify-between">
-                            <svg class="w-7 h-7 text-blue-200 mb-4 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                            <svg class="w-7 h-7 mb-4 drop-shadow-md" style="color: #93c5fd;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
                             <div>
-                                <div class="text-[10px] font-bold text-blue-200 uppercase tracking-widest mb-1 opacity-80">Bugünkü KM</div>
+                                <div class="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-80" style="color: #bfdbfe;">Bugünkü KM</div>
                                 <div class="text-xl font-black text-white tracking-tight drop-shadow-lg" id="advTabMesafe">0.0 km</div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Hız KPI -->
-                    <div class="relative overflow-hidden bg-gradient-to-br from-emerald-500/80 to-teal-700/80 backdrop-blur-xl rounded-3xl p-5 shadow-[0_15px_35px_rgba(16,185,129,0.4)] border border-emerald-400/30 transform hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(16,185,129,0.6)] transition-all duration-300 group cursor-default">
+                    <div class="relative overflow-hidden premium-glass-panel rounded-3xl p-5 shadow-[0_15px_35px_rgba(16,185,129,0.4)] border border-emerald-400/30 transform hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(16,185,129,0.6)] transition-all duration-300 group cursor-default">
                         <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
                         <div class="relative z-10 flex flex-col h-full justify-between">
-                            <svg class="w-7 h-7 text-emerald-200 mb-4 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            <svg class="w-7 h-7 mb-4 drop-shadow-md" style="color: #6ee7b7;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                             <div>
-                                <div class="text-[10px] font-bold text-emerald-200 uppercase tracking-widest mb-1 opacity-80">Maks. Hız</div>
+                                <div class="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-80" style="color: #a7f3d0;">Maks. Hız</div>
                                 <div class="text-xl font-black text-white tracking-tight drop-shadow-lg" id="advTabMaxHiz">-- km/s</div>
                             </div>
                         </div>
