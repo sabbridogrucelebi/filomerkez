@@ -335,7 +335,7 @@
     </div>
 
     <!-- Geçmiş İzleme Paneli (Sol Tarafta Floating) -->
-    <div id="historyPanel" class="hidden absolute top-[80px] left-[300px] z-[1001] w-80 bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 p-5 transition-all">
+    <div id="historyPanel" class="hidden absolute z-[1001] w-80 bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 p-5 transition-all" style="left: 300px; top: 80px;">
         <h3 class="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
             <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             Geçmiş İzleme
@@ -372,7 +372,7 @@
     </div>
 
     <!-- History Player (Alt Kısımda) -->
-    <div id="historyPlayer" class="hidden absolute bottom-6 left-1/2 -translate-x-1/2 z-[1001] w-full max-w-2xl bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 p-4 transition-all flex flex-col gap-3">
+    <div id="historyPlayer" class="hidden absolute left-1/2 -translate-x-1/2 z-[1001] w-full max-w-2xl bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 p-4 transition-all flex flex-col gap-3" style="bottom: 24px;">
         <div class="flex items-center justify-between px-2">
             <div class="text-sm font-black text-slate-800" id="playerVehiclePlate">34 ABC 123</div>
             <div class="text-xs font-bold text-indigo-600" id="playerCurrentTime">--:--:--</div>
