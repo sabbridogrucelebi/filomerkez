@@ -100,6 +100,54 @@ class VehicleTrackingApiController extends Controller
         ]);
     }
 
+    public function history(Request $request)
+    {
+        abort_unless($request->user()->hasPermission('vehicles.view'), 403, 'Bu işlem için yetkiniz bulunmamaktadır.');
+
+        $request->validate([
+            'vehicle_id' => 'required|exists:vehicles,id',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+        ]);
+
+        $companyId = $request->user()->company_id;
+        
+        $vehicle = \App\Models\Fleet\Vehicle::where('company_id', $companyId)
+            ->where('id', $request->vehicle_id)
+            ->firstOrFail();
+
+        // Convert requested local time to UTC for DB query
+        $startDateUtc = \Carbon\Carbon::parse($request->start_date)->subHours(3);
+        $endDateUtc = \Carbon\Carbon::parse($request->end_date)->subHours(3);
+
+        $locations = \App\Models\Fleet\VehicleLocation::where('vehicle_id', $vehicle->id)
+            ->whereBetween('recorded_at', [$startDateUtc, $endDateUtc])
+            ->orderBy('recorded_at', 'asc')
+            ->get();
+
+        $historyData = [];
+        foreach ($locations as $loc) {
+            $statusArr = is_string($loc->status) ? json_decode($loc->status, true) : $loc->status;
+            $acc = isset($statusArr['acc']) ? (bool) $statusArr['acc'] : false;
+            $localTime = $loc->recorded_at ? $loc->recorded_at->copy()->addHours(3) : null;
+            
+            $historyData[] = [
+                'Latitude' => $loc->latitude,
+                'Longitude' => $loc->longitude,
+                'Speed' => $loc->speed,
+                'Course' => $loc->course,
+                'EngineStatus' => $acc ? 'Açık' : 'Kapalı',
+                'RecordedAt' => $localTime ? $localTime->format('Y-m-d H:i:s') : null,
+                'Timestamp' => $localTime ? $localTime->timestamp : 0,
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'history' => $historyData
+        ]);
+    }
+
     public function dailyWorkReport(Request $request)
     {
         abort_unless($request->user()->hasPermission('vehicles.view'), 403, 'Bu işlem için yetkiniz bulunmamaktadır.');

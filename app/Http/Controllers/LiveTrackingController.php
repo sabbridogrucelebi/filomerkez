@@ -73,6 +73,50 @@ class LiveTrackingController extends Controller
         return response()->json(['vehicles' => $liveData]);
     }
 
+    public function historyData(Request $request)
+    {
+        abort_unless(auth()->user()->hasPermission('vehicle_tracking.view'), 403);
+
+        $request->validate([
+            'vehicle_id' => 'required|exists:vehicles,id',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+        ]);
+
+        $companyId = auth()->user()->company_id;
+        
+        $vehicle = Vehicle::where('company_id', $companyId)
+            ->where('id', $request->vehicle_id)
+            ->firstOrFail();
+
+        // Convert requested local time to UTC for DB query
+        $startDateUtc = \Carbon\Carbon::parse($request->start_date)->subHours(3);
+        $endDateUtc = \Carbon\Carbon::parse($request->end_date)->subHours(3);
+
+        $locations = VehicleLocation::where('vehicle_id', $vehicle->id)
+            ->whereBetween('recorded_at', [$startDateUtc, $endDateUtc])
+            ->orderBy('recorded_at', 'asc')
+            ->get();
+
+        $historyData = [];
+        foreach ($locations as $loc) {
+            $acc = isset($loc->status['acc']) ? (bool) $loc->status['acc'] : false;
+            $localTime = $loc->recorded_at ? $loc->recorded_at->copy()->addHours(3) : null;
+            
+            $historyData[] = [
+                'lat' => $loc->latitude,
+                'lng' => $loc->longitude,
+                'speed' => $loc->speed,
+                'course' => $loc->course,
+                'acc' => $acc,
+                'time' => $localTime ? $localTime->format('d.m.Y H:i:s') : null,
+                'timestamp' => $localTime ? $localTime->timestamp : 0,
+            ];
+        }
+
+        return response()->json(['success' => true, 'history' => $historyData]);
+    }
+
     // Modal üzerinden araca IMEI atamak için method
     public function assignImei(Request $request)
     {

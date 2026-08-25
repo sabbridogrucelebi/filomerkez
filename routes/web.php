@@ -327,6 +327,9 @@ Route::get('/vehicle-tracking/live', [\App\Http\Controllers\LiveTrackingControll
     ->middleware(['auth', 'permission:vehicle_tracking.view'])
     ->name('vehicle-tracking.live');
 
+Route::get('/vehicle-tracking/history', [\App\Http\Controllers\LiveTrackingController::class, 'historyData'])
+    ->name('vehicle-tracking.history');
+
 Route::post('/vehicle-tracking/assign-imei', [\App\Http\Controllers\LiveTrackingController::class, 'assignImei'])
     ->middleware(['auth', 'permission:vehicles.edit'])
     ->name('vehicle-tracking.assign-imei');
