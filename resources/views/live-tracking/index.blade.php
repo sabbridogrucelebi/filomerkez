@@ -116,6 +116,8 @@
         }
 
         /* 3D Sidebar Menu Item */
+
+
         .sidebar-item {
             display: flex;
             align-items: center;
@@ -178,6 +180,20 @@
             font-weight: 700;
             color: rgba(165,180,252,0.7);
             margin-top: 2px;
+        }
+
+        /* Araç Marker Konteyneri ve Süzülme Animasyonu */
+        .custom-vehicle-marker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 1.5s linear; /* Yumuşak kayma animasyonu */
+        }
+        
+        /* Harita katman seçicinin (topright) üst menünün altında kalmaması için */
+        .leaflet-top.leaflet-right {
+            margin-top: 80px;
+            margin-right: 20px;
         }
     </style>
 </head>
