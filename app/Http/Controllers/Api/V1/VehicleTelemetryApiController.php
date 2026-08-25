@@ -31,13 +31,13 @@ class VehicleTelemetryApiController extends Controller
             'recorded_at' => 'nullable|date',
         ]);
 
-        $imei = $validated['imei'];
+        $imei = trim($validated['imei']);
 
-        // Find the vehicle that this IMEI belongs to
-        $vehicle = Vehicle::where('device_imei', $imei)->first();
+        // Find the vehicle that this IMEI belongs to (bypassing global scopes since request is unauthenticated)
+        $vehicle = Vehicle::withoutGlobalScope('company')->where('device_imei', $imei)->first();
 
         if (!$vehicle) {
-            Log::warning("Telemetry received for unknown IMEI: {$imei}");
+            Log::warning("Telemetry received for unknown IMEI: '{$imei}'");
             return response()->json(['error' => 'Vehicle not found for given IMEI'], 404);
         }
 
