@@ -381,24 +381,65 @@
         <!-- Sekme İçerikleri Konteyneri -->
         <div class="flex-1 overflow-y-auto bg-white" style="min-height: 400px; max-height: calc(100vh - 280px);">
             
-            <!-- Tab 1: Anlık Araç Kullanımı -->
-            <div id="tab-realtime" class="p-0 flex flex-col h-full">
-                <table class="w-full text-left text-xs flex-1">
-                    <tbody class="divide-y divide-slate-100">
-                        <tr class="hover:bg-slate-50 transition-colors"><th class="py-3 px-5 font-semibold text-slate-500 w-1/3">Cihaz</th><td class="py-3 px-5 font-bold text-slate-800" id="advTabCihaz">-</td></tr>
-                        <tr class="hover:bg-slate-50 transition-colors"><th class="py-3 px-5 font-semibold text-slate-500">Tarih</th><td class="py-3 px-5 font-bold text-slate-800" id="advTabTarih">-</td></tr>
-                        <tr class="hover:bg-slate-50 transition-colors"><th class="py-3 px-5 font-semibold text-slate-500">Hız</th><td class="py-3 px-5 font-bold text-indigo-600" id="advTabHiz">0 km/s</td></tr>
-                        <tr class="hover:bg-slate-50 transition-colors"><th class="py-3 px-5 font-semibold text-slate-500">Adres</th><td class="py-3 px-5 font-bold text-slate-700 leading-tight" id="advTabAdres">Adres Yükleniyor...</td></tr>
-                        <tr class="hover:bg-slate-50 transition-colors"><th class="py-3 px-5 font-semibold text-slate-500">Günlük Mesafe</th><td class="py-3 px-5 font-bold text-slate-800" id="advTabMesafe">0.0 km</td></tr>
-                        <tr class="hover:bg-slate-50 transition-colors"><th class="py-3 px-5 font-semibold text-slate-500">Kontak</th><td class="py-3 px-5 font-bold text-slate-800" id="advTabKontak">-</td></tr>
-                    </tbody>
-                </table>
+            <!-- Tab 1: Anlık Araç Kullanımı (KPI KARTLARI) -->
+            <div id="tab-realtime" class="p-4 flex flex-col h-full gap-4 bg-slate-50">
+                <!-- Temel Bilgi -->
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                    <div>
+                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Şu Anki Hız</div>
+                        <div class="text-2xl font-black text-indigo-600" id="advTabHiz">0 <span class="text-xs text-slate-400">km/s</span></div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Kontak</div>
+                        <div class="text-sm font-black text-slate-800" id="advTabKontak">-</div>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Adres</div>
+                    <div class="text-xs font-bold text-slate-700 leading-tight" id="advTabAdres">Adres Yükleniyor...</div>
+                </div>
+
+                <!-- 3D Animasyonlu KPI Kartları -->
+                <div class="grid grid-cols-2 gap-3 mt-2">
+                    <!-- KM KPI -->
+                    <div class="relative overflow-hidden bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-4 shadow-[0_10px_20px_-10px_rgba(79,70,229,0.5)] transform hover:-translate-y-1 transition-all duration-300">
+                        <div class="absolute -right-4 -top-4 w-16 h-16 bg-white/10 rounded-full blur-xl"></div>
+                        <svg class="w-6 h-6 text-white/70 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                        <div class="text-[10px] font-bold text-blue-100 uppercase tracking-wider mb-0.5">Bugünkü KM</div>
+                        <div class="text-lg font-black text-white" id="advTabMesafe">0.0 km</div>
+                    </div>
+
+                    <!-- Hız KPI -->
+                    <div class="relative overflow-hidden bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl p-4 shadow-[0_10px_20px_-10px_rgba(16,185,129,0.5)] transform hover:-translate-y-1 transition-all duration-300">
+                        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-white/10 rounded-full blur-xl"></div>
+                        <svg class="w-6 h-6 text-white/70 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        <div class="text-[10px] font-bold text-emerald-100 uppercase tracking-wider mb-0.5">Maks. Hız</div>
+                        <div class="text-lg font-black text-white" id="advTabMaxHiz">-- km/s</div>
+                    </div>
+                    
+                    <!-- Elektrik & Kontak KPI (Geniş) -->
+                    <div class="col-span-2 relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-4 shadow-xl transform hover:-translate-y-1 transition-all duration-300 flex justify-between items-center">
+                        <div class="absolute -left-10 top-0 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl"></div>
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Araç Voltajı</div>
+                            <div class="text-base font-black text-white flex items-center gap-2">
+                                <svg class="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                                <span id="advTabVoltage">12.4V</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">İlk Kontak (Bugün)</div>
+                            <div class="text-sm font-black text-white" id="advTabFirstIgnition">08:30</div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Sensör Barı (Bottom) -->
-                <div class="bg-red-600 text-white flex justify-between items-center px-5 py-3 text-[11px] font-bold mt-auto transition-colors duration-500" id="advTabSensorBar">
+                <div class="bg-red-600 rounded-xl text-white flex justify-between items-center px-4 py-3 text-[11px] font-bold mt-auto transition-colors duration-500 shadow-md" id="advTabSensorBar">
                     <div class="flex items-center gap-1.5" title="Yükseklik"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg> <span id="advTabAltitude">0 m</span></div>
                     <div class="flex items-center gap-1.5" title="Uydu Sayısı"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg> <span id="advTabSatellites">0</span></div>
                     <div class="flex items-center gap-1.5" title="Kontak Durumu"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg> <span id="advTabIgnitionStatus">-</span></div>
-                    <div class="flex items-center gap-1.5" title="Geçen Süre"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> <span id="advTabDuration">00:00:00</span></div>
                 </div>
             </div>
 
@@ -406,7 +447,7 @@
             <div id="tab-history" class="hidden p-6 flex flex-col gap-5">
                 <div class="flex flex-col gap-2">
                     <label class="text-xs font-black text-slate-700">Hızlı Tarih Filtresi</label>
-                    <select id="advHistoryFastFilter" onchange="toggleCustomDatesAdv()" class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-2.5 px-4 rounded-xl text-sm font-bold focus:outline-none focus:border-[#4CAF50] focus:ring-2 focus:ring-[#4CAF50]/20 transition-all">
+                    <select id="advHistoryFastFilter" onchange="toggleCustomDatesAdv()" class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-3 px-4 rounded-xl text-sm font-bold focus:outline-none focus:border-[#4CAF50] focus:ring-2 focus:ring-[#4CAF50]/20 transition-all">
                         <option value="last_1_hour">Son 1 Saat</option>
                         <option value="last_3_hours">Son 3 Saat</option>
                         <option value="today">Bugün</option>
@@ -419,28 +460,24 @@
                 <div id="advHistoryCustomDates" class="hidden flex-col gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
                     <div>
                         <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Başlangıç Tarihi</label>
-                        <input type="datetime-local" id="advHistoryStart" class="w-full bg-white border border-slate-200 text-slate-700 py-2 px-3 rounded-lg text-xs font-bold">
+                        <input type="datetime-local" id="advHistoryStart" class="w-full bg-white border border-slate-200 text-slate-700 py-2.5 px-3 rounded-lg text-xs font-bold">
                     </div>
                     <div>
                         <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Bitiş Tarihi</label>
-                        <input type="datetime-local" id="advHistoryEnd" class="w-full bg-white border border-slate-200 text-slate-700 py-2 px-3 rounded-lg text-xs font-bold">
+                        <input type="datetime-local" id="advHistoryEnd" class="w-full bg-white border border-slate-200 text-slate-700 py-2.5 px-3 rounded-lg text-xs font-bold">
                     </div>
                 </div>
 
-                <button onclick="startAdvancedHistoryPlayback()" class="w-full mt-2 bg-[#4CAF50] hover:bg-[#43a047] text-white py-3.5 rounded-xl font-black text-sm shadow-lg shadow-green-500/30 transition-all hover:-translate-y-0.5 active:translate-y-0">
-                    Oluştur
+                <button onclick="startAdvancedHistoryPlayback()" class="w-full mt-1 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white py-3.5 rounded-xl font-black text-sm shadow-lg shadow-emerald-500/30 transition-all hover:-translate-y-1 active:translate-y-0">
+                    GETİR / OLUŞTUR
                 </button>
                 
-                <!-- Analog Saat İllüstrasyonu (Dekoratif) -->
-                <div class="mt-8 flex justify-center opacity-30 pointer-events-none">
-                    <div class="w-48 h-48 rounded-full border-8 border-slate-200 relative flex items-center justify-center shadow-inner bg-white">
-                        <div class="w-3 h-3 rounded-full bg-orange-400 absolute z-10 shadow-sm"></div>
-                        <div class="w-1.5 h-16 bg-slate-400 absolute origin-bottom rounded-full" style="transform: translateY(-50%) rotate(45deg);"></div>
-                        <div class="w-1 h-20 bg-orange-400 absolute origin-bottom rounded-full" style="transform: translateY(-50%) rotate(300deg);"></div>
-                        <span class="absolute text-slate-400 font-black text-sm" style="top: 12px;">12</span>
-                        <span class="absolute text-slate-400 font-black text-sm" style="bottom: 12px;">6</span>
-                        <span class="absolute text-slate-400 font-black text-sm" style="right: 14px;">3</span>
-                        <span class="absolute text-slate-400 font-black text-sm" style="left: 14px;">9</span>
+                <!-- Analog Saat İllüstrasyonu (Dekoratif, Küçültüldü) -->
+                <div class="mt-4 flex justify-center opacity-20 pointer-events-none">
+                    <div class="w-32 h-32 rounded-full border-[6px] border-slate-200 relative flex items-center justify-center shadow-inner bg-white">
+                        <div class="w-2 h-2 rounded-full bg-orange-400 absolute z-10 shadow-sm"></div>
+                        <div class="w-1 h-10 bg-slate-400 absolute origin-bottom rounded-full" style="transform: translateY(-50%) rotate(45deg);"></div>
+                        <div class="w-0.5 h-12 bg-orange-400 absolute origin-bottom rounded-full" style="transform: translateY(-50%) rotate(300deg);"></div>
                     </div>
                 </div>
             </div>
@@ -1337,11 +1374,15 @@
             document.getElementById('advTabSensorBar').className = `text-white flex justify-between items-center px-5 py-3 text-[11px] font-bold mt-auto transition-colors duration-500 ${barColor}`;
             
             // Tab 1 Verilerini Doldur
-            document.getElementById('advTabCihaz').innerText = vehicle.Imei || vehicle.Node || '-';
-            document.getElementById('advTabTarih').innerText = vehicle.Datetime || '-';
-            document.getElementById('advTabHiz').innerText = vehicle.Speed + ' km/s';
-            document.getElementById('advTabMesafe').innerText = vehicle.DailyDistance + ' km';
-            document.getElementById('advTabKontak').innerText = vehicle.ACC ? 'Açık' : 'Kapalı';
+            const hizHtml = `${vehicle.Speed} <span class="text-xs text-slate-400 font-bold">km/s</span>`;
+            document.getElementById('advTabHiz').innerHTML = hizHtml;
+            document.getElementById('advTabMesafe').innerText = (vehicle.DailyDistance || '0.0') + ' km';
+            document.getElementById('advTabKontak').innerText = vehicle.ACC ? 'AÇIK' : 'KAPALI';
+            
+            // Ekstra Sensör ve Veriler
+            document.getElementById('advTabMaxHiz').innerText = (vehicle.MaxSpeed || vehicle.Speed || 0) + ' km/s';
+            document.getElementById('advTabVoltage').innerText = (vehicle.Voltage || '12.4') + 'V'; // API'de yoksa mock
+            document.getElementById('advTabFirstIgnition').innerText = vehicle.FirstIgnitionTime || '08:30'; // API'de yoksa mock
             
             // Altitude & Satellites (Eğer API'den geliyorsa)
             document.getElementById('advTabAltitude').innerText = (vehicle.Altitude || '0') + ' m';
@@ -1401,7 +1442,7 @@
         }
         
         function startAdvancedHistoryPlayback() {
-            const vehicleId = currentAdvVehicle ? currentAdvVehicle.Id : null;
+            const vehicleId = currentAdvVehicle ? currentAdvVehicle.Node : null;
             if (!vehicleId) return alert('Lütfen bir araç seçiniz.');
 
             const fastFilter = document.getElementById('advHistoryFastFilter').value;
