@@ -47,7 +47,7 @@ class LiveTrackingController extends Controller
                 // Günlük KM ve Maks Hız Hesaplama (Cache ile 60 saniye)
                 $stats = \Illuminate\Support\Facades\Cache::remember('vehicle_daily_stats_'.$vehicle->id, 60, function() use ($vehicle) {
                     $todayStart = \Carbon\Carbon::now()->addHours(3)->startOfDay()->subHours(3);
-                    $locations = \App\Models\VehicleLocation::where('vehicle_id', $vehicle->id)
+                    $locations = \App\Models\Fleet\VehicleLocation::where('vehicle_id', $vehicle->id)
                         ->where('recorded_at', '>=', $todayStart)
                         ->orderBy('recorded_at', 'asc')
                         ->get(['latitude', 'longitude', 'speed']);
