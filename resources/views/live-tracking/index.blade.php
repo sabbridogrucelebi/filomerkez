@@ -205,47 +205,47 @@
     <!-- Harita Katmanı (Arka Plan) -->
     <div id="map" class="absolute inset-0 w-full h-full z-0"></div>
 
-    <!-- Üst Navbar (Mavi Gradient) -->
-    <div id="topNavbar" class="navbar-hidden absolute top-0 left-[280px] right-0 z-[900] h-16 flex justify-between items-center px-6">
+    <!-- Üst Yüzen Arama (Floating Navbar) -->
+    <div id="topNavbar" class="absolute top-6 left-[300px] right-6 z-[900] flex justify-between items-start pointer-events-none">
         <!-- Sol: Arama -->
-        <div class="relative" style="width: 360px;" id="globalSearchWrapper">
-            <div style="background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.2); border-radius:12px; display:flex; align-items:center; padding:0 16px; height:40px; width:100%; position: relative; z-index: 1002;">
-                <svg style="width:18px;height:18px;color:rgba(199,210,254,0.7);flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                <input id="globalVehicleSearch" type="text" autocomplete="off" placeholder="Plaka veya lokasyon ara..." style="background:transparent; border:none; outline:none; color:white; font-weight:700; font-size:13px; margin-left:10px; width:100%;" class="placeholder-indigo-300/60">
+        <div class="relative pointer-events-auto rounded-2xl" style="width: 400px;" id="globalSearchWrapper">
+            <div class="bg-slate-900/80 backdrop-blur-xl border border-white/20 rounded-2xl flex items-center px-5 h-14 w-full relative z-[1002] shadow-[0_10px_30px_rgba(0,0,0,0.4)] transition-all focus-within:shadow-[0_10px_40px_rgba(99,102,241,0.5)] focus-within:border-indigo-400/50">
+                <svg class="w-5 h-5 text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <input id="globalVehicleSearch" type="text" autocomplete="off" placeholder="Plaka veya lokasyon ara..." class="bg-transparent border-none outline-none text-white font-bold text-sm ml-3 w-full placeholder-slate-400">
             </div>
             <!-- Arama Sonuçları Dropdown -->
-            <ul id="globalSearchResults" class="absolute left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden hidden z-[1001]" style="max-height: 300px; overflow-y: auto;">
+            <ul id="globalSearchResults" class="absolute left-0 right-0 mt-3 bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden hidden z-[1001] custom-scrollbar" style="max-height: 350px; overflow-y: auto;">
                 <!-- JS ile Doldurulacak -->
             </ul>
         </div>
 
         <!-- Sağ: Butonlar -->
-        <div style="display:flex; align-items:center; gap:12px;">
+        <div class="flex items-center gap-4 pointer-events-auto">
             @if(session('success'))
-                <div style="background:#10b981; color:white; padding:8px 16px; border-radius:12px; font-weight:800; font-size:12px; display:flex; align-items:center; gap:6px; box-shadow:0 4px 15px rgba(16,185,129,0.4);">
+                <div class="bg-emerald-500/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl font-black text-sm flex items-center gap-2 shadow-[0_10px_25px_rgba(16,185,129,0.5)] border border-emerald-400/50">
                     ✅ {{ session('success') }}
                 </div>
             @endif
             <!-- Panele Dön 3D Buton -->
-            <a href="{{ route('dashboard') }}" class="btn-3d">
-                <svg style="width:18px;height:18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"></path></svg>
+            <a href="{{ route('dashboard') }}" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-5 py-3.5 rounded-2xl shadow-[0_10px_25px_rgba(79,70,229,0.5)] font-black text-sm flex items-center gap-2 border border-white/20 hover:-translate-y-1 transition-all duration-300">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"></path></svg>
                 Panele Dön
             </a>
         </div>
     </div>
 
-    <!-- Mavi Premium Full-Height Sidebar (Her Zaman Açık, Yazılar Okunur) -->
-    <div id="blueSidebar" class="sidebar-hidden absolute top-0 bottom-0 left-0 z-[1000] flex flex-col overflow-hidden">
+    <!-- Mavi Premium Full-Height Sidebar (Glassmorphism) -->
+    <div id="blueSidebar" class="sidebar-hidden absolute top-4 bottom-4 left-4 z-[1000] flex flex-col overflow-hidden w-[280px] bg-slate-900/80 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
         
         <!-- Üst Kısım: Logo -->
-        <div style="height:80px; display:flex; align-items:center; padding:0 24px; border-bottom:1px solid rgba(99,102,241,0.2); flex-shrink:0;">
-            <div style="position:relative; width:42px; height:42px; border-radius:14px; background:white; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px rgba(0,0,0,0.2); flex-shrink:0;">
-                <span style="color:#4338ca; font-weight:900; font-size:15px; letter-spacing:-1px;">FM</span>
-                <div style="position:absolute; right:-4px; top:-4px; width:12px; height:12px; background:#34d399; border-radius:50%; border:2px solid #4338ca;"></div>
+        <div style="height:90px; display:flex; align-items:center; padding:0 24px; border-bottom:1px solid rgba(255,255,255,0.05); flex-shrink:0;">
+            <div style="position:relative; width:46px; height:46px; border-radius:16px; background:linear-gradient(135deg, #fff, #f8fafc); display:flex; align-items:center; justify-content:center; box-shadow:0 10px 25px rgba(0,0,0,0.3); flex-shrink:0;">
+                <span style="color:#4f46e5; font-weight:900; font-size:18px; letter-spacing:-1px;">FM</span>
+                <div style="position:absolute; right:-4px; top:-4px; width:14px; height:14px; background:#10b981; border-radius:50%; border:2px solid #1e1b4b; box-shadow:0 0 10px rgba(16,185,129,0.5);"></div>
             </div>
             <div style="margin-left:16px;">
-                <h1 style="font-size:20px; font-weight:900; color:white; letter-spacing:-0.5px; line-height:1; margin:0 0 4px 0;">FiloMerkez</h1>
-                <p style="font-size:10px; font-weight:800; color:rgba(165,180,252,0.8); text-transform:uppercase; letter-spacing:3px; margin:0;">Premium Takip</p>
+                <h1 style="font-size:22px; font-weight:900; color:white; letter-spacing:-0.5px; line-height:1; margin:0 0 4px 0; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">FiloMerkez</h1>
+                <p style="font-size:10px; font-weight:800; color:rgba(199,210,254,0.9); text-transform:uppercase; letter-spacing:4px; margin:0;">Premium Takip</p>
             </div>
         </div>
 
@@ -300,38 +300,39 @@
     </div>
 
     <!-- Cihaz Tanımlama Modalı -->
-    <div id="imeiModal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm transition-all duration-300">
-        <div class="relative w-full max-w-md rounded-[32px] bg-white shadow-2xl overflow-hidden border border-slate-100 scale-95 opacity-0 transition-all duration-300" id="imeiModalContent">
-            <form action="{{ route('vehicle-tracking.assign-imei') }}" method="POST">
+    <div id="imeiModal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md transition-all duration-300">
+        <div class="relative w-full max-w-md rounded-[32px] bg-slate-900/90 shadow-[0_30px_60px_rgba(0,0,0,0.8)] border border-white/10 scale-95 opacity-0 transition-all duration-300 overflow-hidden" id="imeiModalContent">
+            <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 pointer-events-none"></div>
+            <form action="{{ route('vehicle-tracking.assign-imei') }}" method="POST" class="relative z-10">
                 @csrf
                 <input type="hidden" name="vehicle_id" id="modalVehicleId">
                 
                 <div class="p-8">
-                    <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center justify-between mb-8">
                         <div class="flex items-center gap-4">
-                            <div class="h-12 w-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 text-xl">📱</div>
+                            <div class="h-14 w-14 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-2xl border border-indigo-500/30 shadow-inner drop-shadow-md">📱</div>
                             <div>
-                                <h3 class="text-lg font-black text-slate-800">Cihaz Ekle</h3>
-                                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1" id="modalVehiclePlate">Plaka</p>
+                                <h3 class="text-xl font-black text-white text-shadow-sm">Cihaz Ekle</h3>
+                                <p class="text-[10px] font-bold text-indigo-300 uppercase tracking-widest mt-1" id="modalVehiclePlate">Plaka</p>
                             </div>
                         </div>
-                        <button type="button" onclick="closeImeiModal()" class="h-8 w-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition flex items-center justify-center">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        <button type="button" onclick="closeImeiModal()" class="h-10 w-10 rounded-xl bg-white/5 text-slate-400 hover:bg-rose-500/20 hover:text-rose-400 border border-transparent hover:border-rose-500/30 transition-all flex items-center justify-center group">
+                            <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
                     </div>
 
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-xs font-black uppercase tracking-wider text-slate-600 mb-2">Cihaz IMEI Numarası</label>
+                            <label class="block text-[11px] font-black uppercase tracking-widest text-slate-300 mb-2">Cihaz IMEI Numarası</label>
                             <input type="text" name="device_imei" id="modalDeviceImei" 
-                                class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-slate-900 font-mono text-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition outline-none shadow-inner"
+                                class="w-full rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-white font-mono text-base focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition-all outline-none shadow-inner"
                                 placeholder="Örn: 353210110128749">
-                            <p class="text-[10px] text-slate-400 mt-3 font-medium">GPS cihazının arkasındaki 15 haneli numarayı giriniz.</p>
+                            <p class="text-[10px] text-slate-400 mt-3 font-bold">GPS cihazının arkasındaki 15 haneli numarayı giriniz.</p>
                         </div>
                     </div>
 
-                    <div class="mt-8">
-                        <button type="submit" class="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700 hover:-translate-y-0.5 transition-all shadow-xl shadow-indigo-600/30">
+                    <div class="mt-10">
+                        <button type="submit" class="w-full py-4 rounded-2xl bg-indigo-500 hover:bg-indigo-400 text-white font-black text-sm uppercase tracking-widest hover:-translate-y-1 transition-all shadow-[0_10px_20px_rgba(99,102,241,0.4)] hover:shadow-[0_15px_25px_rgba(99,102,241,0.6)] border border-indigo-400">
                             Kaydet ve Bağla
                         </button>
                     </div>
@@ -343,186 +344,207 @@
     <!-- ========================================== -->
     <!-- SOL ARAÇ DETAY PANELİ (AŞAMA 2 & 3 & 4) -->
     <!-- ========================================== -->
-    <div id="advancedVehiclePanel" class="hidden absolute flex flex-col bg-white shadow-2xl rounded-xl border border-slate-200/60 overflow-hidden transition-all duration-300" style="left: 300px; top: 80px; width: 380px; z-index: 9999; max-height: calc(100vh - 100px);">
+    <div id="advancedVehiclePanel" class="hidden absolute flex flex-col bg-slate-900/80 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-3xl border border-white/10 overflow-hidden transition-all duration-500" style="left: 310px; top: 16px; bottom: 16px; width: 380px; z-index: 9999;">
         <!-- Başlık Kısmı (Plaka ve Butonlar) -->
-        <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-            <div class="flex items-center gap-3">
-                <div class="w-3 h-3 rounded-full bg-red-500 shadow-sm transition-colors duration-500" id="advPanelStatusDot"></div>
+        <div class="px-6 py-5 border-b border-white/10 flex justify-between items-center relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-transparent pointer-events-none"></div>
+            <div class="flex items-center gap-4 relative z-10">
+                <div class="relative w-4 h-4 flex items-center justify-center">
+                    <div class="absolute inset-0 rounded-full animate-ping opacity-50" id="advPanelStatusGlow"></div>
+                    <div class="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)] transition-colors duration-500 relative z-10" id="advPanelStatusDot"></div>
+                </div>
                 <div>
-                    <h2 class="text-sm font-black text-slate-800" id="advPanelPlate">42 C 0051</h2>
-                    <p class="text-[11px] font-bold text-slate-400" id="advPanelDriver">Şoför Seçilmedi</p>
+                    <h2 class="text-lg font-black text-white tracking-wide text-shadow-sm" id="advPanelPlate">42 C 0051</h2>
+                    <p class="text-[11px] font-bold text-indigo-300 uppercase tracking-widest mt-0.5" id="advPanelDriver">Şoför Seçilmedi</p>
                 </div>
             </div>
-            <div class="flex items-center gap-1">
-                <button onclick="closeAdvancedVehiclePanel()" class="w-8 h-8 rounded-lg hover:bg-slate-200 flex justify-center items-center text-slate-500 transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            <div class="flex items-center gap-1 relative z-10">
+                <button onclick="closeAdvancedVehiclePanel()" class="w-8 h-8 rounded-xl bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 flex justify-center items-center text-slate-400 transition-all border border-transparent hover:border-rose-500/30">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
         </div>
 
         <!-- Sekme Seçici (Dropdown) -->
-        <div class="p-4 border-b border-slate-100 bg-white">
+        <div class="p-4 border-b border-white/10 bg-black/20">
             <div class="relative">
-                <select id="advPanelTabSelect" onchange="switchAdvPanelTab(this.value)" class="w-full appearance-none bg-white border border-slate-200 text-slate-700 py-2.5 pl-4 pr-10 rounded-lg text-sm font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all cursor-pointer">
-                    <option value="tab-realtime">Anlık Araç Kullanımı</option>
-                    <option value="tab-history">Araç Geçmişi</option>
-                    <option value="tab-alarms">Aracın Alarmları</option>
-                    <option value="tab-commands">Araç Komutları</option>
-                    <option value="tab-reports">Raporlar</option>
-                    <option value="tab-config">Araç Konfigürasyonu</option>
-                    <option value="tab-routes">Rota Listesi</option>
+                <select id="advPanelTabSelect" onchange="switchAdvPanelTab(this.value)" class="w-full appearance-none bg-slate-800/50 border border-white/10 text-white py-3 pl-4 pr-10 rounded-xl text-sm font-bold shadow-inner focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all cursor-pointer">
+                    <option value="tab-realtime" class="bg-slate-800">Anlık Araç Kullanımı</option>
+                    <option value="tab-history" class="bg-slate-800">Araç Geçmişi</option>
+                    <option value="tab-alarms" class="bg-slate-800">Aracın Alarmları</option>
+                    <option value="tab-commands" class="bg-slate-800">Araç Komutları</option>
+                    <option value="tab-reports" class="bg-slate-800">Raporlar</option>
+                    <option value="tab-config" class="bg-slate-800">Araç Konfigürasyonu</option>
+                    <option value="tab-routes" class="bg-slate-800">Rota Listesi</option>
                 </select>
-                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-indigo-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
                 </div>
             </div>
         </div>
 
         <!-- Sekme İçerikleri Konteyneri -->
-        <div class="flex-1 overflow-y-auto bg-white" style="min-height: 400px; max-height: calc(100vh - 280px);">
+        <div class="flex-1 overflow-y-auto custom-scrollbar relative">
             
             <!-- Tab 1: Anlık Araç Kullanımı (KPI KARTLARI) -->
-            <div id="tab-realtime" class="p-4 flex flex-col h-full gap-4 bg-slate-50">
-                <!-- Temel Bilgi -->
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-                    <div>
-                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Şu Anki Hız</div>
-                        <div class="text-2xl font-black text-indigo-600" id="advTabHiz">0 <span class="text-xs text-slate-400">km/s</span></div>
+            <div id="tab-realtime" class="p-5 flex flex-col h-full gap-5">
+                
+                <!-- Temel Bilgi (Hız ve Kontak) -->
+                <div class="bg-white/5 backdrop-blur-md p-5 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] border border-white/10 flex items-center justify-between relative overflow-hidden group">
+                    <div class="absolute -right-10 -top-10 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl group-hover:bg-indigo-500/30 transition-all duration-500"></div>
+                    <div class="relative z-10">
+                        <div class="text-[10px] font-black text-indigo-300 uppercase tracking-[0.2em] mb-1">Şu Anki Hız</div>
+                        <div class="text-3xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]" id="advTabHiz">0 <span class="text-sm text-indigo-200">km/s</span></div>
                     </div>
-                    <div class="text-right">
-                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Kontak</div>
-                        <div class="text-sm font-black text-slate-800" id="advTabKontak">-</div>
+                    <div class="text-right relative z-10">
+                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Kontak</div>
+                        <div class="text-sm font-black text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]" id="advTabKontak">-</div>
                     </div>
                 </div>
                 
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Adres</div>
-                    <div class="text-xs font-bold text-slate-700 leading-tight" id="advTabAdres">Adres Yükleniyor...</div>
+                <!-- Adres -->
+                <div class="bg-white/5 backdrop-blur-md p-4 rounded-2xl shadow-inner border border-white/5 flex gap-3 items-start">
+                    <div class="mt-0.5 text-indigo-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></div>
+                    <div>
+                        <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Mevcut Konum</div>
+                        <div class="text-xs font-bold text-slate-200 leading-relaxed" id="advTabAdres">Adres Yükleniyor...</div>
+                    </div>
                 </div>
 
                 <!-- 3D Animasyonlu KPI Kartları -->
-                <div class="grid grid-cols-2 gap-3 mt-2">
+                <div class="grid grid-cols-2 gap-4 mt-1">
                     <!-- KM KPI -->
-                    <div class="relative overflow-hidden bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-4 shadow-[0_10px_20px_-10px_rgba(79,70,229,0.5)] transform hover:-translate-y-1 transition-all duration-300">
-                        <div class="absolute -right-4 -top-4 w-16 h-16 bg-white/10 rounded-full blur-xl"></div>
-                        <svg class="w-6 h-6 text-white/70 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
-                        <div class="text-[10px] font-bold text-blue-100 uppercase tracking-wider mb-0.5">Bugünkü KM</div>
-                        <div class="text-lg font-black text-white" id="advTabMesafe">0.0 km</div>
+                    <div class="relative overflow-hidden bg-gradient-to-br from-blue-600/80 to-indigo-800/80 backdrop-blur-xl rounded-3xl p-5 shadow-[0_15px_35px_rgba(37,99,235,0.4)] border border-blue-400/30 transform hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(37,99,235,0.6)] transition-all duration-300 group cursor-default">
+                        <div class="absolute -right-4 -top-4 w-20 h-20 bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+                        <div class="relative z-10 flex flex-col h-full justify-between">
+                            <svg class="w-7 h-7 text-blue-200 mb-4 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                            <div>
+                                <div class="text-[10px] font-bold text-blue-200 uppercase tracking-widest mb-1 opacity-80">Bugünkü KM</div>
+                                <div class="text-xl font-black text-white tracking-tight drop-shadow-lg" id="advTabMesafe">0.0 km</div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Hız KPI -->
-                    <div class="relative overflow-hidden bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl p-4 shadow-[0_10px_20px_-10px_rgba(16,185,129,0.5)] transform hover:-translate-y-1 transition-all duration-300">
-                        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-white/10 rounded-full blur-xl"></div>
-                        <svg class="w-6 h-6 text-white/70 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                        <div class="text-[10px] font-bold text-emerald-100 uppercase tracking-wider mb-0.5">Maks. Hız</div>
-                        <div class="text-lg font-black text-white" id="advTabMaxHiz">-- km/s</div>
+                    <div class="relative overflow-hidden bg-gradient-to-br from-emerald-500/80 to-teal-700/80 backdrop-blur-xl rounded-3xl p-5 shadow-[0_15px_35px_rgba(16,185,129,0.4)] border border-emerald-400/30 transform hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(16,185,129,0.6)] transition-all duration-300 group cursor-default">
+                        <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+                        <div class="relative z-10 flex flex-col h-full justify-between">
+                            <svg class="w-7 h-7 text-emerald-200 mb-4 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            <div>
+                                <div class="text-[10px] font-bold text-emerald-200 uppercase tracking-widest mb-1 opacity-80">Maks. Hız</div>
+                                <div class="text-xl font-black text-white tracking-tight drop-shadow-lg" id="advTabMaxHiz">-- km/s</div>
+                            </div>
+                        </div>
                     </div>
                     
                     <!-- Elektrik & Kontak KPI (Geniş) -->
-                    <div class="col-span-2 relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-4 shadow-xl transform hover:-translate-y-1 transition-all duration-300 flex justify-between items-center">
-                        <div class="absolute -left-10 top-0 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl"></div>
-                        <div>
-                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Araç Voltajı</div>
-                            <div class="text-base font-black text-white flex items-center gap-2">
-                                <svg class="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                    <div class="col-span-2 relative overflow-hidden bg-gradient-to-r from-slate-800/90 to-slate-900/90 backdrop-blur-xl rounded-3xl p-5 shadow-[0_15px_30px_rgba(0,0,0,0.5)] border border-slate-600/50 transform hover:-translate-y-1 hover:border-slate-500/80 transition-all duration-300 flex justify-between items-center group cursor-default">
+                        <div class="absolute -left-10 top-0 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl group-hover:bg-yellow-500/20 transition-colors duration-700"></div>
+                        <div class="relative z-10">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Araç Voltajı</div>
+                            <div class="text-xl font-black text-white flex items-center gap-2 drop-shadow-md">
+                                <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                                 <span id="advTabVoltage">12.4V</span>
                             </div>
                         </div>
-                        <div class="text-right">
-                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">İlk Kontak (Bugün)</div>
-                            <div class="text-sm font-black text-white" id="advTabFirstIgnition">08:30</div>
+                        <div class="text-right relative z-10">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">İlk Kontak (Bugün)</div>
+                            <div class="text-lg font-black text-white drop-shadow-md" id="advTabFirstIgnition">08:30</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Sensör Barı (Bottom) -->
-                <div class="bg-red-600 rounded-xl text-white flex justify-between items-center px-4 py-3 text-[11px] font-bold mt-auto transition-colors duration-500 shadow-md" id="advTabSensorBar">
-                    <div class="flex items-center gap-1.5" title="Yükseklik"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg> <span id="advTabAltitude">0 m</span></div>
-                    <div class="flex items-center gap-1.5" title="Uydu Sayısı"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg> <span id="advTabSatellites">0</span></div>
-                    <div class="flex items-center gap-1.5" title="Kontak Durumu"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg> <span id="advTabIgnitionStatus">-</span></div>
+                <div class="bg-gradient-to-r from-red-600/90 to-rose-700/90 backdrop-blur-md rounded-2xl text-white flex justify-between items-center px-5 py-3.5 text-[11px] font-bold mt-auto transition-colors duration-500 shadow-[0_10px_20px_rgba(225,29,72,0.4)] border border-red-400/30" id="advTabSensorBar">
+                    <div class="flex items-center gap-1.5" title="Yükseklik"><svg class="w-4 h-4 text-red-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg> <span id="advTabAltitude" class="drop-shadow-sm">0 m</span></div>
+                    <div class="flex items-center gap-1.5" title="Uydu Sayısı"><svg class="w-4 h-4 text-red-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg> <span id="advTabSatellites" class="drop-shadow-sm">0</span></div>
+                    <div class="flex items-center gap-1.5" title="Kontak Durumu"><svg class="w-4 h-4 text-red-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg> <span id="advTabIgnitionStatus" class="drop-shadow-sm">-</span></div>
                 </div>
             </div>
 
             <!-- Tab 2: Araç Geçmişi -->
-            <div id="tab-history" class="hidden p-6 flex flex-col gap-5">
-                <div class="flex flex-col gap-2">
-                    <label class="text-xs font-black text-slate-700">Hızlı Tarih Filtresi</label>
-                    <select id="advHistoryFastFilter" onchange="toggleCustomDatesAdv()" class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-3 px-4 rounded-xl text-sm font-bold focus:outline-none focus:border-[#4CAF50] focus:ring-2 focus:ring-[#4CAF50]/20 transition-all">
-                        <option value="last_1_hour">Son 1 Saat</option>
-                        <option value="last_3_hours">Son 3 Saat</option>
-                        <option value="today">Bugün</option>
-                        <option value="yesterday">Dün</option>
-                        <option value="last_3_days">Son 3 Gün</option>
-                        <option value="custom">Detaylı Aralık</option>
-                    </select>
+            <div id="tab-history" class="hidden p-6 flex flex-col gap-6">
+                <div class="flex flex-col gap-2 relative">
+                    <div class="absolute -left-6 top-0 bottom-0 w-1 bg-indigo-500 rounded-r-full shadow-[0_0_10px_rgba(99,102,241,0.8)]"></div>
+                    <label class="text-[10px] font-black text-indigo-300 uppercase tracking-widest">Hızlı Tarih Filtresi</label>
+                    <div class="relative group">
+                        <select id="advHistoryFastFilter" onchange="toggleCustomDatesAdv()" class="w-full appearance-none bg-white/5 border border-white/10 text-white py-3.5 px-5 rounded-2xl text-sm font-bold shadow-inner focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all cursor-pointer backdrop-blur-md group-hover:bg-white/10">
+                            <option value="last_1_hour" class="bg-slate-800 text-white">Son 1 Saat</option>
+                            <option value="last_3_hours" class="bg-slate-800 text-white">Son 3 Saat</option>
+                            <option value="today" class="bg-slate-800 text-white">Bugün</option>
+                            <option value="yesterday" class="bg-slate-800 text-white">Dün</option>
+                            <option value="last_3_days" class="bg-slate-800 text-white">Son 3 Gün</option>
+                            <option value="custom" class="bg-slate-800 text-white">Detaylı Aralık</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-indigo-400 group-hover:text-indigo-300 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </div>
                 </div>
                 
-                <div id="advHistoryCustomDates" class="hidden flex-col gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <div id="advHistoryCustomDates" class="hidden flex-col gap-4 p-5 bg-black/20 rounded-2xl border border-white/5 shadow-inner">
                     <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Başlangıç Tarihi</label>
-                        <input type="datetime-local" id="advHistoryStart" class="w-full bg-white border border-slate-200 text-slate-700 py-2.5 px-3 rounded-lg text-xs font-bold">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Başlangıç Tarihi</label>
+                        <input type="datetime-local" id="advHistoryStart" class="w-full bg-slate-900/50 border border-white/10 text-white py-3 px-4 rounded-xl text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
                     </div>
                     <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Bitiş Tarihi</label>
-                        <input type="datetime-local" id="advHistoryEnd" class="w-full bg-white border border-slate-200 text-slate-700 py-2.5 px-3 rounded-lg text-xs font-bold">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Bitiş Tarihi</label>
+                        <input type="datetime-local" id="advHistoryEnd" class="w-full bg-slate-900/50 border border-white/10 text-white py-3 px-4 rounded-xl text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
                     </div>
                 </div>
 
-                <button onclick="startAdvancedHistoryPlayback()" class="w-full mt-1 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white py-3.5 rounded-xl font-black text-sm shadow-lg shadow-emerald-500/30 transition-all hover:-translate-y-1 active:translate-y-0">
-                    GETİR / OLUŞTUR
-                </button>
-                
-                <!-- Analog Saat İllüstrasyonu (Dekoratif, Küçültüldü) -->
-                <div class="mt-4 flex justify-center opacity-20 pointer-events-none">
-                    <div class="w-32 h-32 rounded-full border-[6px] border-slate-200 relative flex items-center justify-center shadow-inner bg-white">
-                        <div class="w-2 h-2 rounded-full bg-orange-400 absolute z-10 shadow-sm"></div>
-                        <div class="w-1 h-10 bg-slate-400 absolute origin-bottom rounded-full" style="transform: translateY(-50%) rotate(45deg);"></div>
-                        <div class="w-0.5 h-12 bg-orange-400 absolute origin-bottom rounded-full" style="transform: translateY(-50%) rotate(300deg);"></div>
+                <button onclick="startAdvancedHistoryPlayback()" class="relative w-full mt-2 group overflow-hidden rounded-2xl">
+                    <div class="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 transition-transform duration-500 group-hover:scale-105"></div>
+                    <div class="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-400 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-md"></div>
+                    <div class="relative px-6 py-4 flex items-center justify-center gap-3">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span class="font-black text-white text-sm tracking-widest uppercase text-shadow-sm">Geçmişi Getir</span>
                     </div>
-                </div>
+                </button>
             </div>
 
             <!-- Diğer Tablar (Yakında) -->
             <div id="tab-other" class="hidden p-8 text-center text-slate-400 text-sm font-medium flex flex-col items-center justify-center min-h-[300px]">
-                <div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 border border-slate-100">
-                    <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                <div class="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mb-4 border border-white/10 shadow-inner">
+                    <svg class="w-8 h-8 text-indigo-400/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                 </div>
                 Bu modül arayüzü yakında aktif edilecektir.
             </div>
         </div>
         
         <!-- Geçmiş Özeti (History Summary - Sadece Geçmiş Modunda Açılır) -->
-        <div id="advHistorySummary" class="hidden flex-1 overflow-y-auto bg-white p-6 flex flex-col gap-6" style="min-height: 400px; max-height: calc(100vh - 280px);">
-            <div>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Toplam Mesafe</p>
-                <div class="text-4xl font-black text-slate-800" id="advSumTotalKm">0.0<span class="text-sm text-slate-500 font-bold ml-1">km</span></div>
+        <div id="advHistorySummary" class="hidden flex-1 overflow-y-auto bg-transparent p-6 flex flex-col gap-6 custom-scrollbar" style="min-height: 400px; max-height: calc(100vh - 280px);">
+            <div class="relative overflow-hidden bg-gradient-to-br from-indigo-500/20 to-purple-500/20 p-5 rounded-3xl border border-indigo-500/30 shadow-inner">
+                <div class="absolute -right-4 -top-4 w-20 h-20 bg-indigo-500/30 rounded-full blur-2xl"></div>
+                <p class="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-1 relative z-10">Toplam Mesafe</p>
+                <div class="text-4xl font-black text-white relative z-10 drop-shadow-md" id="advSumTotalKm">0.0<span class="text-sm text-indigo-200 font-bold ml-1">km</span></div>
             </div>
             
-            <div class="grid grid-cols-2 gap-4 pb-6 border-b border-slate-100">
-                <div>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Ortalama Hız</p>
-                    <div class="text-2xl font-black text-slate-700" id="advSumAvgSpd">0<span class="text-xs text-slate-400 font-bold ml-1">km/sa</span></div>
+            <div class="grid grid-cols-2 gap-4 pb-6 border-b border-white/10">
+                <div class="bg-white/5 p-4 rounded-2xl border border-white/5 text-center shadow-inner">
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Ortalama Hız</p>
+                    <div class="text-2xl font-black text-white drop-shadow-md" id="advSumAvgSpd">0<span class="text-[10px] text-slate-400 font-bold ml-1">km/sa</span></div>
                 </div>
-                <div>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Azami Hız</p>
-                    <div class="text-2xl font-black text-slate-700" id="advSumMaxSpd">0<span class="text-xs text-slate-400 font-bold ml-1">km/sa</span></div>
+                <div class="bg-white/5 p-4 rounded-2xl border border-white/5 text-center shadow-inner">
+                    <p class="text-[9px] font-black text-emerald-400/80 uppercase tracking-widest mb-1">Azami Hız</p>
+                    <div class="text-2xl font-black text-emerald-400 drop-shadow-md" id="advSumMaxSpd">0<span class="text-[10px] text-emerald-400/60 font-bold ml-1">km/sa</span></div>
                 </div>
             </div>
             
             <!-- Trip Özeti Detayları (Başlangıç/Bitiş) -->
-            <div class="flex flex-col gap-4 relative pl-4 border-l-2 border-dashed border-slate-200" id="advSumRouteDetails">
+            <div class="flex flex-col gap-4 relative pl-4 border-l-2 border-dashed border-white/20" id="advSumRouteDetails">
                 <!-- JS ile Doldurulacak -->
             </div>
             
-            <button onclick="document.getElementById('rightHistoryPanel').classList.remove('translate-x-full');" class="mt-4 text-xs font-bold text-indigo-600 hover:text-indigo-800 text-right w-full">Sefer Listesi ></button>
+            <button onclick="document.getElementById('rightHistoryPanel').classList.remove('translate-x-[120%]');" class="mt-2 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-black text-indigo-400 hover:text-indigo-300 text-center w-full transition-colors border border-white/5">SEFER LİSTESİNİ GÖR</button>
             
             <!-- Pasta Grafik -->
-            <div class="mt-auto pt-6 border-t border-slate-100 flex items-center justify-between">
-                <div class="w-24 h-24 rounded-full" id="advSumPieChart" style="background: conic-gradient(#ef4444 0% 0%, #3b82f6 0% 0%, #f43f5e 0% 0%);"></div>
-                <div class="flex flex-col gap-2 text-[10px] font-bold">
-                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-blue-500"></div> Hareketli <span id="advSumMovPct" class="text-slate-400">-%</span></div>
-                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-red-500"></div> Duran <span id="advSumStpPct" class="text-slate-400">-%</span></div>
-                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-pink-400"></div> Rölantide <span id="advSumIdlPct" class="text-slate-400">-%</span></div>
+            <div class="mt-auto pt-6 border-t border-white/10 flex items-center justify-between">
+                <div class="w-24 h-24 rounded-full shadow-[0_0_20px_rgba(0,0,0,0.5)] border-4 border-slate-800" id="advSumPieChart" style="background: conic-gradient(#ef4444 0% 0%, #3b82f6 0% 0%, #f43f5e 0% 0%);"></div>
+                <div class="flex flex-col gap-3 text-[10px] font-bold">
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div> <span class="text-white w-14">Hareketli</span> <span id="advSumMovPct" class="text-blue-300 font-black">-%</span></div>
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]"></div> <span class="text-white w-14">Duran</span> <span id="advSumStpPct" class="text-red-300 font-black">-%</span></div>
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.8)]"></div> <span class="text-white w-14">Rölanti</span> <span id="advSumIdlPct" class="text-purple-300 font-black">-%</span></div>
                 </div>
             </div>
         </div>
@@ -531,130 +553,138 @@
     <!-- ========================================== -->
     <!-- SAĞ GEÇMİŞ KAYITLARI PANELİ (AŞAMA 5) -->
     <!-- ========================================== -->
-    <div id="rightHistoryPanel" class="fixed right-0 bottom-0 bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.1)] border-l border-slate-200/60 z-[9999] flex flex-col transition-transform duration-300 translate-x-full" style="top: 64px; width: 400px;">
+    <div id="rightHistoryPanel" class="fixed z-[9999] flex flex-col bg-slate-900/80 backdrop-blur-2xl shadow-[-20px_0_50px_rgba(0,0,0,0.5)] border border-white/10 rounded-3xl overflow-hidden transition-transform duration-500 translate-x-[120%]" style="top: 16px; bottom: 16px; right: 16px; width: 400px;">
         <!-- Başlık -->
-        <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-            <div class="flex items-center gap-2">
-                <button onclick="document.getElementById('rightHistoryPanel').classList.add('translate-x-full');" class="w-8 h-8 rounded-lg hover:bg-slate-200 flex justify-center items-center text-slate-500 transition-colors mr-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        <div class="px-6 py-5 border-b border-white/10 flex justify-between items-center relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-l from-indigo-500/10 to-transparent pointer-events-none"></div>
+            <div class="flex items-center gap-4 relative z-10">
+                <button onclick="document.getElementById('rightHistoryPanel').classList.add('translate-x-[120%]');" class="w-8 h-8 rounded-xl bg-white/5 hover:bg-slate-700 flex justify-center items-center text-slate-400 hover:text-white transition-all border border-transparent hover:border-white/20 mr-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
                 </button>
-                <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <div class="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 </div>
-                <h2 class="text-sm font-black text-slate-800">Araç Geçmişi Listesi</h2>
+                <div>
+                    <h2 class="text-lg font-black text-white tracking-wide text-shadow-sm">Zaman Çizelgesi</h2>
+                    <p class="text-[10px] font-bold text-indigo-300 uppercase tracking-widest mt-0.5">Geçmiş Kayıtları</p>
+                </div>
             </div>
-            <div class="text-xs font-bold text-slate-500 bg-white px-3 py-1 rounded-full shadow-sm border border-slate-100">
-                <span class="text-indigo-600" id="advHistoryCount">0</span> Kayıt
+            <div class="text-xs font-black text-white bg-indigo-600/80 px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(79,70,229,0.5)] border border-indigo-400/50 relative z-10">
+                <span id="advHistoryCount">0</span> Kayıt
             </div>
         </div>
         
-        <!-- Arama / Filtre (Opsiyonel) -->
-        <div class="p-3 border-b border-slate-100 bg-white">
+        <!-- Arama / Filtre -->
+        <div class="p-4 border-b border-white/10 bg-black/20">
             <div class="relative">
-                <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                <input type="text" placeholder="Adres veya saat ara..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all">
+                <svg class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <input type="text" placeholder="Adres veya saat ara..." class="w-full pl-11 pr-4 py-3 bg-slate-800/50 border border-white/10 rounded-xl text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-inner">
             </div>
         </div>
 
         <!-- Liste -->
-        <div class="flex-1 overflow-y-auto bg-slate-50 p-3 flex flex-col gap-2" id="advHistoryListContainer">
+        <div class="flex-1 overflow-y-auto bg-transparent p-5 flex flex-col gap-0 custom-scrollbar relative" id="advHistoryListContainer">
             <!-- Örnek Eleman (JS ile Doldurulacak) -->
             <div class="text-center text-slate-400 text-xs font-bold mt-10">
                 Geçmiş kaydı oluşturulduğunda noktalar burada listelenecektir.
             </div>
         </div>
     </div>
-    <div id="arventoTopBar" class="hidden absolute w-[600px] left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md rounded-full shadow-2xl border border-slate-200 px-6 py-3 flex items-center gap-4 transition-all" style="top: 80px; margin-left: 140px; z-index: 9999;">
+    <div id="arventoTopBar" class="hidden absolute w-[700px] left-1/2 -translate-x-1/2 bg-slate-900/80 backdrop-blur-2xl rounded-full shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-white/10 px-4 py-2 flex items-center gap-3 transition-all" style="top: 80px; margin-left: 140px; z-index: 9999;">
         <!-- Kapat Butonu -->
-        <button onclick="exitHistoryMode()" class="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-all">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        <button onclick="exitHistoryMode()" class="w-12 h-12 rounded-full bg-white/5 hover:bg-rose-500/20 flex items-center justify-center text-slate-300 hover:text-rose-400 hover:border-rose-500/50 border border-white/10 transition-all shadow-inner group shrink-0">
+            <svg class="w-6 h-6 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
         </button>
 
-        <div class="font-black text-slate-800 text-lg mr-4">Geçmiş</div>
+        <div class="font-black text-white text-base tracking-widest uppercase ml-1 mr-2 text-shadow-sm"><div class="w-2 h-2 rounded-full bg-indigo-500 inline-block mr-2 shadow-[0_0_8px_rgba(99,102,241,0.8)]"></div>Geçmiş</div>
 
         <!-- Tarih Seçici -->
         <div class="flex-1 relative">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
             </div>
-            <select id="arventoDateSelect" onchange="checkCustomDateFilter()" class="block w-full pl-9 pr-3 py-2 text-sm font-bold text-slate-700 bg-white border border-slate-200 rounded-full appearance-none outline-none focus:border-indigo-500 shadow-sm cursor-pointer">
-                <option value="today">Bugün</option>
-                <option value="yesterday">Dün</option>
-                <option value="last_1_hour">Son 1 Saat</option>
-                <option value="last_3_hours">Son 3 Saat</option>
-                <option value="last_3_days">Son 3 Gün</option>
-                <option value="custom">Detaylı Zaman Aralığı</option>
+            <select id="arventoDateSelect" onchange="checkCustomDateFilter()" class="block w-full pl-10 pr-4 py-3 text-xs font-bold text-white bg-black/30 border border-white/5 rounded-full appearance-none outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner cursor-pointer backdrop-blur-md">
+                <option value="today" class="bg-slate-800 text-white">Bugün</option>
+                <option value="yesterday" class="bg-slate-800 text-white">Dün</option>
+                <option value="last_1_hour" class="bg-slate-800 text-white">Son 1 Saat</option>
+                <option value="last_3_hours" class="bg-slate-800 text-white">Son 3 Saat</option>
+                <option value="last_3_days" class="bg-slate-800 text-white">Son 3 Gün</option>
+                <option value="custom" class="bg-slate-800 text-white">Detaylı Zaman Aralığı</option>
             </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
         </div>
 
         <!-- Araç Seçici (Arama Özellikli) -->
         <div class="flex-1 relative" id="vehicleSearchContainer">
             <input type="hidden" id="arventoVehicleSelect" value="">
             <div class="relative">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
-                <input type="text" id="vehicleSearchInput" onkeyup="filterVehicles()" onclick="toggleVehicleDropdown(event)" placeholder="Plaka Ara (Örn: 42 C)..." class="block w-full pl-9 pr-3 py-2 text-sm font-bold text-slate-700 bg-white border border-slate-200 rounded-full outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 shadow-sm transition-all placeholder:font-normal placeholder:text-slate-400" autocomplete="off">
+                <input type="text" id="vehicleSearchInput" onkeyup="filterVehicles()" onclick="toggleVehicleDropdown(event)" placeholder="Plaka Ara..." class="block w-full pl-10 pr-4 py-3 text-xs font-bold text-white bg-black/30 border border-white/5 rounded-full outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner transition-all placeholder:font-bold placeholder:text-slate-500" autocomplete="off">
             </div>
             
             <!-- Açılır Liste -->
-            <ul id="vehicleDropdownList" class="hidden absolute left-0 right-0 mt-2 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar z-[10005]">
+            <ul id="vehicleDropdownList" class="hidden absolute left-0 right-0 mt-3 bg-slate-800/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.6)] max-h-60 overflow-y-auto custom-scrollbar z-[10005] p-2">
                 @foreach($vehicles as $v)
                     @if($v->device_imei)
-                    <li class="vehicle-option px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer border-b border-slate-50 last:border-0 transition-all flex items-center gap-2" onclick="selectVehicle('{{ $v->id }}', '{{ $v->plate }}')">
+                    <li class="vehicle-option px-4 py-3 text-xs font-bold text-slate-300 hover:bg-indigo-500 hover:text-white rounded-xl cursor-pointer transition-all flex items-center gap-3" onclick="selectVehicle('{{ $v->node }}', '{{ $v->plate }}')">
                         <div class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
                         {{ $v->plate }}
                     </li>
                     @endif
                 @endforeach
-                <li id="noVehicleResult" class="hidden px-4 py-3 text-xs font-bold text-slate-400 text-center">Sonuç bulunamadı</li>
+                <li id="noVehicleResult" class="hidden px-4 py-3 text-xs font-bold text-slate-500 text-center">Sonuç bulunamadı</li>
             </ul>
         </div>
 
-        <button onclick="fetchHistoryData()" class="px-5 py-2 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm transition-all shadow-lg shadow-indigo-600/30">Getir</button>
+        <button onclick="fetchHistoryData()" class="px-6 py-3 rounded-full bg-indigo-500 hover:bg-indigo-400 text-white font-black text-xs tracking-widest uppercase transition-all shadow-[0_0_20px_rgba(99,102,241,0.5)] hover:scale-105 hover:shadow-[0_0_25px_rgba(99,102,241,0.7)] shrink-0">Getir</button>
     </div>
 
     <!-- Detaylı Tarih Seçici Modalı (Gizli) -->
-    <div id="customDatePanel" class="hidden absolute w-80 bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 p-5 transition-all" style="top: 150px; left: 50%; transform: translateX(-50%); margin-left: 140px; z-index: 9999;">
-        <h4 class="font-black text-slate-800 text-sm mb-3">Özel Tarih Aralığı</h4>
-        <div class="space-y-3">
+    <div id="customDatePanel" class="hidden absolute w-80 bg-slate-900/80 backdrop-blur-2xl rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-white/10 p-6 transition-all" style="top: 150px; left: 50%; transform: translateX(-50%); margin-left: 140px; z-index: 9999;">
+        <h4 class="font-black text-white text-sm mb-4 tracking-wide text-shadow-sm flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]"></div>Özel Tarih Aralığı</h4>
+        <div class="space-y-4">
             <div>
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Başlangıç</label>
-                <input type="datetime-local" id="historyStartDate" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Başlangıç</label>
+                <input type="datetime-local" id="historyStartDate" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-inner">
             </div>
             <div>
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Bitiş</label>
-                <input type="datetime-local" id="historyEndDate" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Bitiş</label>
+                <input type="datetime-local" id="historyEndDate" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-inner">
             </div>
         </div>
     </div>
 
     <!-- Özet ve Sefer Listesi Paneli (Sol Tarafta Floating) -->
-    <div id="arventoTripPanel" class="hidden absolute w-80 max-h-[70vh] flex flex-col bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden transition-all" style="left: 300px; top: 80px; z-index: 9999;">
+    <div id="arventoTripPanel" class="hidden absolute w-80 max-h-[70vh] flex flex-col bg-slate-900/80 backdrop-blur-2xl rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-white/10 overflow-hidden transition-all" style="left: 300px; top: 80px; z-index: 9999;">
         <!-- Özet Kartı -->
-        <div class="bg-indigo-600 p-5 text-white">
-            <div class="text-xs font-bold text-indigo-200 uppercase tracking-widest mb-1">Toplam Günlük Özet</div>
-            <div class="text-3xl font-black mb-4" id="summaryTotalDistance">0 km</div>
+        <div class="relative overflow-hidden bg-gradient-to-br from-indigo-600/80 to-purple-700/80 p-6 border-b border-white/10">
+            <div class="absolute -right-10 -top-10 w-32 h-32 bg-white/20 rounded-full blur-3xl"></div>
+            <div class="text-[10px] font-black text-indigo-200 uppercase tracking-[0.2em] mb-2 relative z-10">Toplam Günlük Özet</div>
+            <div class="text-4xl font-black text-white mb-6 drop-shadow-md relative z-10" id="summaryTotalDistance">0 km</div>
             
-            <div class="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                    <div class="text-indigo-200 text-[10px] font-bold uppercase">Maks Hız</div>
-                    <div class="font-black" id="summaryMaxSpeed">0 km/s</div>
+            <div class="grid grid-cols-2 gap-4 text-sm relative z-10">
+                <div class="bg-black/20 p-3 rounded-xl border border-white/10 shadow-inner">
+                    <div class="text-indigo-300 text-[9px] font-black uppercase tracking-widest">Maks Hız</div>
+                    <div class="font-black text-white" id="summaryMaxSpeed">0 km/s</div>
                 </div>
-                <div>
-                    <div class="text-indigo-200 text-[10px] font-bold uppercase">Ortalama Hız</div>
-                    <div class="font-black" id="summaryAvgSpeed">0 km/s</div>
+                <div class="bg-black/20 p-3 rounded-xl border border-white/10 shadow-inner">
+                    <div class="text-indigo-300 text-[9px] font-black uppercase tracking-widest">Ortalama Hız</div>
+                    <div class="font-black text-white" id="summaryAvgSpeed">0 km/s</div>
                 </div>
             </div>
         </div>
         
-        <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-white">
-            <span class="font-black text-slate-800 text-sm">Sefer Listesi</span>
-            <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg" id="summaryTripCount">0 Sefer</span>
+        <div class="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-black/20 backdrop-blur-md">
+            <span class="font-black text-white text-sm">Sefer Listesi</span>
+            <span class="text-[10px] font-black text-indigo-100 bg-indigo-500/50 border border-indigo-400/50 px-3 py-1.5 rounded-full shadow-[0_0_10px_rgba(99,102,241,0.4)]" id="summaryTripCount">0 Sefer</span>
         </div>
         
         <!-- Liste -->
-        <div id="tripListContainer" class="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar bg-slate-50">
+        <div id="tripListContainer" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar bg-transparent">
             <!-- Sefer öğeleri buraya JS ile basılacak -->
         </div>
     </div>
@@ -663,32 +693,38 @@
     <div id="arventoPlayerControls" class="hidden absolute right-6 flex flex-col items-center gap-3 transition-all" style="bottom: 40px; z-index: 9999;">
         <!-- Hız Çarpanları -->
         <div class="flex flex-col-reverse gap-2" id="speedMultipliers">
-            <button onclick="setPlaybackSpeed(100)" class="w-12 h-12 rounded-full bg-white/90 backdrop-blur-md shadow-xl border border-slate-100 text-xs font-black text-slate-600 hover:bg-indigo-600 hover:text-white transition-all speed-btn">100x</button>
-            <button onclick="setPlaybackSpeed(75)" class="w-12 h-12 rounded-full bg-white/90 backdrop-blur-md shadow-xl border border-slate-100 text-xs font-black text-slate-600 hover:bg-indigo-600 hover:text-white transition-all speed-btn">75x</button>
-            <button onclick="setPlaybackSpeed(50)" class="w-12 h-12 rounded-full bg-white/90 backdrop-blur-md shadow-xl border border-slate-100 text-xs font-black text-slate-600 hover:bg-indigo-600 hover:text-white transition-all speed-btn">50x</button>
-            <button onclick="setPlaybackSpeed(25)" class="w-12 h-12 rounded-full bg-white/90 backdrop-blur-md shadow-xl border border-slate-100 text-xs font-black text-slate-600 hover:bg-indigo-600 hover:text-white transition-all speed-btn">25x</button>
-            <button onclick="setPlaybackSpeed(10)" class="w-12 h-12 rounded-full bg-white/90 backdrop-blur-md shadow-xl border border-slate-100 text-xs font-black text-slate-600 hover:bg-indigo-600 hover:text-white transition-all speed-btn">10x</button>
-            <button onclick="setPlaybackSpeed(5)" class="w-12 h-12 rounded-full bg-white/90 backdrop-blur-md shadow-xl border border-slate-100 text-xs font-black text-slate-600 hover:bg-indigo-600 hover:text-white transition-all speed-btn">5x</button>
-            <button onclick="setPlaybackSpeed(1)" class="w-14 h-14 rounded-full bg-indigo-600 shadow-xl shadow-indigo-600/40 text-sm font-black text-white hover:scale-105 transition-all speed-btn active-speed">1x</button>
+            <button onclick="setPlaybackSpeed(100)" class="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-xl shadow-[0_0_15px_rgba(0,0,0,0.3)] border border-white/10 text-[10px] font-black text-slate-400 hover:bg-indigo-500 hover:text-white hover:border-indigo-400 transition-all speed-btn">100x</button>
+            <button onclick="setPlaybackSpeed(75)" class="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-xl shadow-[0_0_15px_rgba(0,0,0,0.3)] border border-white/10 text-[10px] font-black text-slate-400 hover:bg-indigo-500 hover:text-white hover:border-indigo-400 transition-all speed-btn">75x</button>
+            <button onclick="setPlaybackSpeed(50)" class="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-xl shadow-[0_0_15px_rgba(0,0,0,0.3)] border border-white/10 text-[10px] font-black text-slate-400 hover:bg-indigo-500 hover:text-white hover:border-indigo-400 transition-all speed-btn">50x</button>
+            <button onclick="setPlaybackSpeed(25)" class="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-xl shadow-[0_0_15px_rgba(0,0,0,0.3)] border border-white/10 text-[10px] font-black text-slate-400 hover:bg-indigo-500 hover:text-white hover:border-indigo-400 transition-all speed-btn">25x</button>
+            <button onclick="setPlaybackSpeed(10)" class="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-xl shadow-[0_0_15px_rgba(0,0,0,0.3)] border border-white/10 text-[10px] font-black text-slate-400 hover:bg-indigo-500 hover:text-white hover:border-indigo-400 transition-all speed-btn">10x</button>
+            <button onclick="setPlaybackSpeed(5)" class="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-xl shadow-[0_0_15px_rgba(0,0,0,0.3)] border border-white/10 text-[10px] font-black text-slate-400 hover:bg-indigo-500 hover:text-white hover:border-indigo-400 transition-all speed-btn">5x</button>
+            <button onclick="setPlaybackSpeed(1)" class="w-14 h-14 rounded-2xl bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.6)] border border-indigo-400 text-[11px] font-black text-white hover:scale-105 transition-all speed-btn active-speed relative overflow-hidden"><div class="absolute inset-0 bg-white/20 opacity-0 hover:opacity-100 transition-opacity"></div>1x</button>
         </div>
     </div>
 
     <!-- Oynatıcı Slider ve Durdur Butonları (Sol Alt / Orta) -->
-    <div id="arventoSliderContainer" class="hidden absolute right-[120px] bg-white/90 backdrop-blur-md rounded-full shadow-2xl border border-slate-200 p-3 flex items-center gap-4 transition-all" style="bottom: 40px; left: 304px; z-index: 9999;">
-        <button onclick="togglePlayback()" id="playPauseBtn" class="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30 hover:scale-105 transition-all shrink-0">
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
-        </button>
-        
-        <button onclick="stopPlayback()" class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-slate-200 transition-all shrink-0">
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd"></path></svg>
-        </button>
+    <div id="arventoSliderContainer" class="hidden absolute right-[120px] bg-slate-900/80 backdrop-blur-2xl rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-white/10 p-4 flex items-center gap-5 transition-all" style="bottom: 40px; left: 304px; z-index: 9999;">
+        <div class="flex items-center gap-3 shrink-0">
+            <button onclick="togglePlayback()" id="playPauseBtn" class="w-14 h-14 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shadow-[0_0_20px_rgba(99,102,241,0.5)] border border-indigo-400 hover:scale-105 transition-all group overflow-hidden relative">
+                <div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <svg class="w-6 h-6 relative z-10" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+            </button>
+            
+            <button onclick="stopPlayback()" class="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center text-slate-300 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/50 border border-white/10 shadow-[0_0_15px_rgba(0,0,0,0.3)] transition-all shrink-0">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd"></path></svg>
+            </button>
+        </div>
 
-        <div class="flex-1 flex flex-col justify-center px-4">
-            <div class="flex justify-between text-[10px] font-bold text-slate-500 mb-1">
-                <span id="playerCurrentTime">--:--</span>
-                <span id="playerCurrentSpeed" class="text-indigo-600">0 km/s</span>
+        <div class="flex-1 flex flex-col justify-center px-2">
+            <div class="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">
+                <span id="playerCurrentTime" class="text-indigo-300 drop-shadow-md">--:--</span>
+                <span id="playerCurrentSpeed" class="text-emerald-400 drop-shadow-md">0 km/s</span>
             </div>
-            <input type="range" id="playerSlider" min="0" max="100" value="0" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+            <!-- Özelleştirilmiş Range Slider -->
+            <div class="relative w-full h-2">
+                <input type="range" id="playerSlider" min="0" max="100" value="0" class="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer outline-none z-10 relative" style="background: linear-gradient(to right, #6366f1 0%, #6366f1 0%, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.1) 100%);">
+            </div>
         </div>
     </div>
 
@@ -1534,20 +1570,27 @@
                 else if(loc.acc) idleSec += 30;
                 else stopSec += 30;
                 
-                // Sağ panele liste elemanı ekle
-                const speedColor = loc.speed > 0 ? 'text-cyan-600' : 'text-red-500';
-                const dotColor = loc.speed > 0 ? 'bg-cyan-500' : (loc.acc ? 'bg-purple-500' : 'bg-red-500');
-                
+                // Sağ panele liste elemanı ekle (Zaman Çizelgesi / Timeline Modeli)
+                const speedColor = loc.speed > 0 ? 'text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.8)]' : 'text-rose-400';
+                const dotColor = loc.speed > 0 ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]' : (loc.acc ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)]' : 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.8)]');
+                const lineColor = idx === historyData.length - 1 ? 'bg-transparent' : (loc.speed > 0 ? 'bg-emerald-500/30' : 'bg-rose-500/30');
+
                 container.insertAdjacentHTML('beforeend', `
-                    <div class="bg-white border border-slate-100 rounded-xl p-3 flex items-center gap-3 cursor-pointer hover:border-indigo-300 transition-colors" onclick="playTripFromIndex(${idx})">
-                        <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center font-bold text-slate-400 text-[10px] border border-slate-200 shadow-inner">${idx+1}</div>
-                        <div class="flex-1">
-                            <div class="text-[10px] text-slate-400 font-bold mb-1">${loc.time}</div>
-                            <div class="text-xs font-bold text-slate-700 truncate w-40">${loc.lat}, ${loc.lng}</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-xs font-black ${speedColor}">${loc.speed} km/s</div>
-                            <div class="w-2 h-2 rounded-full ${dotColor} inline-block mt-1"></div>
+                    <div class="relative pl-7 py-3 cursor-pointer group hover:bg-white/5 transition-colors rounded-xl" onclick="playTripFromIndex(${idx})">
+                        <!-- Timeline Çizgisi -->
+                        <div class="absolute left-3 top-8 bottom-[-1rem] w-0.5 ${lineColor} rounded-full group-hover:bg-indigo-500/50 transition-colors"></div>
+                        <!-- Timeline Noktası -->
+                        <div class="absolute left-[7.5px] top-[18px] w-2.5 h-2.5 rounded-full ${dotColor} ring-4 ring-slate-900 group-hover:scale-125 transition-transform z-10"></div>
+                        
+                        <div class="flex items-start justify-between gap-3 relative z-10">
+                            <div class="flex-1">
+                                <div class="text-[10px] text-indigo-300/80 font-black tracking-widest mb-0.5">${loc.time}</div>
+                                <div class="text-xs font-bold text-slate-200 line-clamp-1 group-hover:text-white transition-colors" title="${loc.lat}, ${loc.lng}">${loc.lat}, ${loc.lng}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm font-black ${speedColor}">${loc.speed}</div>
+                                <div class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">km/s</div>
+                            </div>
                         </div>
                     </div>
                 `);
