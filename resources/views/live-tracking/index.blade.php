@@ -418,7 +418,7 @@
         }
 
         function fetchData() {
-            fetch('{{ route("vehicle-tracking.live") }}')
+            fetch('{{ route("vehicle-tracking.live") }}?_t=' + Date.now())
                 .then(response => response.json())
                 .then(data => {
                     if (data.vehicles) {
