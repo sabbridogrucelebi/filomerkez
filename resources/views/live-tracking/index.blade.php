@@ -364,9 +364,11 @@
         }
 
         function createIcon(vehicle) {
-            let statusClass = 'pulse-stopped';
-            if (vehicle.ACC) {
-                statusClass = vehicle.Speed > 0 ? 'pulse-moving' : 'pulse-idle';
+            let statusClass = 'pulse-stopped'; // Varsayılan Kırmızı
+            if (vehicle.Speed > 0) {
+                statusClass = 'pulse-moving'; // Hareketli (Mavi/Turkuaz)
+            } else if (vehicle.ACC) {
+                statusClass = 'pulse-idle'; // Hız 0 ama Kontak Açık (Mor)
             }
             return L.divIcon({
                 className: 'custom-vehicle-marker',
@@ -378,8 +380,10 @@
 
         function getPopupHTML(vehicle, addressHtml = 'Adres yükleniyor...') {
             let speedColor = '#ef4444';
-            if (vehicle.ACC) {
-                speedColor = vehicle.Speed > 0 ? '#06b6d4' : '#a855f7';
+            if (vehicle.Speed > 0) {
+                speedColor = '#06b6d4';
+            } else if (vehicle.ACC) {
+                speedColor = '#a855f7';
             }
             const timeStr = vehicle.Datetime ? vehicle.Datetime : '-';
 
