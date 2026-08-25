@@ -358,16 +358,28 @@
             </select>
         </div>
 
-        <!-- Araç Seçici -->
-        <div class="flex-1 relative">
-            <select id="arventoVehicleSelect" class="block w-full pl-4 pr-8 py-2 text-sm font-bold text-slate-700 bg-white border border-slate-200 rounded-full appearance-none outline-none focus:border-indigo-500 shadow-sm cursor-pointer">
-                <option value="">Plaka Seçin</option>
+        <!-- Araç Seçici (Arama Özellikli) -->
+        <div class="flex-1 relative" id="vehicleSearchContainer">
+            <input type="hidden" id="arventoVehicleSelect" value="">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                <input type="text" id="vehicleSearchInput" onkeyup="filterVehicles()" onclick="toggleVehicleDropdown(event)" placeholder="Plaka Ara (Örn: 42 C)..." class="block w-full pl-9 pr-3 py-2 text-sm font-bold text-slate-700 bg-white border border-slate-200 rounded-full outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 shadow-sm transition-all placeholder:font-normal placeholder:text-slate-400" autocomplete="off">
+            </div>
+            
+            <!-- Açılır Liste -->
+            <ul id="vehicleDropdownList" class="hidden absolute left-0 right-0 mt-2 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar z-[10005]">
                 @foreach($vehicles as $v)
                     @if($v->device_imei)
-                    <option value="{{ $v->id }}">{{ $v->plate }}</option>
+                    <li class="vehicle-option px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer border-b border-slate-50 last:border-0 transition-all flex items-center gap-2" onclick="selectVehicle('{{ $v->id }}', '{{ $v->plate }}')">
+                        <div class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
+                        {{ $v->plate }}
+                    </li>
                     @endif
                 @endforeach
-            </select>
+                <li id="noVehicleResult" class="hidden px-4 py-3 text-xs font-bold text-slate-400 text-center">Sonuç bulunamadı</li>
+            </ul>
         </div>
 
         <button onclick="fetchHistoryData()" class="px-5 py-2 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm transition-all shadow-lg shadow-indigo-600/30">Getir</button>
@@ -735,6 +747,53 @@
                 document.getElementById('customDatePanel').classList.add('hidden');
             }
         }
+
+        // ==========================================
+        // ARAÇ ARAMA DROPDOWN LOGIC
+        // ==========================================
+        function toggleVehicleDropdown(e) {
+            e.stopPropagation();
+            document.getElementById('vehicleDropdownList').classList.remove('hidden');
+            document.getElementById('vehicleSearchInput').focus();
+        }
+
+        function filterVehicles() {
+            const input = document.getElementById('vehicleSearchInput').value.toLowerCase();
+            const options = document.querySelectorAll('.vehicle-option');
+            let hasVisible = false;
+
+            options.forEach(opt => {
+                const text = opt.innerText.toLowerCase();
+                if (text.includes(input)) {
+                    opt.classList.remove('hidden');
+                    hasVisible = true;
+                } else {
+                    opt.classList.add('hidden');
+                }
+            });
+
+            if (!hasVisible) {
+                document.getElementById('noVehicleResult').classList.remove('hidden');
+            } else {
+                document.getElementById('noVehicleResult').classList.add('hidden');
+            }
+        }
+
+        function selectVehicle(id, plate) {
+            document.getElementById('arventoVehicleSelect').value = id;
+            document.getElementById('vehicleSearchInput').value = plate;
+            document.getElementById('vehicleDropdownList').classList.add('hidden');
+        }
+
+        // Dropdown dışına tıklanınca kapatma
+        document.addEventListener('click', function(e) {
+            const container = document.getElementById('vehicleSearchContainer');
+            if (container && !container.contains(e.target)) {
+                const list = document.getElementById('vehicleDropdownList');
+                if (list) list.classList.add('hidden');
+            }
+        });
+        // ==========================================
 
         function fetchHistoryData() {
             const vehicleId = document.getElementById('arventoVehicleSelect').value;
