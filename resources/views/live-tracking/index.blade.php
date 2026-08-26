@@ -337,11 +337,6 @@
         /* Premium Arama Kutusu 3D */
         .search-3d {
             position: relative;
-            border-radius: 18px;
-            background: linear-gradient(145deg, rgba(30, 58, 138, 0.7), rgba(15, 23, 42, 0.85));
-            backdrop-filter: blur(30px);
-            -webkit-backdrop-filter: blur(30px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
             box-shadow:
                 inset 0 2px 6px rgba(255, 255, 255, 0.08),
                 0 4px 0 rgba(0, 0, 0, 0.15),
@@ -393,17 +388,17 @@
     <!-- ============================================= -->
     <!-- PREMIUM 3D ÜST NAVİGASYON BARI -->
     <!-- ============================================= -->
-    <div id="topNavbar" class="absolute top-4 z-[900] flex items-center gap-6 transition-all duration-500 pointer-events-auto" style="left: 20px; right: 20px;">
+    <div id="topNavbar" class="absolute top-4 z-[900] flex items-center gap-6 transition-all duration-500 pointer-events-auto bg-slate-900/80 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] px-6 py-3" style="left: 20px; right: 20px;">
 
         <!-- Logo Bölümü -->
         <div class="flex items-center shrink-0">
-            <div class="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-white to-slate-50 flex items-center justify-center shadow-[0_10px_25px_rgba(0,0,0,0.3)] shrink-0 border border-white/20">
-                <svg class="w-6 h-6 text-indigo-600 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            <div class="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center shadow-inner border border-indigo-400/30 shrink-0">
+                <svg class="w-7 h-7 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                 <div class="absolute -right-1 -top-1 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-slate-900 shadow-[0_0_10px_rgba(52,211,153,0.8)] animate-pulse"></div>
             </div>
             <div class="ml-4">
-                <h1 class="text-xl font-black text-slate-800 tracking-tight leading-none mb-1 text-shadow-sm drop-shadow-[0_2px_4px_rgba(0,0,0,0.1)]">FiloTakip</h1>
-                <p class="text-[9px] font-black text-slate-600 uppercase tracking-widest leading-none">Araç Takip Sistemi</p>
+                <h1 class="text-2xl font-black text-white tracking-tight leading-none mb-1 text-shadow-sm drop-shadow-[0_2px_10px_rgba(255,255,255,0.2)]">FiloTakip</h1>
+                <p class="text-[10px] font-black text-indigo-300 uppercase tracking-widest leading-none drop-shadow-md">Araç Takip Sistemi</p>
             </div>
         </div>
 
@@ -413,14 +408,14 @@
             </div>
         @endif
 
-        <!-- Premium 3D Arama Kutusu -->
-        <div class="flex-1 relative" id="globalSearchWrapper">
-            <div class="search-3d flex items-center px-5 h-14 w-full relative z-[1002]">
+        <!-- Premium Arama Kutusu -->
+        <div class="flex-1 relative max-w-2xl mx-auto" id="globalSearchWrapper">
+            <div class="search-3d flex items-center px-4 h-14 w-full relative z-[1002] rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-inner transition-all hover:bg-white/10 focus-within:bg-white/10">
                 <div class="relative z-10 flex items-center w-full">
-                    <div class="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/10">
-                        <svg class="w-4.5 h-4.5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <div class="w-8 h-8 rounded-xl bg-indigo-500/20 flex items-center justify-center shrink-0 border border-indigo-400/30">
+                        <svg class="w-4 h-4 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </div>
-                    <input id="globalVehicleSearch" type="text" autocomplete="off" placeholder="Plaka veya lokasyon ara..." class="bg-transparent border-none outline-none text-white font-bold text-sm ml-3 w-full placeholder-slate-500 focus:ring-0 relative z-10">
+                    <input id="globalVehicleSearch" type="text" autocomplete="off" placeholder="Plaka veya lokasyon ara..." class="bg-transparent border-none outline-none text-white font-bold text-sm ml-4 w-full placeholder-slate-400 focus:ring-0 relative z-10">
                 </div>
             </div>
             <!-- Arama Sonuçları Dropdown -->
