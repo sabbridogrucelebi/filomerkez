@@ -207,6 +207,182 @@
             margin-top: 80px;
             margin-right: 20px;
         }
+
+        /* =============================================
+           PREMIUM 3D NAVBAR İKON SİSTEMİ
+           ============================================= */
+        
+        /* 3D İkon Buton Temel Stili */
+        .nav-icon-3d {
+            position: relative;
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow:
+                inset 0 2px 4px rgba(255, 255, 255, 0.2),
+                0 4px 0 rgba(0, 0, 0, 0.3),
+                0 8px 20px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        .nav-icon-3d::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 1;
+        }
+        .nav-icon-3d:hover {
+            transform: translateY(-4px) scale(1.08);
+            box-shadow:
+                inset 0 2px 4px rgba(255, 255, 255, 0.3),
+                0 6px 0 rgba(0, 0, 0, 0.3),
+                0 16px 30px rgba(99, 102, 241, 0.4);
+        }
+        .nav-icon-3d:active {
+            transform: translateY(2px) scale(0.98);
+            box-shadow:
+                inset 0 2px 4px rgba(255, 255, 255, 0.1),
+                0 1px 0 rgba(0, 0, 0, 0.3),
+                0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        .nav-icon-3d svg {
+            width: 24px;
+            height: 24px;
+            position: relative;
+            z-index: 2;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+            transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .nav-icon-3d:hover svg {
+            transform: scale(1.15) rotate(-5deg);
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+        }
+
+        /* İkon Renk Varyasyonları */
+        .nav-icon-map {
+            background: linear-gradient(145deg, rgba(16, 185, 129, 0.8), rgba(5, 150, 105, 0.9));
+            color: white;
+        }
+        .nav-icon-map:hover { box-shadow: inset 0 2px 4px rgba(255,255,255,0.3), 0 6px 0 rgba(0,0,0,0.3), 0 16px 30px rgba(16,185,129,0.5); }
+
+        .nav-icon-history {
+            background: linear-gradient(145deg, rgba(99, 102, 241, 0.8), rgba(67, 56, 202, 0.9));
+            color: white;
+        }
+        .nav-icon-history:hover { box-shadow: inset 0 2px 4px rgba(255,255,255,0.3), 0 6px 0 rgba(0,0,0,0.3), 0 16px 30px rgba(99,102,241,0.5); }
+
+        .nav-icon-settings {
+            background: linear-gradient(145deg, rgba(245, 158, 11, 0.8), rgba(217, 119, 6, 0.9));
+            color: white;
+        }
+        .nav-icon-settings:hover { box-shadow: inset 0 2px 4px rgba(255,255,255,0.3), 0 6px 0 rgba(0,0,0,0.3), 0 16px 30px rgba(245,158,11,0.5); }
+        .nav-icon-settings:hover svg {
+            transform: scale(1.15) rotate(90deg);
+        }
+
+        .nav-icon-home {
+            background: linear-gradient(145deg, rgba(168, 85, 247, 0.8), rgba(139, 92, 246, 0.9));
+            color: white;
+        }
+        .nav-icon-home:hover { box-shadow: inset 0 2px 4px rgba(255,255,255,0.3), 0 6px 0 rgba(0,0,0,0.3), 0 16px 30px rgba(168,85,247,0.5); }
+
+        /* Tooltip Stili */
+        .nav-tooltip {
+            position: absolute;
+            bottom: -42px;
+            left: 50%;
+            transform: translateX(-50%) translateY(8px);
+            white-space: nowrap;
+            padding: 6px 14px;
+            border-radius: 10px;
+            background: linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+            color: white;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            z-index: 100;
+        }
+        .nav-tooltip::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 10px;
+            height: 10px;
+            background: rgba(15, 23, 42, 0.95);
+            border-left: 1px solid rgba(255, 255, 255, 0.15);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            transform: translateX(-50%) rotate(45deg);
+        }
+        .nav-icon-3d:hover .nav-tooltip {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Premium Arama Kutusu 3D */
+        .search-3d {
+            position: relative;
+            border-radius: 18px;
+            background: linear-gradient(145deg, rgba(30, 58, 138, 0.7), rgba(15, 23, 42, 0.85));
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow:
+                inset 0 2px 6px rgba(255, 255, 255, 0.08),
+                0 4px 0 rgba(0, 0, 0, 0.15),
+                0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            overflow: hidden;
+        }
+        .search-3d::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+            animation: search-shimmer 4s ease-in-out infinite;
+            z-index: 0;
+        }
+        .search-3d:focus-within {
+            border-color: rgba(129, 140, 248, 0.6);
+            box-shadow:
+                inset 0 2px 6px rgba(255, 255, 255, 0.1),
+                0 4px 0 rgba(0, 0, 0, 0.15),
+                0 10px 30px rgba(99, 102, 241, 0.3),
+                0 0 0 4px rgba(99, 102, 241, 0.15);
+            transform: translateY(-2px);
+        }
+        @keyframes search-shimmer {
+            0% { left: -100%; }
+            50% { left: 200%; }
+            100% { left: 200%; }
+        }
+
+        /* Aktif İkon Glow */
+        @keyframes icon-glow {
+            0%, 100% { box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), 0 4px 0 rgba(0,0,0,0.3), 0 8px 20px rgba(0,0,0,0.3), 0 0 15px rgba(16,185,129,0.4); }
+            50% { box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), 0 4px 0 rgba(0,0,0,0.3), 0 8px 20px rgba(0,0,0,0.3), 0 0 25px rgba(16,185,129,0.6); }
+        }
+        .nav-icon-active {
+            animation: icon-glow 2s ease-in-out infinite;
+            border-color: rgba(255,255,255,0.3) !important;
+        }
+
     </style>
 </head>
 <body class="h-screen w-screen overflow-hidden bg-slate-100 font-sans antialiased text-slate-800">
@@ -214,33 +390,61 @@
     <!-- Harita Katmanı (Arka Plan) -->
     <div id="map" class="absolute inset-0 w-full h-full z-0"></div>
 
-    <!-- Üst Yüzen Arama (Floating Navbar) -->
-    <div id="topNavbar" class="absolute top-6 z-[900] flex flex-col items-center transition-all duration-500" style="left: 50%; transform: translateX(-50%); width: 450px; margin-left: 140px;">
-        <!-- Arama Kutusu -->
-        <div class="relative rounded-2xl w-full" id="globalSearchWrapper">
-            <div class="bg-slate-900/90 backdrop-blur-2xl border border-white/20 rounded-2xl flex items-center px-5 h-14 w-full relative z-[1002] shadow-[0_15px_40px_rgba(0,0,0,0.5)] transition-all focus-within:shadow-[0_15px_40px_rgba(99,102,241,0.5)] focus-within:border-indigo-400/80">
-                <svg class="w-5 h-5 text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                <input id="globalVehicleSearch" type="text" autocomplete="off" placeholder="Plaka veya lokasyon ara..." class="bg-transparent border-none outline-none text-white font-bold text-sm ml-3 w-full placeholder-slate-400 focus:ring-0">
+    <!-- ============================================= -->
+    <!-- PREMIUM 3D ÜST NAVİGASYON BARI -->
+    <!-- ============================================= -->
+    <div id="topNavbar" class="absolute top-4 z-[900] flex items-center gap-4 transition-all duration-500 pointer-events-auto" style="left: 310px; right: 20px;">
+
+        @if(session('success'))
+            <div class="bg-emerald-500/90 backdrop-blur-md text-white px-4 py-2 rounded-xl font-black text-xs flex items-center gap-2 shadow-[0_8px_20px_rgba(16,185,129,0.5)] border border-emerald-400/50 shrink-0" id="successToast">
+                ✅ {{ session('success') }}
+            </div>
+        @endif
+
+        <!-- Premium 3D Arama Kutusu -->
+        <div class="flex-1 relative" id="globalSearchWrapper">
+            <div class="search-3d flex items-center px-5 h-14 w-full relative z-[1002]">
+                <div class="relative z-10 flex items-center w-full">
+                    <div class="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/10">
+                        <svg class="w-4.5 h-4.5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <input id="globalVehicleSearch" type="text" autocomplete="off" placeholder="Plaka veya lokasyon ara..." class="bg-transparent border-none outline-none text-white font-bold text-sm ml-3 w-full placeholder-slate-500 focus:ring-0 relative z-10">
+                </div>
             </div>
             <!-- Arama Sonuçları Dropdown -->
             <ul id="globalSearchResults" class="absolute left-0 right-0 mt-3 bg-slate-900/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] overflow-hidden hidden z-[1001] custom-scrollbar" style="max-height: 350px; overflow-y: auto;">
                 <!-- JS ile Doldurulacak -->
             </ul>
         </div>
-    </div>
 
-    <!-- Sağ Üst: Butonlar -->
-    <div id="topRightButtons" class="absolute top-6 right-6 z-[900] flex items-center gap-4 pointer-events-auto">
-        @if(session('success'))
-            <div class="bg-emerald-500/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl font-black text-sm flex items-center gap-2 shadow-[0_10px_25px_rgba(16,185,129,0.5)] border border-emerald-400/50">
-                ✅ {{ session('success') }}
-            </div>
-        @endif
-        <!-- Panele Dön 3D Buton -->
-        <a href="{{ route('dashboard') }}" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-5 py-3.5 rounded-2xl shadow-[0_10px_25px_rgba(79,70,229,0.5)] font-black text-sm flex items-center gap-2 border border-white/20 hover:-translate-y-1 transition-all duration-300">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"></path></svg>
-            Panele Dön
-        </a>
+        <!-- 3D İkon Butonları -->
+        <div class="flex items-center gap-3 shrink-0">
+
+            <!-- 🗺️ Canlı Harita -->
+            <button class="nav-icon-3d nav-icon-map nav-icon-active" onclick="window.location.reload();" title="Canlı Harita">
+                <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+                <span class="nav-tooltip">🗺️ Canlı Harita</span>
+            </button>
+
+            <!-- ⏱️ Geçmiş İzleme -->
+            <button class="nav-icon-3d nav-icon-history" onclick="openNavHistoryMode()" title="Geçmiş İzleme">
+                <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span class="nav-tooltip">⏱️ Araç Geçmiş İzleme</span>
+            </button>
+
+            <!-- ⚙️ Cihaz Tanımlamaları -->
+            <a href="{{ route('vehicle-tracking.definitions') }}" class="nav-icon-3d nav-icon-settings" title="Cihaz Tanımlamaları">
+                <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <span class="nav-tooltip">⚙️ Cihaz Tanımlamaları</span>
+            </a>
+
+            <!-- 🏠 Ana Sayfa (Panele Dön) -->
+            <a href="{{ route('dashboard') }}" class="nav-icon-3d nav-icon-home" title="Ana Sayfa">
+                <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"></path></svg>
+                <span class="nav-tooltip">🏠 Ana Sayfaya Dön</span>
+            </a>
+
+        </div>
     </div>
 
     <!-- Mavi Premium Full-Height Sidebar (Glassmorphism) -->
@@ -1588,6 +1792,23 @@
         function closeAdvancedVehiclePanel() {
             document.getElementById('advancedVehiclePanel').classList.add('hidden');
             currentAdvVehicle = null;
+        }
+
+        // Üst navbar'dan Geçmiş İzleme ikonuna tıklandığında çağrılır
+        function openNavHistoryMode() {
+            if (currentAdvVehicle) {
+                // Araç zaten seçiliyse, geçmiş sekmesini aç
+                document.getElementById('advancedVehiclePanel').classList.remove('hidden');
+                switchAdvPanelTab('tab-history');
+                document.getElementById('advPanelTabSelect').value = 'tab-history';
+            } else {
+                // Araç seçili değilse, arventoTopBar'ı aç (eski geçmiş modu)
+                const topBar = document.getElementById('arventoTopBar');
+                if (topBar) {
+                    topBar.classList.remove('hidden');
+                    topBar.classList.add('flex');
+                }
+            }
         }
 
         function switchAdvPanelTab(tabId) {
