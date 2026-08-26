@@ -410,6 +410,81 @@
             border-color: rgba(255,255,255,0.3) !important;
         }
 
+        /* =============================================
+           MOBİL UYUMLULUK (RESPONSIVE)
+           ============================================= */
+        @media (max-width: 768px) {
+            /* Üst Bar */
+            #topNavbar {
+                left: 10px !important; right: 10px !important; top: 10px !important;
+                padding: 10px !important;
+                border-radius: 1.5rem !important;
+                flex-wrap: wrap;
+                gap: 10px;
+                justify-content: space-between;
+            }
+            #globalSearchWrapper {
+                order: 3;
+                width: 100%;
+                margin-top: 5px;
+            }
+            .search-3d { height: 44px !important; }
+            #topNavbar h1 { font-size: 1.25rem !important; }
+            
+            /* Sol Menü (Araç Listesi) - Alttan Çekmece */
+            #blueSidebar {
+                width: 100% !important;
+                left: 0 !important;
+                top: auto !important;
+                bottom: 0 !important;
+                height: 50vh !important;
+                border-radius: 2rem 2rem 0 0 !important;
+                z-index: 1000 !important;
+                transition: transform 0.4s cubic-bezier(0.2,0.8,0.2,1) !important;
+            }
+            #blueSidebar.sidebar-visible { transform: translateY(0) !important; }
+            #blueSidebar.sidebar-hidden { transform: translateY(120%) !important; }
+            
+            /* Gelişmiş Araç Paneli - Alttan Çekmece */
+            #advancedVehiclePanel {
+                width: 100% !important;
+                left: 0 !important;
+                top: auto !important;
+                bottom: 0 !important;
+                height: 55vh !important;
+                border-radius: 2rem 2rem 0 0 !important;
+                z-index: 1001 !important;
+            }
+            
+            /* Sağ Panel (Geçmiş İzleme) - Alttan Çekmece */
+            #rightHistoryPanel {
+                width: 100% !important;
+                left: 0 !important;
+                right: 0 !important;
+                top: auto !important;
+                bottom: 0 !important;
+                height: 55vh !important;
+                border-radius: 2rem 2rem 0 0 !important;
+                z-index: 1002 !important;
+                transition: transform 0.5s cubic-bezier(0.2,0.8,0.2,1) !important;
+            }
+            /* JS'den gelen inline translateX(0) komutunu mobil için translateY(0) olarak eziyoruz */
+            #rightHistoryPanel[style*="translateX(0)"] {
+                transform: translateY(0) !important;
+            }
+            #rightHistoryPanel[style*="translateX(120%)"] {
+                transform: translateY(120%) !important;
+            }
+            
+            /* Leaflet Harita Kontrolleri */
+            .leaflet-top.leaflet-right { margin-top: 130px !important; margin-right: 10px !important; }
+            .leaflet-top.leaflet-left { margin-top: 130px !important; margin-left: 10px !important; }
+            
+            /* Misafir Görünümü İçin Harita Kontrolü Düzeltmesi (Üst bar yoksa) */
+            body:not(:has(#topNavbar)) .leaflet-top.leaflet-right { margin-top: 20px !important; }
+            body:not(:has(#topNavbar)) .leaflet-top.leaflet-left { margin-top: 20px !important; }
+        }
+
     </style>
 </head>
 <body class="h-screen w-screen overflow-hidden bg-slate-100 font-sans antialiased text-slate-800">
