@@ -949,23 +949,23 @@
             <div>
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Başlangıç</label>
                 <div class="relative group">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <div class="w-7 h-7 rounded-lg bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30 group-focus-within:border-indigo-400 transition-colors shadow-[0_0_10px_rgba(99,102,241,0.2)]">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-auto" onclick="document.getElementById('historyStartDate')._flatpickr.open()">
+                        <div class="cursor-pointer w-7 h-7 rounded-lg bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30 hover:border-indigo-400 transition-colors shadow-[0_0_10px_rgba(99,102,241,0.2)]">
                             <svg class="w-4 h-4 text-indigo-400 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                         </div>
                     </div>
-                    <input type="text" id="historyStartDate" placeholder="Tarih Seç" class="w-full bg-black/40 border border-white/10 rounded-xl pl-14 pr-4 py-3.5 text-xs font-black text-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] hover:bg-black/60 hover:border-indigo-500/30 cursor-pointer" readonly>
+                    <input type="text" id="historyStartDate" placeholder="Tarih Seç" class="w-full bg-black/40 border border-white/10 rounded-xl pl-14 pr-4 py-3.5 text-xs font-black text-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] hover:bg-black/60 hover:border-indigo-500/30">
                 </div>
             </div>
             <div>
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 mt-2">Bitiş</label>
                 <div class="relative group">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <div class="w-7 h-7 rounded-lg bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30 group-focus-within:border-indigo-400 transition-colors shadow-[0_0_10px_rgba(99,102,241,0.2)]">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-auto" onclick="document.getElementById('historyEndDate')._flatpickr.open()">
+                        <div class="cursor-pointer w-7 h-7 rounded-lg bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30 hover:border-indigo-400 transition-colors shadow-[0_0_10px_rgba(99,102,241,0.2)]">
                             <svg class="w-4 h-4 text-indigo-400 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         </div>
                     </div>
-                    <input type="text" id="historyEndDate" placeholder="Tarih Seç" class="w-full bg-black/40 border border-white/10 rounded-xl pl-14 pr-4 py-3.5 text-xs font-black text-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] hover:bg-black/60 hover:border-indigo-500/30 cursor-pointer" readonly>
+                    <input type="text" id="historyEndDate" placeholder="Tarih Seç" class="w-full bg-black/40 border border-white/10 rounded-xl pl-14 pr-4 py-3.5 text-xs font-black text-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] hover:bg-black/60 hover:border-indigo-500/30">
                 </div>
             </div>
             <button onclick="fetchHistoryData()" class="w-full py-3 mt-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs shadow-[0_0_20px_rgba(79,70,229,0.5)] hover:shadow-[0_0_30px_rgba(79,70,229,0.7)] transition-all flex items-center justify-center gap-2 transform hover:-translate-y-0.5">
@@ -1038,7 +1038,9 @@
                 time_24hr: true,
                 locale: "tr",
                 defaultDate: startOfToday,
-                theme: "dark"
+                theme: "dark",
+                allowInput: true,
+                clickOpens: false
             });
 
             flatpickr("#historyEndDate", {
@@ -1049,7 +1051,9 @@
                 time_24hr: true,
                 locale: "tr",
                 defaultDate: endOfToday,
-                theme: "dark"
+                theme: "dark",
+                allowInput: true,
+                clickOpens: false
             });
         });
 
