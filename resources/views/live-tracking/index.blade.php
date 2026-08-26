@@ -393,7 +393,19 @@
     <!-- ============================================= -->
     <!-- PREMIUM 3D ÜST NAVİGASYON BARI -->
     <!-- ============================================= -->
-    <div id="topNavbar" class="absolute top-4 z-[900] flex items-center gap-4 transition-all duration-500 pointer-events-auto" style="left: 310px; right: 20px;">
+    <div id="topNavbar" class="absolute top-4 z-[900] flex items-center gap-6 transition-all duration-500 pointer-events-auto" style="left: 20px; right: 20px;">
+
+        <!-- Logo Bölümü -->
+        <div class="flex items-center shrink-0">
+            <div class="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-white to-slate-50 flex items-center justify-center shadow-[0_10px_25px_rgba(0,0,0,0.3)] shrink-0 border border-white/20">
+                <svg class="w-6 h-6 text-indigo-600 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <div class="absolute -right-1 -top-1 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-slate-900 shadow-[0_0_10px_rgba(52,211,153,0.8)] animate-pulse"></div>
+            </div>
+            <div class="ml-4">
+                <h1 class="text-xl font-black text-slate-800 tracking-tight leading-none mb-1 text-shadow-sm drop-shadow-[0_2px_4px_rgba(0,0,0,0.1)]">FiloTakip</h1>
+                <p class="text-[9px] font-black text-slate-600 uppercase tracking-widest leading-none">Araç Takip Sistemi</p>
+            </div>
+        </div>
 
         @if(session('success'))
             <div class="bg-emerald-500/90 backdrop-blur-md text-white px-4 py-2 rounded-xl font-black text-xs flex items-center gap-2 shadow-[0_8px_20px_rgba(16,185,129,0.5)] border border-emerald-400/50 shrink-0" id="successToast">
@@ -445,72 +457,7 @@
             </a>
 
         </div>
-    </div>
 
-    <!-- Mavi Premium Full-Height Sidebar (Glassmorphism) -->
-    <div id="blueSidebar" class="sidebar-hidden absolute top-4 bottom-4 left-4 z-[1000] flex flex-col overflow-hidden w-[280px] bg-slate-900/80 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-        
-        <!-- Üst Kısım: Logo -->
-        <div style="height:90px; display:flex; align-items:center; padding:0 24px; border-bottom:1px solid rgba(255,255,255,0.05); flex-shrink:0;">
-            <div style="position:relative; width:46px; height:46px; border-radius:16px; background:linear-gradient(135deg, #fff, #f8fafc); display:flex; align-items:center; justify-content:center; box-shadow:0 10px 25px rgba(0,0,0,0.3); flex-shrink:0;">
-                <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                <div style="position:absolute; right:-4px; top:-4px; width:14px; height:14px; background:#10b981; border-radius:50%; border:2px solid #1e1b4b; box-shadow:0 0 10px rgba(16,185,129,0.5);"></div>
-            </div>
-            <div style="margin-left:16px;">
-                <h1 style="font-size:22px; font-weight:900; color:white; letter-spacing:-0.5px; line-height:1; margin:0 0 4px 0; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">FiloTakip</h1>
-                <p style="font-size:10px; font-weight:800; color:rgba(199,210,254,0.9); text-transform:uppercase; letter-spacing:1px; margin:0;">Araç Takip Sistemi</p>
-            </div>
-        </div>
-
-        <!-- Ana Menü -->
-        <div style="flex:1; padding:28px 16px; display:flex; flex-direction:column; gap:8px; overflow-y:auto;" class="custom-scrollbar">
-            
-            <!-- Canlı Harita (Aktif) -->
-            <button class="sidebar-item active" style="position:relative;" onclick="window.location.reload();">
-                <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
-                <div class="item-text">
-                    <span>Canlı Harita</span>
-                    <span>Tüm filoyu anlık izle</span>
-                </div>
-            </button>
-
-            <!-- Geçmiş İzleme -->
-            <button class="sidebar-item" style="position:relative;" onclick="openHistoryPanel()">
-                <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                <div class="item-text">
-                    <span>Geçmiş İzleme</span>
-                    <span>Rota ve Video Playback</span>
-                </div>
-            </button>
-
-            <!-- Tanımlamalar -->
-            <a href="{{ route('vehicle-tracking.definitions') }}" class="sidebar-item" style="position:relative; text-decoration:none;">
-                <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                <div class="item-text">
-                    <span>Cihaz Tanımlamaları</span>
-                    <span>IMEI ve Araç eşleştirme</span>
-                </div>
-            </a>
-
-        </div>
-
-        <!-- Alt Durum Kutusu -->
-        <div style="padding:16px 20px 28px 20px; flex-shrink:0;">
-            <div style="padding:16px; border-radius:16px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); backdrop-filter:blur(10px);">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-                    <span style="font-size:12px; font-weight:700; color:white;">Sunucu Bağlantısı</span>
-                    <span style="position:relative; display:flex; width:10px; height:10px;">
-                        <span class="animate-ping" style="position:absolute;width:100%;height:100%;border-radius:50%;background:#34d399;opacity:0.75;"></span>
-                        <span style="position:relative;display:inline-flex;border-radius:50%;width:10px;height:10px;background:#34d399;"></span>
-                    </span>
-                </div>
-                <div style="height:6px; width:100%; background:rgba(255,255,255,0.1); border-radius:999px; overflow:hidden; margin-bottom:8px;">
-                    <div class="animate-pulse" style="height:100%; background:linear-gradient(90deg,#34d399,#6ee7b7); width:100%;"></div>
-                </div>
-                <p style="font-size:10px; color:#6ee7b7; font-weight:900; letter-spacing:2px; text-transform:uppercase;">TCP Canlı Akış Aktif</p>
-            </div>
-        </div>
-    </div>
 
     <!-- Cihaz Tanımlama Modalı -->
     <div id="imeiModal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md transition-all duration-300">
@@ -557,7 +504,7 @@
     <!-- ========================================== -->
     <!-- SOL ARAÇ DETAY PANELİ (AŞAMA 2 & 3 & 4) -->
     <!-- ========================================== -->
-    <div id="advancedVehiclePanel" class="hidden absolute flex flex-col premium-glass-panel rounded-3xl overflow-hidden transition-all duration-500" style="left: 310px; top: 16px; bottom: 16px; width: 380px; z-index: 9999;">
+    <div id="advancedVehiclePanel" class="hidden absolute flex flex-col premium-glass-panel rounded-3xl overflow-hidden transition-all duration-500" style="left: 20px; top: 90px; bottom: 20px; width: 380px; z-index: 9999;">
         <!-- Başlık Kısmı (Plaka ve Butonlar) -->
         <div class="px-6 py-5 border-b border-white/10 flex justify-between items-center relative overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-transparent pointer-events-none"></div>
@@ -1000,15 +947,14 @@
             fetchData();
             setInterval(fetchData, 3000);
 
-            // Başlangıçta sidebar ve navbar gelsin
+            // Başlangıçta navbar gelsin
             setTimeout(function() {
-                document.getElementById('blueSidebar').classList.remove('sidebar-hidden');
-                document.getElementById('blueSidebar').classList.add('sidebar-visible');
+                const navbar = document.getElementById('topNavbar');
+                if (navbar) {
+                    navbar.classList.remove('navbar-hidden');
+                    navbar.classList.add('navbar-visible');
+                }
             }, 500);
-            setTimeout(function() {
-                document.getElementById('topNavbar').classList.remove('navbar-hidden');
-                document.getElementById('topNavbar').classList.add('navbar-visible');
-            }, 800);
 
             // 5 saniye sonra gizle (Eğer üzerine gelinmezse)
             let hideTimeout;
@@ -1076,15 +1022,13 @@
 
             // Arayüz elemanları üzerindeki tıklamaların haritaya geçmesini engelle
             const uiElements = [
-                'blueSidebar', 
-                'globalSearchWrapper', 
                 'topNavbar',
+                'globalSearchWrapper',
                 'advancedVehiclePanel', 
                 'rightHistoryPanel', 
                 'arventoTripPanel', 
                 'arventoPlayerControls',
-                'imeiModal',
-                'topRightButtons'
+                'imeiModal'
             ];
             uiElements.forEach(id => {
                 const el = document.getElementById(id);
