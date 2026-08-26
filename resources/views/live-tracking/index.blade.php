@@ -781,7 +781,7 @@
             <!-- Bölüm 1: Seçimler (Araç ve Tarih) -->
             <div class="space-y-4 bg-black/20 p-5 rounded-2xl border border-white/5 shadow-inner">
                 <!-- Araç Seçimi -->
-                <div class="relative" id="vehicleSearchContainer">
+                <div class="relative z-50" id="vehicleSearchContainer">
                     <input type="hidden" id="arventoVehicleSelect" value="">
                     <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 pl-1">Araç Seç</label>
                     <div class="relative">
@@ -791,7 +791,7 @@
                         <input type="text" id="vehicleSearchInput" onkeyup="filterVehicles()" onclick="toggleVehicleDropdown(event)" placeholder="Plaka Ara..." class="w-full pl-10 pr-4 py-3 text-sm font-bold text-white bg-slate-800/50 border border-white/10 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-500" autocomplete="off">
                     </div>
                     <!-- Araç Listesi (Dropdown) -->
-                    <ul id="vehicleDropdownList" class="hidden absolute left-0 right-0 mt-2 bg-slate-800/95 backdrop-blur-2xl border border-white/10 rounded-xl shadow-[0_15px_40px_rgba(0,0,0,0.6)] max-h-48 overflow-y-auto custom-scrollbar z-[10005] p-2">
+                    <ul id="vehicleDropdownList" class="hidden absolute left-0 right-0 mt-2 bg-slate-900 border border-white/10 rounded-xl shadow-[0_15px_40px_rgba(0,0,0,0.8)] max-h-48 overflow-y-auto custom-scrollbar z-[10005] p-2">
                         @foreach($vehicles as $v)
                             @if($v->device_imei)
                             <li class="vehicle-option px-4 py-2.5 text-xs font-bold text-slate-300 hover:bg-indigo-500 hover:text-white rounded-lg cursor-pointer transition-colors flex items-center gap-3" onclick="selectVehicle('{{ $v->node }}', '{{ $v->plate }}')">
