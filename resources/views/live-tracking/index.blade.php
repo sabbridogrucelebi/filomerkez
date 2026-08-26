@@ -453,6 +453,8 @@
 
         </div>
 
+    </div>
+    <!-- End of topNavbar -->
 
     <!-- Cihaz Tanımlama Modalı -->
     <div id="imeiModal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md transition-all duration-300">
