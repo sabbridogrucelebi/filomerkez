@@ -10,7 +10,22 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin=""/>
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin=""/>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
+    <!-- Flatpickr Premium Date Picker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/tr.js"></script>
     <style>
+        .flatpickr-calendar.dark {
+            background: #0f172a !important; /* slate-900 */
+            border: 1px solid rgba(255,255,255,0.1) !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+            font-family: inherit !important;
+        }
+        .flatpickr-day.selected {
+            background: #6366f1 !important; /* indigo-500 */
+            border-color: #6366f1 !important;
+        }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
         
@@ -922,13 +937,17 @@
         <div class="space-y-4">
             <div>
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Başlangıç</label>
-                <input type="datetime-local" id="historyStartDate" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-inner">
+                <div class="relative">
+                    <input type="text" id="historyStartDate" placeholder="Tarih ve Saat Seçin" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all shadow-inner cursor-pointer" readonly>
+                </div>
             </div>
             <div>
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Bitiş</label>
-                <input type="datetime-local" id="historyEndDate" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-inner">
+                <div class="relative">
+                    <input type="text" id="historyEndDate" placeholder="Tarih ve Saat Seçin" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all shadow-inner cursor-pointer" readonly>
+                </div>
             </div>
-            <button onclick="fetchHistoryData()" class="w-full py-2 rounded-lg bg-indigo-500 text-white font-bold text-xs">Uygula</button>
+            <button onclick="fetchHistoryData()" class="w-full py-2 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-xs shadow-[0_0_15px_rgba(99,102,241,0.4)] transition-all">Uygula</button>
         </div>
     </div>
 
@@ -981,6 +1000,33 @@
                     navbar.classList.add('navbar-visible');
                 }
             }, 500);
+
+            // Flatpickr Premium Date Pickers Kurulumu
+            const today = new Date();
+            const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 1, 0); // 00:01
+            const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 0); // 23:59
+
+            flatpickr("#historyStartDate", {
+                enableTime: true,
+                dateFormat: "Y-m-d\\TH:i",
+                altInput: true,
+                altFormat: "d.m.Y H:i",
+                time_24hr: true,
+                locale: "tr",
+                defaultDate: startOfToday,
+                theme: "dark"
+            });
+
+            flatpickr("#historyEndDate", {
+                enableTime: true,
+                dateFormat: "Y-m-d\\TH:i",
+                altInput: true,
+                altFormat: "d.m.Y H:i",
+                time_24hr: true,
+                locale: "tr",
+                defaultDate: endOfToday,
+                theme: "dark"
+            });
         });
 
         function initMap() {
