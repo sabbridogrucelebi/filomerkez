@@ -2377,8 +2377,9 @@
 
         function generateShareLink() {
             const vehicleId = document.getElementById('arventoVehicleSelect').value;
-            const startDate = document.getElementById('historyStartDate').value;
-            const endDate = document.getElementById('historyEndDate').value;
+            const dateFilter = document.getElementById('arventoDateSelect').value;
+            const startDate = document.getElementById('historyStartDate') ? document.getElementById('historyStartDate').value : '';
+            const endDate = document.getElementById('historyEndDate') ? document.getElementById('historyEndDate').value : '';
             const duration = document.getElementById('shareDuration').value;
 
             fetch('{{ route("vehicle.tracking.share") }}', {
@@ -2389,6 +2390,7 @@
                 },
                 body: JSON.stringify({
                     vehicle_id: vehicleId,
+                    date_filter: dateFilter,
                     start_date: startDate,
                     end_date: endDate,
                     duration: duration
