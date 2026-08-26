@@ -794,7 +794,7 @@
                     <ul id="vehicleDropdownList" class="hidden absolute left-0 right-0 mt-2 bg-slate-900 border border-white/10 rounded-xl shadow-[0_15px_40px_rgba(0,0,0,0.8)] max-h-48 overflow-y-auto custom-scrollbar z-[10005] p-2">
                         @foreach($vehicles as $v)
                             @if($v->device_imei)
-                            <li class="vehicle-option px-4 py-2.5 text-xs font-bold text-slate-300 hover:bg-indigo-500 hover:text-white rounded-lg cursor-pointer transition-colors flex items-center gap-3" onclick="selectVehicle('{{ $v->node }}', '{{ $v->plate }}')">
+                            <li class="vehicle-option px-4 py-2.5 text-xs font-bold text-slate-300 hover:bg-indigo-500 hover:text-white rounded-lg cursor-pointer transition-colors flex items-center gap-3" onclick="selectVehicle('{{ $v->id }}', '{{ $v->plate }}')">
                                 <div class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
                                 {{ $v->plate }}
                             </li>
