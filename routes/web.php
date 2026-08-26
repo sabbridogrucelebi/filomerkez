@@ -70,6 +70,15 @@ Route::get('/debug-logs-secret-123', function() {
     return "No logs.";
 });
 
+Route::get('/debug-share-test', function() {
+    try {
+        $count = \App\Models\SharedPlayback::count();
+        return "Tablo çalışıyor! Kayıt sayısı: " . $count;
+    } catch (\Exception $e) {
+        return "Veritabanı Hatası: " . $e->getMessage();
+    }
+});
+
 Route::get('/clear-cache-secret', function() {
     \Illuminate\Support\Facades\Artisan::call('optimize:clear');
     \Illuminate\Support\Facades\Artisan::call('cache:clear');
