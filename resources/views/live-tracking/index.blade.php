@@ -420,6 +420,7 @@
     <!-- ============================================= -->
     <!-- PREMIUM 3D ÜST NAVİGASYON BARI -->
     <!-- ============================================= -->
+    @if(!isset($isGuest))
     <div id="topNavbar" class="absolute top-4 z-[900] flex items-center gap-6 transition-all duration-500 pointer-events-auto bg-slate-900/80 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] px-6 py-3" style="left: 20px; right: 20px;">
 
         <!-- Logo Bölümü -->
@@ -487,6 +488,7 @@
 
     </div>
     <!-- End of topNavbar -->
+    @endif
 
     <!-- Cihaz Tanımlama Modalı -->
     <div id="imeiModal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md transition-all duration-300">
@@ -533,6 +535,7 @@
     <!-- ========================================== -->
     <!-- SOL ARAÇ DETAY PANELİ (AŞAMA 2 & 3 & 4) -->
     <!-- ========================================== -->
+    @if(!isset($isGuest))
     <div id="advancedVehiclePanel" class="hidden absolute flex flex-col premium-glass-panel rounded-3xl overflow-hidden transition-all duration-500" style="left: 20px; top: 90px; bottom: 20px; width: 380px; z-index: 9999;">
         <!-- Başlık Kısmı (Plaka ve Butonlar) -->
         <div class="px-6 py-5 border-b border-white/10 flex justify-between items-center relative overflow-hidden">
@@ -785,6 +788,7 @@
     <!-- End of advPanelTabsContainer -->
 </div>
 <!-- End of advancedVehiclePanel -->
+@endif
 
     <!-- ========================================== -->
     <!-- ========================================== -->
@@ -804,18 +808,26 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
+                @if(!isset($isGuest))
+                <button onclick="openShareModal()" class="w-10 h-10 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 flex justify-center items-center text-emerald-400 hover:text-emerald-300 transition-all border border-emerald-500/20 hover:border-emerald-500/50" title="Kaydı Paylaş">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                </button>
+                @endif
                 <button onclick="openIconModal()" class="w-10 h-10 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 flex justify-center items-center text-indigo-400 hover:text-indigo-300 transition-all border border-indigo-500/20 hover:border-indigo-500/50" title="Araç İkonunu Değiştir">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                 </button>
+                @if(!isset($isGuest))
                 <button onclick="exitHistoryMode()" class="w-10 h-10 rounded-xl bg-white/5 hover:bg-rose-500/20 flex justify-center items-center text-slate-400 hover:text-rose-400 transition-all border border-transparent hover:border-rose-500/50">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
+                @endif
             </div>
         </div>
 
         <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
             
             <!-- Bölüm 1: Seçimler (Araç ve Tarih) -->
+            @if(!isset($isGuest))
             <div class="space-y-4 bg-black/20 p-5 rounded-2xl border border-white/5 shadow-inner">
                 <!-- Araç Seçimi -->
                 <div class="relative z-50" id="vehicleSearchContainer">
@@ -866,6 +878,13 @@
                     Kayıtları Getir
                 </button>
             </div>
+            @else
+            <!-- Misafir İçin Seçilen Araç Bilgisi -->
+            <div class="bg-indigo-500/10 border border-indigo-500/20 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
+                <div class="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-1">Araç Plakası</div>
+                <div class="text-xl font-black text-white">{{ $shared->vehicle->plate ?? 'Bilinmeyen Araç' }}</div>
+            </div>
+            @endif
 
             <!-- Bölüm 2: Playback Kontrolleri -->
             <div id="rightPlaybackContainer" class="bg-gradient-to-br from-slate-800 to-slate-900 p-5 rounded-2xl border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.5)] opacity-50 pointer-events-none transition-all duration-300">
@@ -1004,6 +1023,50 @@
         </div>
     </div>
 
+    <!-- Paylaşım Modalı -->
+    <div id="sharePlaybackModal" class="hidden fixed inset-0 z-[10005] bg-black/60 backdrop-blur-sm flex items-center justify-center transition-all opacity-0">
+        <div class="premium-glass-panel rounded-3xl w-[500px] shadow-[0_30px_60px_rgba(0,0,0,0.8)] border border-white/10 flex flex-col transform scale-95 transition-transform duration-300" id="shareModalBox">
+            <div class="px-6 py-5 border-b border-white/10 flex justify-between items-center bg-slate-900/50 rounded-t-3xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black text-white">Kaydı Paylaş</h3>
+                        <p class="text-[10px] font-bold text-emerald-300 uppercase tracking-widest mt-0.5">Misafir İzleme Linki Üret</p>
+                    </div>
+                </div>
+                <button onclick="closeShareModal()" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-rose-500/20 flex justify-center items-center text-slate-400 hover:text-rose-400 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <label class="block text-[11px] font-black uppercase tracking-widest text-slate-300 mb-2">Link Geçerlilik Süresi</label>
+                <select id="shareDuration" class="w-full bg-slate-800/80 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-emerald-500 transition-all cursor-pointer mb-6">
+                    <option value="24h">24 Saat Geçerli</option>
+                    <option value="7d">7 Gün Geçerli</option>
+                    <option value="unlimited">Süresiz</option>
+                </select>
+                
+                <button onclick="generateShareLink()" class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs tracking-widest uppercase transition-all shadow-[0_10px_20px_rgba(16,185,129,0.4)] hover:shadow-[0_10px_25px_rgba(16,185,129,0.6)] flex items-center justify-center gap-2 mb-4" id="generateLinkBtn">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                    LİNK ÜRET
+                </button>
+
+                <div id="shareLinkResultContainer" class="hidden">
+                    <label class="block text-[11px] font-black uppercase tracking-widest text-slate-300 mb-2 text-center text-emerald-400">✅ Link Başarıyla Üretildi!</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="generatedShareLink" readonly class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono font-bold text-indigo-300 outline-none text-center selection:bg-indigo-500/30">
+                        <button onclick="copyShareLink()" class="px-5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 font-bold border border-indigo-500/30 transition-colors" title="Kopyala">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let map;
         let markers = {};
@@ -1013,8 +1076,26 @@
 
         document.addEventListener("DOMContentLoaded", function() {
             initMap();
+            
+            @if(!isset($isGuest))
             fetchData();
             setInterval(fetchData, 3000);
+            @else
+            // Misafir Modu İnisyalizasyon
+            isHistoryMode = true;
+            historyData = @json($historyData ?? []);
+            tripData = @json($tripData ?? []);
+            
+            setTimeout(() => {
+                const rightPanel = document.getElementById('rightHistoryPanel');
+                if(rightPanel) {
+                    rightPanel.style.transform = 'translateX(0)';
+                }
+                if(historyData.length > 0) {
+                    initArventoPlaybackUI();
+                }
+            }, 800);
+            @endif
 
             // Başlangıçta navbar gelsin
             setTimeout(function() {

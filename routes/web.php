@@ -45,6 +45,7 @@ use App\Http\Controllers\CustomerPortalController;
 use App\Http\Controllers\CustomerPortalUserController;
 use App\Http\Controllers\CustomerServiceRouteController;
 use App\Http\Controllers\VehicleTrackingController;
+use App\Http\Controllers\SharedPlaybackController;
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardController;
 use App\Http\Controllers\SuperAdmin\CompanyController as SuperAdminCompanyController;
 
@@ -1055,7 +1056,13 @@ Route::middleware('auth')->group(function () {
     Route::delete('/pilotcell/school/{school_id}/routes/{route_id}/students/{student_id}/users/{user_id}', [\App\Http\Controllers\PilotCellController::class, 'destroyStudentUser'])
         ->middleware(['auth', 'permission:pilotcell.view'])
         ->name('pilotcell.school.routes.students.users.destroy');
+
+    // Paylaşımlı Geçmiş Kayıt Linki Üretme
+    Route::post('/vehicle-tracking/share', [SharedPlaybackController::class, 'generateLink'])->name('vehicle.tracking.share');
 });
+
+// Paylaşımlı Geçmiş Kayıt (Misafir Ekranı)
+Route::get('/share/v/{uuid}', [SharedPlaybackController::class, 'showGuestView'])->name('share.playback.guest');
 
 // Driver Invite Public Routes
 Route::get('/invite/driver/{token}', [\App\Http\Controllers\DriverInviteController::class, 'show'])->name('invite.driver.show');
