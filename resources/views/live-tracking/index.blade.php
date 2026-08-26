@@ -201,6 +201,12 @@
             justify-content: center;
             transition: transform 1.5s linear; /* Yumuşak kayma animasyonu */
         }
+        .history-vehicle-marker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Transition is applied dynamically in JS to match playback speed */
+        }
         
         /* Harita katman seçicinin (topright) üst menünün altında kalmaması için */
         .leaflet-top.leaflet-right {
@@ -1037,6 +1043,27 @@
             });
         }
 
+        function createHistoryCarIcon(vehicle) {
+            let course = vehicle.course || vehicle.Course || 0;
+            
+            let svgCar = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 32px; height: 32px; transform: rotate(${course}deg); filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); transition: transform 0.1s linear;">
+                <rect x="30" y="15" width="40" height="70" rx="8" fill="#e2e8f0" stroke="#475569" stroke-width="2"/>
+                <path d="M35 35 Q50 30 65 35 L62 45 L38 45 Z" fill="#1e293b"/>
+                <path d="M35 65 Q50 70 65 65 L62 55 L38 55 Z" fill="#1e293b"/>
+                <circle cx="36" cy="18" r="4" fill="#fef08a"/>
+                <circle cx="64" cy="18" r="4" fill="#fef08a"/>
+                <rect x="34" y="80" width="8" height="4" rx="2" fill="#ef4444"/>
+                <rect x="58" y="80" width="8" height="4" rx="2" fill="#ef4444"/>
+            </svg>`;
+
+            return L.divIcon({
+                className: 'history-vehicle-marker',
+                html: svgCar,
+                iconSize: [32, 32],
+                iconAnchor: [16, 16]
+            });
+        }
+
         function getPopupHTML(vehicle, addressHtml = 'Adres yükleniyor...') {
             let speedColor = '#ef4444';
             if (vehicle.Speed > 0) {
@@ -1371,7 +1398,7 @@
             if (historyMarker) map.removeLayer(historyMarker);
             const firstLoc = historyData[0];
             historyMarker = L.marker([parseFloat(firstLoc.lat), parseFloat(firstLoc.lng)], {
-                icon: createIcon({ Speed: firstLoc.speed, ACC: firstLoc.acc })
+                icon: createHistoryCarIcon(firstLoc)
             }).addTo(map);
             
             updatePlayerUI();
@@ -1493,8 +1520,14 @@
 
         function updateHistoryMarker() {
             const loc = historyData[currentPlaybackIndex];
+            const transitionMs = 1000 / playbackSpeed;
+            
             historyMarker.setLatLng([parseFloat(loc.lat), parseFloat(loc.lng)]);
-            historyMarker.setIcon(createIcon({ Speed: loc.speed, ACC: loc.acc }));
+            historyMarker.setIcon(createHistoryCarIcon(loc));
+            
+            if (historyMarker._icon) {
+                historyMarker._icon.style.transition = `transform ${transitionMs}ms linear`;
+            }
             
             if (!map.getBounds().contains(historyMarker.getLatLng())) {
                 map.panTo(historyMarker.getLatLng());
