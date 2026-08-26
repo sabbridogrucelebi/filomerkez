@@ -749,6 +749,8 @@
         
     </div>
     <!-- End of advPanelTabsContainer -->
+</div>
+<!-- End of advancedVehiclePanel -->
 
     <!-- ========================================== -->
     <!-- ========================================== -->
@@ -899,6 +901,7 @@
 
         </div>
     </div>
+    <!-- End of rightHistoryPanel -->
     
     <!-- Detaylı Tarih Seçici Modalı (Gizli) -->
     <div id="customDatePanel" class="hidden absolute w-80 premium-glass-panel rounded-3xl p-6 transition-all" style="top: 150px; right: 450px; z-index: 9999;">
