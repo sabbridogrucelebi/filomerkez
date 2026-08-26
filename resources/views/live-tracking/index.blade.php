@@ -2069,6 +2069,94 @@
             updatePlayerUI();
             map.flyTo([historyData[idx].lat, historyData[idx].lng], 16, {duration: 1});
         }
+
+        // --- ICON SELECTION MODAL LOGIC ---
+        function openIconModal() {
+            const modal = document.getElementById('iconSelectionModal');
+            const box = document.getElementById('iconModalBox');
+            modal.classList.remove('hidden');
+            // Small delay to allow transition
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-95');
+            }, 10);
+            renderIconGrid();
+        }
+
+        function closeIconModal() {
+            const modal = document.getElementById('iconSelectionModal');
+            const box = document.getElementById('iconModalBox');
+            modal.classList.add('opacity-0');
+            box.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        function selectIcon(id) {
+            localStorage.setItem('selectedPlaybackIcon', id);
+            renderIconGrid(); // Re-render to show active state
+            
+            // Eğer geçmiş izleme oynatılıyorsa veya marker haritadaysa anında güncelle
+            if (typeof historyMarker !== 'undefined' && historyMarker) {
+                const loc = historyData[currentPlaybackIndex] || historyData[0];
+                const transitionMs = (typeof isPlaying !== 'undefined' && isPlaying) ? (1000 / playbackSpeed) : 100;
+                
+                historyMarker.setIcon(createHistoryCarIcon(loc));
+                if (historyMarker._icon) {
+                    historyMarker._icon.style.transition = `transform ${transitionMs}ms linear`;
+                }
+            }
+        }
+
+        function renderIconGrid() {
+            const container = document.getElementById('iconGridContainer');
+            if(!container) return;
+            container.innerHTML = '';
+            
+            const activeId = localStorage.getItem('selectedPlaybackIcon') || 'sedan_white';
+
+            premiumVehicleIcons.forEach(icon => {
+                const isActive = (icon.id === activeId);
+                const activeClass = isActive ? 'border-indigo-500 bg-indigo-500/20 shadow-[0_0_20px_rgba(99,102,241,0.4)]' : 'border-white/10 bg-slate-800/50 hover:bg-slate-700/50 hover:border-indigo-400/50';
+                const checkmark = isActive ? `<div class="absolute top-2 right-2 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center text-white shadow-md z-10"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div>` : '';
+                
+                let width = 40, height = 70, rx = 8;
+                if (icon.id.includes('suv') || icon.id.includes('jeep')) { width = 44; height = 72; rx = 6; }
+                if (icon.id.includes('van') || icon.id.includes('vip')) { width = 44; height = 80; rx = 4; }
+                if (icon.id.includes('sports')) { width = 42; height = 66; rx = 12; }
+                if (icon.id.includes('pickup')) { width = 42; height = 76; rx = 4; }
+                
+                let extraSvg = '';
+                if (icon.id.includes('pickup')) {
+                    extraSvg = `<rect x="31" y="55" width="38" height="28" fill="#334155" opacity="0.8"/>`;
+                }
+                
+                let svgHtml = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: auto; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); transform: rotate(0deg); display: block; margin: 0 auto;">
+                    <rect x="${50 - width/2}" y="${50 - height/2}" width="${width}" height="${height}" rx="${rx}" fill="${icon.color}" stroke="#334155" stroke-width="2"/>
+                    ${extraSvg}
+                    <path d="M35 35 Q50 30 65 35 L62 45 L38 45 Z" fill="#0f172a"/>
+                    <path d="M35 65 Q50 70 65 65 L62 55 L38 55 Z" fill="#0f172a"/>
+                    <circle cx="36" cy="${50 - height/2 + 3}" r="4" fill="#fef08a"/>
+                    <circle cx="64" cy="${50 - height/2 + 3}" r="4" fill="#fef08a"/>
+                    <rect x="34" y="${50 + height/2 - 5}" width="8" height="4" rx="2" fill="#ef4444"/>
+                    <rect x="58" y="${50 + height/2 - 5}" width="8" height="4" rx="2" fill="#ef4444"/>
+                </svg>`;
+
+                const item = `
+                    <div onclick="selectIcon('${icon.id}')" class="relative rounded-2xl border ${activeClass} p-3 cursor-pointer transition-all transform hover:-translate-y-1 group flex flex-col items-center">
+                        ${checkmark}
+                        <div class="w-16 h-16 mb-2">
+                            ${svgHtml}
+                        </div>
+                        <div class="text-[10px] font-black text-slate-300 text-center uppercase tracking-widest leading-tight">
+                            ${icon.name}
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', item);
+            });
+        }
     </script>
 </body>
 </html>
