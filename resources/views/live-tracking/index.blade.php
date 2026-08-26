@@ -14,17 +14,28 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://npmcdn.com/flatpickr/dist/l10n/tr.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/tr.js"></script>
     <style>
         .flatpickr-calendar.dark {
-            background: #0f172a !important; /* slate-900 */
-            border: 1px solid rgba(255,255,255,0.1) !important;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+            background: rgba(15, 23, 42, 0.95) !important;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(99, 102, 241, 0.3) !important;
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(99, 102, 241, 0.2) !important;
             font-family: inherit !important;
+            border-radius: 1.2rem !important;
+            animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.9) translateY(-10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
         }
         .flatpickr-day.selected {
-            background: #6366f1 !important; /* indigo-500 */
+            background: #6366f1 !important;
             border-color: #6366f1 !important;
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.8) !important;
+            font-weight: 900 !important;
+            transform: scale(1.1);
+            transition: all 0.2s;
         }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
@@ -937,17 +948,30 @@
         <div class="space-y-4">
             <div>
                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Başlangıç</label>
-                <div class="relative">
-                    <input type="text" id="historyStartDate" placeholder="Tarih ve Saat Seçin" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all shadow-inner cursor-pointer" readonly>
+                <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <div class="w-7 h-7 rounded-lg bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30 group-focus-within:border-indigo-400 transition-colors shadow-[0_0_10px_rgba(99,102,241,0.2)]">
+                            <svg class="w-4 h-4 text-indigo-400 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        </div>
+                    </div>
+                    <input type="text" id="historyStartDate" placeholder="Tarih Seç" class="w-full bg-black/40 border border-white/10 rounded-xl pl-14 pr-4 py-3.5 text-xs font-black text-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] hover:bg-black/60 hover:border-indigo-500/30 cursor-pointer" readonly>
                 </div>
             </div>
             <div>
-                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Bitiş</label>
-                <div class="relative">
-                    <input type="text" id="historyEndDate" placeholder="Tarih ve Saat Seçin" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all shadow-inner cursor-pointer" readonly>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 mt-2">Bitiş</label>
+                <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <div class="w-7 h-7 rounded-lg bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30 group-focus-within:border-indigo-400 transition-colors shadow-[0_0_10px_rgba(99,102,241,0.2)]">
+                            <svg class="w-4 h-4 text-indigo-400 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                    </div>
+                    <input type="text" id="historyEndDate" placeholder="Tarih Seç" class="w-full bg-black/40 border border-white/10 rounded-xl pl-14 pr-4 py-3.5 text-xs font-black text-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] hover:bg-black/60 hover:border-indigo-500/30 cursor-pointer" readonly>
                 </div>
             </div>
-            <button onclick="fetchHistoryData()" class="w-full py-2 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-xs shadow-[0_0_15px_rgba(99,102,241,0.4)] transition-all">Uygula</button>
+            <button onclick="fetchHistoryData()" class="w-full py-3 mt-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs shadow-[0_0_20px_rgba(79,70,229,0.5)] hover:shadow-[0_0_30px_rgba(79,70,229,0.7)] transition-all flex items-center justify-center gap-2 transform hover:-translate-y-0.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                UYGULA
+            </button>
         </div>
     </div>
 
