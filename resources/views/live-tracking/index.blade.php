@@ -777,9 +777,14 @@
                     <p class="text-[10px] font-bold text-indigo-300 uppercase tracking-widest mt-0.5">Rota ve Playback</p>
                 </div>
             </div>
-            <button onclick="exitHistoryMode()" class="w-10 h-10 rounded-xl bg-white/5 hover:bg-rose-500/20 flex justify-center items-center text-slate-400 hover:text-rose-400 transition-all border border-transparent hover:border-rose-500/50">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
+            <div class="flex items-center gap-2">
+                <button onclick="openIconModal()" class="w-10 h-10 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 flex justify-center items-center text-indigo-400 hover:text-indigo-300 transition-all border border-indigo-500/20 hover:border-indigo-500/50" title="Araç İkonunu Değiştir">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                </button>
+                <button onclick="exitHistoryMode()" class="w-10 h-10 rounded-xl bg-white/5 hover:bg-rose-500/20 flex justify-center items-center text-slate-400 hover:text-rose-400 transition-all border border-transparent hover:border-rose-500/50">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
         </div>
 
         <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
@@ -927,6 +932,35 @@
         </div>
     </div>
 
+    <!-- Araç İkonları Modal (Gizli) -->
+    <div id="iconSelectionModal" class="hidden fixed inset-0 z-[10005] bg-black/60 backdrop-blur-sm flex items-center justify-center transition-all opacity-0">
+        <div class="premium-glass-panel rounded-3xl w-[600px] shadow-[0_30px_60px_rgba(0,0,0,0.8)] border border-white/10 flex flex-col transform scale-95 transition-transform duration-300" id="iconModalBox">
+            <!-- Header -->
+            <div class="px-6 py-5 border-b border-white/10 flex justify-between items-center bg-slate-900/50 rounded-t-3xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black text-white">Araç İkonları</h3>
+                        <p class="text-[10px] font-bold text-indigo-300 uppercase tracking-widest mt-0.5">Oynatma İçin Premium Görünüm Seçin</p>
+                    </div>
+                </div>
+                <button onclick="closeIconModal()" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-rose-500/20 flex justify-center items-center text-slate-400 hover:text-rose-400 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <!-- Grid -->
+            <div class="p-6 grid grid-cols-5 gap-4 overflow-y-auto max-h-[400px] custom-scrollbar" id="iconGridContainer">
+                <!-- JavaScript ile Doldurulacak -->
+            </div>
+            <!-- Footer -->
+            <div class="px-6 py-4 border-t border-white/10 bg-black/20 rounded-b-3xl flex justify-end">
+                <button onclick="closeIconModal()" class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black tracking-wide shadow-[0_0_15px_rgba(79,70,229,0.4)] transition-all">TAMAM</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let map;
         let markers = {};
@@ -1043,17 +1077,55 @@
             });
         }
 
+        const premiumVehicleIcons = [
+            { id: 'sedan_white', name: 'Beyaz Sedan', color: '#f8fafc' },
+            { id: 'sedan_black', name: 'Siyah Executive', color: '#1e293b' },
+            { id: 'sports_red', name: 'Kırmızı Spor', color: '#ef4444' },
+            { id: 'hatchback_blue', name: 'Mavi Hatchback', color: '#3b82f6' },
+            { id: 'suv_gray', name: 'Gri SUV', color: '#94a3b8' },
+            { id: 'taxi_yellow', name: 'Sarı Taksi', color: '#eab308' },
+            { id: 'pickup_green', name: 'Yeşil Kamyonet', color: '#22c55e' },
+            { id: 'van_white', name: 'Beyaz Panelvan', color: '#f1f5f9' },
+            { id: 'jeep_orange', name: 'Turuncu Arazi', color: '#f97316' },
+            { id: 'vip_purple', name: 'Mor VIP Minibüs', color: '#a855f7' }
+        ];
+
+        function getSelectedIconConfig() {
+            const savedId = localStorage.getItem('selectedPlaybackIcon') || 'sedan_white';
+            return premiumVehicleIcons.find(i => i.id === savedId) || premiumVehicleIcons[0];
+        }
+
         function createHistoryCarIcon(vehicle) {
             let course = vehicle.course || vehicle.Course || 0;
+            const iconConfig = getSelectedIconConfig();
+            const bodyColor = iconConfig.color;
             
+            // Adjust proportions based on type for variety
+            let width = 40, height = 70, rx = 8;
+            if (iconConfig.id.includes('suv') || iconConfig.id.includes('jeep')) { width = 44; height = 72; rx = 6; }
+            if (iconConfig.id.includes('van') || iconConfig.id.includes('vip')) { width = 44; height = 80; rx = 4; }
+            if (iconConfig.id.includes('sports')) { width = 42; height = 66; rx = 12; }
+            if (iconConfig.id.includes('pickup')) { width = 42; height = 76; rx = 4; }
+            
+            // For pickup, we draw an open bed
+            let extraSvg = '';
+            if (iconConfig.id.includes('pickup')) {
+                extraSvg = `<rect x="31" y="55" width="38" height="28" fill="#334155" opacity="0.8"/>`;
+            }
+
             let svgCar = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 56px; height: 56px; transform: rotate(${course}deg); filter: drop-shadow(0 5px 8px rgba(0,0,0,0.5)); transition: transform 0.1s linear;">
-                <rect x="30" y="15" width="40" height="70" rx="8" fill="#e2e8f0" stroke="#475569" stroke-width="2"/>
-                <path d="M35 35 Q50 30 65 35 L62 45 L38 45 Z" fill="#1e293b"/>
-                <path d="M35 65 Q50 70 65 65 L62 55 L38 55 Z" fill="#1e293b"/>
-                <circle cx="36" cy="18" r="4" fill="#fef08a"/>
-                <circle cx="64" cy="18" r="4" fill="#fef08a"/>
-                <rect x="34" y="80" width="8" height="4" rx="2" fill="#ef4444"/>
-                <rect x="58" y="80" width="8" height="4" rx="2" fill="#ef4444"/>
+                <rect x="${50 - width/2}" y="${50 - height/2}" width="${width}" height="${height}" rx="${rx}" fill="${bodyColor}" stroke="#334155" stroke-width="2"/>
+                ${extraSvg}
+                <!-- Windshield -->
+                <path d="M35 35 Q50 30 65 35 L62 45 L38 45 Z" fill="#0f172a"/>
+                <!-- Rear Window -->
+                <path d="M35 65 Q50 70 65 65 L62 55 L38 55 Z" fill="#0f172a"/>
+                <!-- Headlights -->
+                <circle cx="36" cy="${50 - height/2 + 3}" r="4" fill="#fef08a"/>
+                <circle cx="64" cy="${50 - height/2 + 3}" r="4" fill="#fef08a"/>
+                <!-- Taillights -->
+                <rect x="34" y="${50 + height/2 - 5}" width="8" height="4" rx="2" fill="#ef4444"/>
+                <rect x="58" y="${50 + height/2 - 5}" width="8" height="4" rx="2" fill="#ef4444"/>
             </svg>`;
 
             return L.divIcon({
