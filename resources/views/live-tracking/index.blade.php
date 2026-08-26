@@ -1649,11 +1649,15 @@
             clearInterval(playbackInterval);
             isPlaying = false;
             
-            document.getElementById('arventoTopBar').classList.add('hidden');
-            document.getElementById('customDatePanel').classList.add('hidden');
-            document.getElementById('arventoTripPanel').classList.add('hidden');
-            document.getElementById('arventoSliderContainer').classList.add('hidden');
-            document.getElementById('arventoSliderContainer').classList.remove('flex');
+            const rightPanel = document.getElementById('rightHistoryPanel');
+            if (rightPanel) {
+                rightPanel.style.transform = 'translateX(120%)';
+            }
+            
+            const customDatePanel = document.getElementById('customDatePanel');
+            if (customDatePanel) {
+                customDatePanel.classList.add('hidden');
+            }
             
             if (historyPolyline) map.removeLayer(historyPolyline);
             if (historyMarker) map.removeLayer(historyMarker);
