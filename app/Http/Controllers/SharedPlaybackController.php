@@ -45,8 +45,9 @@ class SharedPlaybackController extends Controller
         $tripData = $historyDataArray['trips'] ?? [];
         
         $isGuest = true;
+        $vehicles = [];
 
-        return view('live-tracking.index', compact('shared', 'historyData', 'tripData', 'isGuest'));
+        return view('live-tracking.index', compact('shared', 'historyData', 'tripData', 'isGuest', 'vehicles'));
     }
 
     /**
