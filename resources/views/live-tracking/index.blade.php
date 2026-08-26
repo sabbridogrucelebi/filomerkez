@@ -1460,17 +1460,29 @@
             historyPolyline = L.polyline(latlngs, {color: '#2563eb', weight: 5, opacity: 0.8}).addTo(map);
             map.fitBounds(historyPolyline.getBounds());
 
+            // İlk hareket anını bul
+            let firstMoveIdx = 0;
+            if (historyData && historyData.length > 0) {
+                for (let i = 0; i < historyData.length; i++) {
+                    if (parseFloat(historyData[i].speed) > 0) {
+                        firstMoveIdx = i;
+                        break;
+                    }
+                }
+            }
+
             // Slider
             const slider = document.getElementById('playerSlider');
             slider.max = historyData.length - 1;
-            slider.value = 0;
-            currentPlaybackIndex = 0;
+            slider.value = firstMoveIdx;
+            currentPlaybackIndex = firstMoveIdx;
 
             // Marker
             if (historyMarker) map.removeLayer(historyMarker);
-            const firstLoc = historyData[0];
+            const firstLoc = historyData[firstMoveIdx] || historyData[0];
             historyMarker = L.marker([parseFloat(firstLoc.lat), parseFloat(firstLoc.lng)], {
                 icon: createHistoryCarIcon(firstLoc)
+
             }).addTo(map);
             
             updatePlayerUI();
@@ -1572,8 +1584,19 @@
 
         function stopPlayback() {
             if (isPlaying) togglePlayback();
-            currentPlaybackIndex = 0;
-            document.getElementById('playerSlider').value = 0;
+            
+            let firstMoveIdx = 0;
+            if (historyData && historyData.length > 0) {
+                for (let i = 0; i < historyData.length; i++) {
+                    if (parseFloat(historyData[i].speed) > 0) {
+                        firstMoveIdx = i;
+                        break;
+                    }
+                }
+            }
+            
+            currentPlaybackIndex = firstMoveIdx;
+            document.getElementById('playerSlider').value = firstMoveIdx;
             updateHistoryMarker();
             updatePlayerUI();
             map.fitBounds(historyPolyline.getBounds());
