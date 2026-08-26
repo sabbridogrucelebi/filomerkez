@@ -58,6 +58,18 @@ Route::get('/run-migrations-secret', function () {
     }
 });
 
+Route::get('/debug-logs-secret-123', function() {
+    $files = glob(storage_path('logs/laravel-*.log'));
+    if(empty($files)) { $files = [storage_path('logs/laravel.log')]; }
+    rsort($files);
+    $latest = $files[0] ?? storage_path('logs/laravel.log');
+    if (file_exists($latest)) {
+        $lines = file($latest);
+        return '<pre>' . implode("", array_slice($lines, -250)) . '</pre>';
+    }
+    return "No logs.";
+});
+
 Route::get('/clear-cache-secret', function() {
     \Illuminate\Support\Facades\Artisan::call('optimize:clear');
     \Illuminate\Support\Facades\Artisan::call('cache:clear');
