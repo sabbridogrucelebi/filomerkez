@@ -1046,7 +1046,7 @@
         function createHistoryCarIcon(vehicle) {
             let course = vehicle.course || vehicle.Course || 0;
             
-            let svgCar = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 96px; height: 96px; transform: rotate(${course}deg); filter: drop-shadow(0 6px 12px rgba(0,0,0,0.6)); transition: transform 0.1s linear;">
+            let svgCar = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 56px; height: 56px; transform: rotate(${course}deg); filter: drop-shadow(0 5px 8px rgba(0,0,0,0.5)); transition: transform 0.1s linear;">
                 <rect x="30" y="15" width="40" height="70" rx="8" fill="#e2e8f0" stroke="#475569" stroke-width="2"/>
                 <path d="M35 35 Q50 30 65 35 L62 45 L38 45 Z" fill="#1e293b"/>
                 <path d="M35 65 Q50 70 65 65 L62 55 L38 55 Z" fill="#1e293b"/>
@@ -1059,8 +1059,8 @@
             return L.divIcon({
                 className: 'history-vehicle-marker',
                 html: svgCar,
-                iconSize: [96, 96],
-                iconAnchor: [48, 48]
+                iconSize: [56, 56],
+                iconAnchor: [28, 28]
             });
         }
 
