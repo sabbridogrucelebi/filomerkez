@@ -2339,6 +2339,86 @@
                 container.insertAdjacentHTML('beforeend', item);
             });
         }
+        // ==========================================
+        // PAYLAŞIM MODALI (SHARE)
+        // ==========================================
+        function openShareModal() {
+            if (historyData.length === 0) {
+                alert('Lütfen önce bir araca ait geçmiş kayıtları getirin.');
+                return;
+            }
+            document.getElementById('shareLinkResultContainer').classList.add('hidden');
+            document.getElementById('generateLinkBtn').classList.remove('hidden');
+            
+            const modal = document.getElementById('sharePlaybackModal');
+            const box = document.getElementById('shareModalBox');
+            modal.classList.remove('hidden');
+            
+            // Trigger reflow
+            void modal.offsetWidth; 
+            
+            modal.classList.remove('opacity-0');
+            modal.classList.add('opacity-100');
+            box.classList.remove('scale-95');
+            box.classList.add('scale-100');
+        }
+
+        function closeShareModal() {
+            const modal = document.getElementById('sharePlaybackModal');
+            const box = document.getElementById('shareModalBox');
+            modal.classList.remove('opacity-100');
+            modal.classList.add('opacity-0');
+            box.classList.remove('scale-100');
+            box.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        function generateShareLink() {
+            const vehicleId = document.getElementById('arventoVehicleSelect').value;
+            const startDate = document.getElementById('historyStartDate').value;
+            const endDate = document.getElementById('historyEndDate').value;
+            const duration = document.getElementById('shareDuration').value;
+
+            fetch('{{ route("vehicle.tracking.share") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    vehicle_id: vehicleId,
+                    start_date: startDate,
+                    end_date: endDate,
+                    duration: duration
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('generateLinkBtn').classList.add('hidden');
+                    document.getElementById('shareLinkResultContainer').classList.remove('hidden');
+                    document.getElementById('generatedShareLink').value = data.link;
+                } else {
+                    alert('Link üretilirken bir hata oluştu: ' + (data.message || ''));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Bir hata oluştu.');
+            });
+        }
+
+        function copyShareLink() {
+            const copyText = document.getElementById("generatedShareLink");
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            document.execCommand("copy");
+            
+            // Sadece alert yerine şık bir tost bildirimi yapabiliriz ama basitçe alert tutalım
+            alert("Link başarıyla kopyalandı!");
+        }
     </script>
 </body>
 </html>

@@ -335,6 +335,10 @@ Route::post('/vehicle-tracking/assign-imei', [\App\Http\Controllers\LiveTracking
     ->middleware(['auth', 'permission:vehicles.edit'])
     ->name('vehicle-tracking.assign-imei');
 
+Route::post('/vehicle-tracking/share', [\App\Http\Controllers\SharedPlaybackController::class, 'store'])
+    ->middleware(['auth', 'permission:vehicle_tracking.view'])
+    ->name('vehicle.tracking.share');
+
 // --- TANIMLAMALAR PANELİ ---
 Route::get('/vehicle-tracking/definitions', [\App\Http\Controllers\LiveTrackingController::class, 'definitions'])
     ->middleware(['auth', 'permission:vehicle_tracking.view'])
