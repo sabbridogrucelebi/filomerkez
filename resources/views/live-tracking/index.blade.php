@@ -936,27 +936,6 @@
                     navbar.classList.add('navbar-visible');
                 }
             }, 500);
-
-            // 5 saniye sonra gizle (Eğer üzerine gelinmezse)
-            let hideTimeout;
-            
-            function resetHideTimer() {
-                clearTimeout(hideTimeout);
-                document.getElementById('blueSidebar').classList.remove('sidebar-hidden');
-                document.getElementById('blueSidebar').classList.add('sidebar-visible');
-                
-                hideTimeout = setTimeout(() => {
-                    document.getElementById('blueSidebar').classList.remove('sidebar-visible');
-                    document.getElementById('blueSidebar').classList.add('sidebar-hidden');
-                }, 5000);
-            }
-
-            // Mouse hareketinde sayacı sıfırla (sadece sidebar alanı veya harita geneli)
-            document.addEventListener('mousemove', resetHideTimer);
-            document.addEventListener('click', resetHideTimer);
-            
-            // İlk sayacı başlat
-            resetHideTimer();
         });
 
         function initMap() {
