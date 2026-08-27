@@ -70,10 +70,18 @@ Route::get('/run-analyze-stops-secret', function () {
 });
 
 Route::get('/debug-traffic-lights', function () {
-    $total = \Illuminate\Support\Facades\DB::table('learned_stops')->count();
-    $lights = \Illuminate\Support\Facades\DB::table('learned_stops')->where('is_traffic_light', 1)->count();
-    $all = \Illuminate\Support\Facades\DB::table('learned_stops')->get();
-    return "Total Stops: {$total} <br> Traffic Lights: {$lights} <br><br> Data: <pre>" . json_encode($all, JSON_PRETTY_PRINT) . "</pre>";
+    $client = new \GuzzleHttp\Client();
+    $lat = 37.9405; $lng = 32.5082;
+    $query = "[out:json];(node(around:150,{$lat},{$lng})['highway'='traffic_signals'];);out;";
+    try {
+        $response = $client->post("http://overpass-api.de/api/interpreter", [
+            'form_params' => ['data' => $query],
+            'timeout' => 15,
+        ]);
+        return "Overpass Result: <pre>" . e($response->getBody()->getContents()) . "</pre>";
+    } catch (\Exception $e) {
+        return "Overpass Error: " . $e->getMessage();
+    }
 });
 
 Route::get('/debug-logs-secret-123', function() {
