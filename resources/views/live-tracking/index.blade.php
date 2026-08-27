@@ -1737,6 +1737,52 @@
             historyPolyline = L.polyline(latlngs, {color: '#2563eb', weight: 5, opacity: 0.8}).addTo(map);
             map.fitBounds(historyPolyline.getBounds());
             
+            // Çizgiye Tıklama Olayı (Geçiş Noktası Detayları)
+            historyPolyline.on('click', function(e) {
+                let closestPoint = null;
+                let minDistance = Infinity;
+                
+                historyData.forEach(loc => {
+                    let d = map.distance(e.latlng, [loc.lat, loc.lng]);
+                    if (d < minDistance) {
+                        minDistance = d;
+                        closestPoint = loc;
+                    }
+                });
+                
+                if (closestPoint) {
+                    // Tarih formatını ayarla (Eğer datetime varsa onu kullan, yoksa timestamp'ten üret)
+                    let dtStr = closestPoint.datetime || new Date(closestPoint.timestamp * 1000).toLocaleString('tr-TR');
+                    
+                    let popupContent = `<div class="p-1 max-w-[200px]">
+                        <div class="font-bold text-sm mb-1 text-slate-800 border-b pb-1">Geçiş Noktası</div>
+                        <div class="text-xs text-slate-700 mt-1"><b>Tarih/Saat:</b> ${dtStr}</div>
+                        <div class="text-xs text-slate-700"><b>Hız:</b> <span class="text-blue-600 font-bold">${closestPoint.speed} km/s</span></div>
+                        <div class="text-xs text-slate-700 mt-1 leading-tight" id="clickedPointAddress"><i>Adres yükleniyor...</i></div>
+                    </div>`;
+                    
+                    let popup = L.popup()
+                        .setLatLng(e.latlng)
+                        .setContent(popupContent)
+                        .openOn(map);
+                        
+                    // Nominatim ile adres çöz
+                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${closestPoint.lat}&lon=${closestPoint.lng}`)
+                        .then(r => r.json())
+                        .then(data => {
+                            let addrStr = data && data.display_name ? data.display_name : 'Adres bulunamadı';
+                            // Uzun adresleri kısalt (Sadece mahalle, ilçe, il vb.)
+                            let addrParts = addrStr.split(', ');
+                            let shortAddr = addrParts.length > 3 ? addrParts.slice(0, 3).join(', ') + '...' : addrStr;
+                            let addrEl = document.getElementById('clickedPointAddress');
+                            if(addrEl) addrEl.innerHTML = `<b>Adres:</b> ${shortAddr}`;
+                        }).catch(err => {
+                            let addrEl = document.getElementById('clickedPointAddress');
+                            if(addrEl) addrEl.innerHTML = `<b>Adres:</b> Bulunamadı`;
+                        });
+                }
+            });
+            
             // YENİ: Bekleme / Durak Noktalarını Hesapla ve Çiz (Arvento Style)
             if(historyStopMarkers) historyStopMarkers.clearLayers();
             historyStopMarkers.addTo(map);
