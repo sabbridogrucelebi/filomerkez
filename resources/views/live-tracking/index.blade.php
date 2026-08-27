@@ -1009,28 +1009,32 @@
             </div>
 
             <!-- Bölüm 3: KPI Özet -->
-            <div id="rightHistorySummary" class="grid grid-cols-2 gap-3 opacity-50 pointer-events-none transition-all duration-300">
-                <div class="bg-indigo-500/10 border border-indigo-500/20 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
-                    <div class="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-1">Toplam Mesafe</div>
-                    <div class="text-xl font-black text-white" id="summaryTotalDistance">0 km</div>
+            <div id="rightHistorySummary" class="flex flex-col gap-5 opacity-50 pointer-events-none transition-all duration-300 pb-10">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-gradient-to-br from-indigo-900/40 to-indigo-800/20 border border-indigo-500/30 p-6 rounded-[2rem] flex flex-col items-center justify-center text-center shadow-[0_10px_30px_rgba(79,70,229,0.2)]">
+                        <div class="text-[10px] font-black text-indigo-300 uppercase tracking-[0.2em] mb-2 drop-shadow-md">Toplam Mesafe</div>
+                        <div class="text-3xl font-black text-white tracking-tight" id="summaryTotalDistance">0<span class="text-sm font-bold text-indigo-300 ml-1">km</span></div>
+                    </div>
+                    <div class="bg-gradient-to-br from-purple-900/40 to-purple-800/20 border border-purple-500/30 p-6 rounded-[2rem] flex flex-col items-center justify-center text-center shadow-[0_10px_30px_rgba(168,85,247,0.2)]">
+                        <div class="text-[10px] font-black text-purple-300 uppercase tracking-[0.2em] mb-2 drop-shadow-md">Maksimum Hız</div>
+                        <div class="text-3xl font-black text-white tracking-tight" id="summaryMaxSpeed">0<span class="text-sm font-bold text-purple-300 ml-1">km/s</span></div>
+                    </div>
                 </div>
-                <div class="bg-purple-500/10 border border-purple-500/20 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
-                    <div class="text-[9px] font-black text-purple-300 uppercase tracking-widest mb-1">Maksimum Hız</div>
-                    <div class="text-xl font-black text-white" id="summaryMaxSpeed">0 km/s</div>
-                </div>
-                <!-- Mini Pasta Grafik -->
-                <div class="col-span-2 bg-black/20 p-4 rounded-2xl border border-white/5 flex items-center justify-between">
-                    <div class="w-16 h-16 rounded-full shadow-inner border-2 border-slate-700" id="advSumPieChart" style="background: conic-gradient(#ef4444 0% 0%, #3b82f6 0% 0%, #f43f5e 0% 0%);"></div>
-                    <div class="flex flex-col gap-2 text-[10px] font-bold">
-                        <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div> <span class="text-slate-300 w-12">Hareketli</span> <span id="advSumMovPct" class="text-blue-300 font-black">-%</span></div>
-                        <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-red-500"></div> <span class="text-slate-300 w-12">Duran</span> <span id="advSumStpPct" class="text-red-300 font-black">-%</span></div>
-                        <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-purple-500"></div> <span class="text-slate-300 w-12">Rölanti</span> <span id="advSumIdlPct" class="text-purple-300 font-black">-%</span></div>
+                <!-- Premium Pasta Grafik -->
+                <div class="bg-slate-900/60 p-6 rounded-[2rem] border border-white/10 flex items-center justify-center gap-8 shadow-inner backdrop-blur-sm">
+                    <div class="w-24 h-24 rounded-full shadow-[0_0_20px_rgba(0,0,0,0.5)] border-4 border-slate-800 relative flex items-center justify-center" id="summaryPieChart" style="background: conic-gradient(#ef4444 0% 0%, #3b82f6 0% 0%, #f43f5e 0% 0%);">
+                        <div class="w-14 h-14 bg-slate-900 rounded-full absolute"></div>
+                    </div>
+                    <div class="flex flex-col gap-3 text-xs font-bold">
+                        <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div> <span class="text-slate-300 w-16 tracking-wide">Hareketli</span> <span id="summaryMovPct" class="text-blue-300 font-black text-sm">-%</span></div>
+                        <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]"></div> <span class="text-slate-300 w-16 tracking-wide">Duran</span> <span id="summaryStpPct" class="text-red-300 font-black text-sm">-%</span></div>
+                        <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.8)]"></div> <span class="text-slate-300 w-16 tracking-wide">Rölanti</span> <span id="summaryIdlPct" class="text-purple-300 font-black text-sm">-%</span></div>
                     </div>
                 </div>
             </div>
 
             <!-- Bölüm 4: Zaman Çizelgesi -->
-            <div class="flex-1 flex flex-col opacity-50 pointer-events-none transition-all duration-300" id="rightTimelineContainer">
+            <div class="hidden flex-1 flex-col opacity-50 pointer-events-none transition-all duration-300" id="rightTimelineContainer">
                 <div class="text-xs font-black text-white mb-3 flex items-center justify-between">
                     <span>Zaman Çizelgesi</span>
                     <span class="bg-indigo-600/80 px-2 py-0.5 rounded text-[10px]" id="advHistoryCount">0 Kayıt</span>
@@ -1680,6 +1684,13 @@
             let maxSpd = 0;
             let spdSum = 0;
             let tripCnt = tripData.length;
+            
+            let movSec = 0, idleSec = 0, stopSec = 0;
+            historyData.forEach((loc) => {
+                if(loc.speed > 0) movSec += 30; // varsayılan saniye
+                else if(loc.acc) idleSec += 30;
+                else stopSec += 30;
+            });
 
             tripData.forEach(t => {
                 totalKm += (t.distance_km || 0);
@@ -1689,9 +1700,32 @@
 
             const avgSpd = tripCnt > 0 ? (spdSum / tripCnt).toFixed(1) : 0;
 
-            document.getElementById('summaryTotalDistance').innerText = totalKm.toFixed(1) + ' km';
-            document.getElementById('summaryMaxSpeed').innerText = maxSpd + ' km/s';
-            document.getElementById('advHistoryCount').innerText = tripCnt + ' Kayıt';
+            const totalDistEl = document.getElementById('summaryTotalDistance');
+            if(totalDistEl) totalDistEl.innerHTML = `${totalKm.toFixed(1)}<span class="text-sm font-bold text-indigo-300 ml-1">km</span>`;
+            
+            const maxSpdEl = document.getElementById('summaryMaxSpeed');
+            if(maxSpdEl) maxSpdEl.innerHTML = `${maxSpd}<span class="text-sm font-bold text-purple-300 ml-1">km/s</span>`;
+            
+            const countEl = document.getElementById('advHistoryCount');
+            if(countEl) countEl.innerText = tripCnt + ' Kayıt';
+            
+            // Pasta Grafik Güncelle (Conic Gradient)
+            const totalSec = movSec + stopSec + idleSec || 1;
+            const movPct = Math.round((movSec / totalSec) * 100);
+            const stopPct = Math.round((stopSec / totalSec) * 100);
+            const idlePct = Math.round((idleSec / totalSec) * 100);
+            
+            const movEl = document.getElementById('summaryMovPct');
+            if(movEl) movEl.innerText = `%${movPct}`;
+            const stpEl = document.getElementById('summaryStpPct');
+            if(stpEl) stpEl.innerText = `%${stopPct}`;
+            const idlEl = document.getElementById('summaryIdlPct');
+            if(idlEl) idlEl.innerText = `%${idlePct}`;
+            
+            const p1 = movPct;
+            const p2 = p1 + stopPct;
+            const pieChartEl = document.getElementById('summaryPieChart');
+            if(pieChartEl) pieChartEl.style.background = `conic-gradient(#3b82f6 0% ${p1}%, #ef4444 ${p1}% ${p2}%, #f472b6 ${p2}% 100%)`;
 
             renderTripList();
 
