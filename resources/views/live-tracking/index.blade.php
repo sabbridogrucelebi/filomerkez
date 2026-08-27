@@ -1363,7 +1363,12 @@
                 extraSvg = `<rect x="31" y="55" width="38" height="28" fill="#334155" opacity="0.8"/>`;
             }
 
-            let svgCar = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 56px; height: 56px; transform: rotate(${course}deg); filter: drop-shadow(0 5px 8px rgba(0,0,0,0.5)); transition: transform 0.1s linear;">
+            // Responsive Boyut (Mobil için küçült)
+            const isMobile = window.innerWidth <= 768;
+            const size = isMobile ? 36 : 56;
+            const anchor = size / 2;
+
+            let svgCar = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: ${size}px; height: ${size}px; transform: rotate(${course}deg); filter: drop-shadow(0 5px 8px rgba(0,0,0,0.5)); transition: transform 0.1s linear;">
                 <rect x="${50 - width/2}" y="${50 - height/2}" width="${width}" height="${height}" rx="${rx}" fill="${bodyColor}" stroke="#334155" stroke-width="2"/>
                 ${extraSvg}
                 <!-- Windshield -->
@@ -1381,8 +1386,8 @@
             return L.divIcon({
                 className: 'history-vehicle-marker',
                 html: svgCar,
-                iconSize: [56, 56],
-                iconAnchor: [28, 28]
+                iconSize: [size, size],
+                iconAnchor: [anchor, anchor]
             });
         }
 
