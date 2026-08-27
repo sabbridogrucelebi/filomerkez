@@ -806,48 +806,6 @@
             <div class="flex flex-col gap-4 relative pl-4 border-l-2 border-dashed border-white/20 hidden" id="advSumRouteDetails">
                 <!-- JS ile Doldurulacak -->
             </div>
-
-            <!-- Oynatma Sırasında Canlı Gösterge (Speedometer & Odometer) -->
-            <div id="playbackLiveGauges" class="flex flex-col items-center justify-center my-2 relative">
-                <!-- Speedometer -->
-                <div class="relative w-48 h-24 overflow-hidden mb-4">
-                    <svg viewBox="0 0 100 50" class="w-full h-full overflow-visible drop-shadow-[0_0_15px_rgba(59,130,246,0.3)]">
-                        <!-- Arka plan yayı (Gri) -->
-                        <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="12" stroke-linecap="round" />
-                        <!-- Dolgu yayı (Renkli) -->
-                        <path id="speedGaugePath" d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="url(#speedGradient)" stroke-width="12" stroke-linecap="round" stroke-dasharray="125.6" stroke-dashoffset="125.6" class="transition-all duration-500 ease-out" />
-                        
-                        <defs>
-                            <linearGradient id="speedGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stop-color="#3b82f6" />
-                                <stop offset="50%" stop-color="#10b981" />
-                                <stop offset="100%" stop-color="#ef4444" />
-                            </linearGradient>
-                        </defs>
-                    </svg>
-                    <div class="absolute bottom-0 left-0 right-0 text-center flex flex-col items-center">
-                        <div class="text-3xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] leading-none" id="liveSpeedValue">0</div>
-                        <div class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">km/sa</div>
-                    </div>
-                </div>
-
-                <!-- Odometer -->
-                <div class="bg-black/40 border border-white/10 p-2 rounded-xl flex gap-1 shadow-inner relative z-10">
-                    <div class="bg-slate-800 text-white font-mono font-bold text-lg w-6 h-8 flex items-center justify-center rounded border border-white/5" id="odo_1">0</div>
-                    <div class="bg-slate-800 text-white font-mono font-bold text-lg w-6 h-8 flex items-center justify-center rounded border border-white/5" id="odo_2">0</div>
-                    <div class="bg-slate-800 text-white font-mono font-bold text-lg w-6 h-8 flex items-center justify-center rounded border border-white/5" id="odo_3">0</div>
-                    <div class="bg-slate-800 text-white font-mono font-bold text-lg w-6 h-8 flex items-center justify-center rounded border border-white/5" id="odo_4">0</div>
-                    <div class="bg-slate-800 text-white font-mono font-bold text-lg w-6 h-8 flex items-center justify-center rounded border border-white/5" id="odo_5">0</div>
-                    <div class="text-white font-black text-lg self-end pb-0.5 mx-0.5">,</div>
-                    <div class="bg-indigo-600 text-white font-mono font-bold text-lg w-6 h-8 flex items-center justify-center rounded shadow-[0_0_10px_rgba(79,70,229,0.5)] border border-indigo-400/50" id="odo_6">0</div>
-                    <div class="text-[9px] font-bold text-slate-400 self-end pb-1 ml-1">km</div>
-                </div>
-                
-                <div class="text-xs font-bold text-slate-300 mt-4 flex items-center gap-2">
-                    <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"></div>
-                    Hareket Süresi: <span id="liveDurationValue" class="font-mono font-black text-indigo-300 drop-shadow-md">00:00:00</span>
-                </div>
-            </div>
             
             <button onclick="document.getElementById('rightHistoryPanel').style.transform = 'translateX(0)';" class="mt-2 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-black text-indigo-400 hover:text-indigo-300 text-center w-full transition-colors border border-white/5">SEFER LİSTESİNİ GÖR</button>
             
@@ -971,9 +929,55 @@
             <!-- Bölüm 2: Playback Kontrolleri -->
             <div id="rightPlaybackContainer" class="bg-gradient-to-br from-slate-800 to-slate-900 p-5 rounded-2xl border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.5)] opacity-50 pointer-events-none transition-all duration-300">
                 
-                <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center justify-between mb-4 hidden">
                     <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Oynatma Kontrolü</span>
                     <span class="text-xs font-mono font-black text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20" id="playerCurrentSpeed">0 km/s</span>
+                </div>
+
+                <!-- YENİ EKLENEN ARVENTO TARZI KPI ALANI -->
+                <div class="mb-5 flex flex-col items-center">
+                    <!-- Tarih ve Saat -->
+                    <div class="text-sm font-black text-white mb-1 tracking-wider text-shadow-sm" id="playbackCurrentDateTime">--.--.---- --:--:--</div>
+                    <!-- Adres / Koordinat -->
+                    <div class="text-[10px] font-bold text-slate-400 text-center mb-6 min-h-[30px] line-clamp-2 px-2" id="playbackCurrentAddress">Koordinat bekleniyor...</div>
+                    
+                    <!-- Speedometer -->
+                    <div class="relative w-48 h-24 overflow-hidden mb-3">
+                        <svg viewBox="0 0 100 50" class="w-full h-full overflow-visible drop-shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+                            <!-- Arka plan yayı (Gri) -->
+                            <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="12" stroke-linecap="round" />
+                            <!-- Dolgu yayı (Renkli) -->
+                            <path id="speedGaugePath" d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="url(#speedGradient)" stroke-width="12" stroke-linecap="round" stroke-dasharray="125.6" stroke-dashoffset="125.6" class="transition-all duration-500 ease-out" />
+                            <defs>
+                                <linearGradient id="speedGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#3b82f6" />
+                                    <stop offset="50%" stop-color="#10b981" />
+                                    <stop offset="100%" stop-color="#ef4444" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <div class="absolute bottom-0 left-0 right-0 text-center flex flex-col items-center">
+                            <div class="text-3xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] leading-none" id="liveSpeedValue">0</div>
+                            <div class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">km/sa</div>
+                        </div>
+                    </div>
+
+                    <!-- Odometer -->
+                    <div class="bg-black/40 border border-white/10 p-2 rounded-xl flex gap-1 shadow-inner relative z-10 mb-2">
+                        <div class="bg-slate-800 text-white font-mono font-bold text-lg w-6 h-8 flex items-center justify-center rounded border border-white/5" id="odo_1">0</div>
+                        <div class="bg-slate-800 text-white font-mono font-bold text-lg w-6 h-8 flex items-center justify-center rounded border border-white/5" id="odo_2">0</div>
+                        <div class="bg-slate-800 text-white font-mono font-bold text-lg w-6 h-8 flex items-center justify-center rounded border border-white/5" id="odo_3">0</div>
+                        <div class="bg-slate-800 text-white font-mono font-bold text-lg w-6 h-8 flex items-center justify-center rounded border border-white/5" id="odo_4">0</div>
+                        <div class="bg-slate-800 text-white font-mono font-bold text-lg w-6 h-8 flex items-center justify-center rounded border border-white/5" id="odo_5">0</div>
+                        <div class="text-white font-black text-lg self-end pb-0.5 mx-0.5">,</div>
+                        <div class="bg-indigo-600 text-white font-mono font-bold text-lg w-6 h-8 flex items-center justify-center rounded shadow-[0_0_10px_rgba(79,70,229,0.5)] border border-indigo-400/50" id="odo_6">0</div>
+                        <div class="text-[9px] font-bold text-slate-400 self-end pb-1 ml-1">km</div>
+                    </div>
+                    
+                    <div class="text-[10px] font-bold text-slate-300 mt-2 flex items-center gap-2 bg-slate-800/50 px-3 py-1.5 rounded-lg border border-white/5">
+                        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+                        Hareket Süresi: <span id="liveDurationValue" class="font-mono font-black text-indigo-300 drop-shadow-md">00:00:00</span>
+                    </div>
                 </div>
 
                 <!-- Range Slider -->
@@ -1894,25 +1898,57 @@
 
         function updatePlayerUI() {
             const loc = historyData[currentPlaybackIndex];
-            document.getElementById('playerCurrentTime').innerText = loc.time;
-            document.getElementById('playerCurrentSpeed').innerText = loc.speed + ' km/s';
+            
+            // Timeline ve Oynatma hızı UI güncellemeleri
+            const timeEl = document.getElementById('playerCurrentTime');
+            if(timeEl) timeEl.innerText = loc.time;
+            
+            const spdEl = document.getElementById('playerCurrentSpeed');
+            if(spdEl) spdEl.innerText = loc.speed + ' km/s';
+            
+            // YENİ EKLENEN ARVENTO TARZI KPI ALANI (Date, Address, Gauges)
+            
+            const dateTimeEl = document.getElementById('playbackCurrentDateTime');
+            if(dateTimeEl) dateTimeEl.innerText = loc.time;
+
+            const addrEl = document.getElementById('playbackCurrentAddress');
+            if(addrEl) {
+                // Performans için geçici olarak koordinat yazalım, oynatma durduğunda adres çekeceğiz.
+                if (!loc.addressFetched && !isPlaying) {
+                    addrEl.innerText = "Adres yükleniyor...";
+                    fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${loc.lat}&lon=${loc.lng}`)
+                        .then(r => r.json())
+                        .then(data => {
+                            const addr = data.display_name || 'Adres bulunamadı';
+                            loc.addressCache = addr;
+                            loc.addressFetched = true;
+                            addrEl.innerText = addr;
+                        }).catch(() => {
+                            addrEl.innerText = `${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}`;
+                        });
+                } else {
+                    addrEl.innerText = loc.addressCache || `${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}`;
+                }
+            }
             
             // Canlı Gösterge (Speedometer)
             const speed = parseInt(loc.speed) || 0;
-            const speedEl = document.getElementById('liveSpeedValue');
-            if(speedEl) {
-                speedEl.innerText = speed;
+            const liveSpeedEl = document.getElementById('liveSpeedValue');
+            if(liveSpeedEl) {
+                liveSpeedEl.innerText = speed;
                 const maxSpeed = 160;
                 const dashArray = 125.6; // SVG çember çevresi
                 const offset = dashArray - (Math.min(speed, maxSpeed) / maxSpeed) * dashArray;
-                document.getElementById('speedGaugePath').style.strokeDashoffset = offset;
+                const pathEl = document.getElementById('speedGaugePath');
+                if(pathEl) pathEl.style.strokeDashoffset = offset;
                 
                 // Hareket Süresi (Tahmini - her nokta 15sn varsayımı)
                 const durationSec = currentPlaybackIndex * 15;
                 const h = Math.floor(durationSec / 3600).toString().padStart(2, '0');
                 const m = Math.floor((durationSec % 3600) / 60).toString().padStart(2, '0');
                 const s = (durationSec % 60).toString().padStart(2, '0');
-                document.getElementById('liveDurationValue').innerText = `${h}:${m}:${s}`;
+                const durationEl = document.getElementById('liveDurationValue');
+                if(durationEl) durationEl.innerText = `${h}:${m}:${s}`;
                 
                 // Odometer (Tahmini Gidilen Mesafe)
                 if (!loc.cumDist) {
