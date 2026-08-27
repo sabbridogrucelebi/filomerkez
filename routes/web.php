@@ -73,15 +73,27 @@ Route::get('/debug-traffic-lights', function () {
     $client = new \GuzzleHttp\Client();
     $lat = 37.9405; $lng = 32.5082;
     $query = "[out:json];(node(around:150,{$lat},{$lng})[\"highway\"=\"traffic_signals\"];);out;";
-    try {
-        $response = $client->post("https://overpass-api.de/api/interpreter", [
-            'form_params' => ['data' => $query],
-            'timeout' => 15,
-        ]);
-        return "Overpass Result: <pre>" . e($response->getBody()->getContents()) . "</pre>";
-    } catch (\Exception $e) {
-        return "Overpass Error: " . $e->getMessage();
+    $endpoints = [
+        "https://z.overpass-api.de/api/interpreter",
+        "https://lz4.overpass-api.de/api/interpreter",
+        "https://overpass.kumi.systems/api/interpreter",
+        "http://overpass.osm.rambler.ru/cgi/interpreter",
+        "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+        "https://overpass-api.de/api/interpreter"
+    ];
+    $results = [];
+    foreach ($endpoints as $url) {
+        try {
+            $response = $client->post($url, [
+                'form_params' => ['data' => $query],
+                'timeout' => 5,
+            ]);
+            $results[] = "SUCCESS with {$url}: " . e(substr($response->getBody()->getContents(), 0, 100)) . "...";
+        } catch (\Exception $e) {
+            $results[] = "FAIL with {$url}: " . $e->getMessage();
+        }
     }
+    return "Endpoint Tests:<br><pre>" . implode("\n\n", $results) . "</pre>";
 });
 
 Route::get('/debug-logs-secret-123', function() {
