@@ -159,7 +159,7 @@ class AnalyzeLearnedStops extends Command
             $url = "http://overpass-api.de/api/interpreter";
             
             $response = $client->post($url, [
-                'form_params' => ['data' => $query],
+                'body' => $query,
                 'timeout' => 15, // Maksimum 15 saniye bekle
             ]);
             

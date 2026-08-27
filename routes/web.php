@@ -75,7 +75,7 @@ Route::get('/debug-traffic-lights', function () {
     $query = "[out:json];(node(around:150,{$lat},{$lng})['highway'='traffic_signals'];);out;";
     try {
         $response = $client->post("http://overpass-api.de/api/interpreter", [
-            'form_params' => ['data' => $query],
+            'body' => $query,
             'timeout' => 15,
         ]);
         return "Overpass Result: <pre>" . e($response->getBody()->getContents()) . "</pre>";
