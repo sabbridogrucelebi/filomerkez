@@ -476,6 +476,10 @@
                 transform: translateY(120%) !important;
             }
             
+            #rightHistoryPanel.mobile-collapsed {
+                transform: translateY(calc(100% - 90px)) !important;
+            }
+            
             /* Leaflet Harita Kontrolleri */
             .leaflet-top.leaflet-right { margin-top: 130px !important; margin-right: 10px !important; }
             .leaflet-top.leaflet-left { margin-top: 130px !important; margin-left: 10px !important; }
@@ -883,6 +887,9 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
+                <button onclick="toggleMobileHistoryPanel()" class="md:hidden w-10 h-10 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 flex justify-center items-center text-blue-400 transition-all border border-blue-500/20" title="Paneli Küçült/Büyüt">
+                    <svg id="mobileCollapseIcon" class="w-5 h-5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
                 @if(!isset($isGuest))
                 <button onclick="openShareModal()" class="w-10 h-10 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 flex justify-center items-center text-emerald-400 hover:text-emerald-300 transition-all border border-emerald-500/20 hover:border-emerald-500/50" title="Kaydı Paylaş">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
@@ -1795,12 +1802,31 @@
             }
         }
 
+        function toggleMobileHistoryPanel() {
+            const panel = document.getElementById('rightHistoryPanel');
+            const icon = document.getElementById('mobileCollapseIcon');
+            if (panel.classList.contains('mobile-collapsed')) {
+                panel.classList.remove('mobile-collapsed');
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                panel.classList.add('mobile-collapsed');
+                icon.style.transform = 'rotate(180deg)';
+            }
+        }
+
         function togglePlayback() {
             const btn = document.getElementById('playPauseBtn');
             if (isPlaying) {
                 clearInterval(playbackInterval);
                 isPlaying = false;
                 btn.innerHTML = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>'; // Play
+                
+                if(window.innerWidth <= 768) {
+                    const panel = document.getElementById('rightHistoryPanel');
+                    const icon = document.getElementById('mobileCollapseIcon');
+                    if (panel) panel.classList.remove('mobile-collapsed');
+                    if (icon) icon.style.transform = 'rotate(0deg)';
+                }
             } else {
                 isPlaying = true;
                 btn.innerHTML = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>'; // Pause
@@ -1809,6 +1835,13 @@
                     currentPlaybackIndex = 0;
                 }
                 playbackInterval = setInterval(playNextFrame, 1000 / playbackSpeed);
+
+                if(window.innerWidth <= 768) {
+                    const panel = document.getElementById('rightHistoryPanel');
+                    const icon = document.getElementById('mobileCollapseIcon');
+                    if (panel) panel.classList.add('mobile-collapsed');
+                    if (icon) icon.style.transform = 'rotate(180deg)';
+                }
             }
         }
 
