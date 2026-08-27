@@ -59,6 +59,7 @@ Route::get('/run-migrations-secret', function () {
 });
 
 Route::get('/run-analyze-stops-secret', function () {
+    set_time_limit(0);
     try {
         \Illuminate\Support\Facades\DB::table('learned_stops')->truncate();
         \Illuminate\Support\Facades\Artisan::call('trips:analyze-stops');

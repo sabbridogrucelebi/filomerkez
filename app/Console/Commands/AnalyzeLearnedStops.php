@@ -106,7 +106,7 @@ class AnalyzeLearnedStops extends Command
                         
                         // Avoid hitting Overpass API rate limits if there are many new stops
                         if ($isTrafficLight || true) {
-                            sleep(1); 
+                            usleep(250000); // 0.25 saniye bekle
                         }
                     }
                 }
