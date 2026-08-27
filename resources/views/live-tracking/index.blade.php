@@ -1547,6 +1547,7 @@
         let historyData = [];
         let tripData = [];
         let historyPolyline = null;
+        let historyStopMarkers = L.layerGroup();
         let historyMarker = null;
         let playbackInterval = null;
         let currentPlaybackIndex = 0;
@@ -1734,6 +1735,58 @@
             if (historyPolyline) map.removeLayer(historyPolyline);
             historyPolyline = L.polyline(latlngs, {color: '#2563eb', weight: 5, opacity: 0.8}).addTo(map);
             map.fitBounds(historyPolyline.getBounds());
+            
+            // YENİ: Bekleme / Durak Noktalarını Hesapla ve Çiz (Arvento Style)
+            if(historyStopMarkers) historyStopMarkers.clearLayers();
+            historyStopMarkers.addTo(map);
+            
+            let currentStop = null;
+            historyData.forEach((loc, idx) => {
+                const speed = parseFloat(loc.speed);
+                if (speed === 0) {
+                    if (!currentStop) {
+                        currentStop = { startIdx: idx, lat: loc.lat, lng: loc.lng, duration: 0, startTime: loc.timestamp };
+                    } else {
+                        currentStop.duration = loc.timestamp - currentStop.startTime;
+                    }
+                } else {
+                    if (currentStop) {
+                        if (currentStop.duration >= 15) { // Sadece 15 saniyeden uzun duruşları al
+                            addStopMarkerToMap(currentStop);
+                        }
+                        currentStop = null;
+                    }
+                }
+            });
+            if (currentStop && currentStop.duration >= 15) {
+                addStopMarkerToMap(currentStop);
+            }
+
+            function addStopMarkerToMap(stop) {
+                let color = '';
+                let title = '';
+                if (stop.duration < 60) {
+                    color = '#eab308'; // Trafik Işığı / Kısa Bekleme (Sarı)
+                    title = `Kırmızı Işık / Trafik (${stop.duration} sn)`;
+                } else if (stop.duration >= 60 && stop.duration < 300) {
+                    color = '#a855f7'; // Durak / Yolcu (Mor)
+                    title = `Durak / Yolcu Alma (${Math.floor(stop.duration/60)} dk ${stop.duration%60} sn)`;
+                } else {
+                    color = '#ef4444'; // Park / Mola (Kırmızı)
+                    title = `Park / Mola (${Math.floor(stop.duration/60)} dk)`;
+                }
+                
+                const marker = L.circleMarker([stop.lat, stop.lng], {
+                    radius: stop.duration >= 60 ? 8 : 6,
+                    fillColor: color,
+                    color: '#ffffff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 1
+                }).bindPopup(`<div class="font-bold text-slate-800 text-xs">${title}</div>`);
+                
+                historyStopMarkers.addLayer(marker);
+            }
 
             // İlk hareket anını bul
             let firstMoveIdx = 0;
