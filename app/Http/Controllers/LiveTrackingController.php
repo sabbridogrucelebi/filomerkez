@@ -21,6 +21,16 @@ class LiveTrackingController extends Controller
         return view('live-tracking.index', compact('vehicles'));
     }
 
+    public function reports()
+    {
+        abort_unless(auth()->user()->hasPermission('vehicle_tracking.view'), 403);
+
+        $companyId = auth()->user()->company_id;
+        $vehicles = Vehicle::where('company_id', $companyId)->get();
+
+        return view('live-tracking.reports', compact('vehicles'));
+    }
+
     public function liveData()
     {
         abort_unless(auth()->user()->hasPermission('vehicle_tracking.view'), 403);
