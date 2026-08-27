@@ -418,6 +418,17 @@ Route::get('/vehicle-tracking/reports/data', [\App\Http\Controllers\Api\V1\Repor
     ->middleware(['auth', 'permission:vehicle_tracking.view'])
     ->name('vehicle-tracking.reports.data');
 
+// cPanel Terminal Alternatifi (Geçici)
+Route::get('/run-migrations', function() {
+    \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+    return "Migrate tamamlandı: " . \Illuminate\Support\Facades\Artisan::output();
+});
+
+Route::get('/run-reports', function() {
+    \Illuminate\Support\Facades\Artisan::call('reports:calculate-daily');
+    return "Raporlar hesaplandı: " . \Illuminate\Support\Facades\Artisan::output();
+});
+
 // Wizard routes
 Route::post('/vehicle-tracking/wizard/check-imei', [\App\Http\Controllers\LiveTrackingController::class, 'wizardCheckImei'])
     ->middleware(['auth', 'permission:vehicles.edit'])
