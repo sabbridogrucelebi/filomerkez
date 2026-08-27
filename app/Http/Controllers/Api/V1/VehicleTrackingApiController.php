@@ -121,41 +121,43 @@ class VehicleTrackingApiController extends Controller
         $endDateUtc = null;
 
         if ($request->date_filter) {
-            $nowLocal = \Carbon\Carbon::now()->addHours(3);
+            $nowUtc = now('UTC');
+            $nowLocal = now('Europe/Istanbul');
+            
             switch ($request->date_filter) {
                 case 'last_1_hour':
-                    $startDateUtc = \Carbon\Carbon::now()->subHour();
-                    $endDateUtc = \Carbon\Carbon::now();
+                    $startDateUtc = $nowUtc->copy()->subHour();
+                    $endDateUtc = $nowUtc->copy();
                     break;
                 case 'today':
-                    $startDateUtc = $nowLocal->copy()->startOfDay()->subHours(3);
-                    $endDateUtc = $nowLocal->copy()->endOfDay()->subHours(3);
+                    $startDateUtc = $nowLocal->copy()->startOfDay()->setTimezone('UTC');
+                    $endDateUtc = $nowLocal->copy()->endOfDay()->setTimezone('UTC');
                     break;
                 case 'yesterday':
-                    $startDateUtc = $nowLocal->copy()->subDay()->startOfDay()->subHours(3);
-                    $endDateUtc = $nowLocal->copy()->subDay()->endOfDay()->subHours(3);
+                    $startDateUtc = $nowLocal->copy()->subDay()->startOfDay()->setTimezone('UTC');
+                    $endDateUtc = $nowLocal->copy()->subDay()->endOfDay()->setTimezone('UTC');
                     break;
                 case 'last_3_hours':
-                    $startDateUtc = \Carbon\Carbon::now()->subHours(3);
-                    $endDateUtc = \Carbon\Carbon::now();
+                    $startDateUtc = $nowUtc->copy()->subHours(3);
+                    $endDateUtc = $nowUtc->copy();
                     break;
                 case 'last_3_days':
-                    $startDateUtc = $nowLocal->copy()->subDays(2)->startOfDay()->subHours(3);
-                    $endDateUtc = $nowLocal->copy()->endOfDay()->subHours(3);
+                    $startDateUtc = $nowLocal->copy()->subDays(2)->startOfDay()->setTimezone('UTC');
+                    $endDateUtc = $nowLocal->copy()->endOfDay()->setTimezone('UTC');
                     break;
                 default:
                     if ($request->start_date && $request->end_date) {
-                        $startDateUtc = \Carbon\Carbon::parse($request->start_date)->subHours(3);
-                        $endDateUtc = \Carbon\Carbon::parse($request->end_date)->subHours(3);
+                        $startDateUtc = \Carbon\Carbon::parse($request->start_date, 'Europe/Istanbul')->setTimezone('UTC');
+                        $endDateUtc = \Carbon\Carbon::parse($request->end_date, 'Europe/Istanbul')->setTimezone('UTC');
                     }
                     break;
             }
         } else if ($request->start_date && $request->end_date) {
-            $startDateUtc = \Carbon\Carbon::parse($request->start_date)->subHours(3);
-            $endDateUtc = \Carbon\Carbon::parse($request->end_date)->subHours(3);
+            $startDateUtc = \Carbon\Carbon::parse($request->start_date, 'Europe/Istanbul')->setTimezone('UTC');
+            $endDateUtc = \Carbon\Carbon::parse($request->end_date, 'Europe/Istanbul')->setTimezone('UTC');
         } else {
-            $startDateUtc = \Carbon\Carbon::now()->addHours(3)->startOfDay()->subHours(3);
-            $endDateUtc = \Carbon\Carbon::now();
+            $startDateUtc = now('Europe/Istanbul')->startOfDay()->setTimezone('UTC');
+            $endDateUtc = now('Europe/Istanbul')->endOfDay()->setTimezone('UTC');
         }
 
         $locations = \App\Models\Fleet\VehicleLocation::where('vehicle_id', $vehicle->id)
