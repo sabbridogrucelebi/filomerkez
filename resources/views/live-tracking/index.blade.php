@@ -52,21 +52,27 @@
             animation: pulse-cyan 2s infinite;
         }
         .pulse-idle {
-            background-color: #a855f7;
-            animation: pulse-purple 2s infinite;
+            background-color: #f97316; /* Orange */
+            animation: pulse-orange 2s infinite;
         }
         .pulse-stopped {
-            background-color: #ef4444;
+            background-color: #ef4444; /* Red */
+        }
+        .pulse-offline {
+            background-color: #94a3b8; /* Gray */
+        }
+        .pulse-black {
+            background-color: #1e293b; /* Slate 800 */
         }
         @keyframes pulse-cyan {
             0% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.7); }
             70% { box-shadow: 0 0 0 12px rgba(6, 182, 212, 0); }
             100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0); }
         }
-        @keyframes pulse-purple {
-            0% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.7); }
-            70% { box-shadow: 0 0 0 12px rgba(168, 85, 247, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); }
+        @keyframes pulse-orange {
+            0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.7); }
+            70% { box-shadow: 0 0 0 12px rgba(249, 115, 22, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
         }
         .custom-vehicle-tooltip {
             background: transparent !important;
@@ -1294,19 +1300,29 @@
             let statusClass = 'pulse-stopped'; // Varsayılan Kırmızı
             let arrowColor = '#ef4444';
             
-            if (vehicle.Speed > 0) {
+            const now = Math.floor(Date.now() / 1000);
+            const dataTime = vehicle.Timestamp || 0;
+            const diffMins = dataTime > 0 ? Math.floor((now - dataTime) / 60) : 999999;
+            
+            if (diffMins >= 48 * 60) {
+                statusClass = 'pulse-black'; // 2 günden eski
+                arrowColor = '#1e293b';
+            } else if (diffMins >= 15) {
+                statusClass = 'pulse-offline'; // 15 dakikadan eski
+                arrowColor = '#94a3b8';
+            } else if (vehicle.Speed > 0) {
                 statusClass = 'pulse-moving'; // Hareketli (Mavi/Turkuaz)
                 arrowColor = '#06b6d4';
             } else if (vehicle.ACC) {
-                statusClass = 'pulse-idle'; // Hız 0 ama Kontak Açık (Mor)
-                arrowColor = '#a855f7';
+                statusClass = 'pulse-idle'; // Hız 0 ama Kontak Açık (Turuncu)
+                arrowColor = '#f97316';
             }
             
             let course = vehicle.Course || 0;
             let arrowHtml = '';
             
             // Eğer araç hareket ediyorsa veya kontak açıksa yön okunu göster
-            if (statusClass !== 'pulse-stopped') {
+            if (statusClass !== 'pulse-stopped' && statusClass !== 'pulse-black' && statusClass !== 'pulse-offline') {
                 arrowHtml = `<div style="position: absolute; top: -18px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-bottom: 22px solid ${arrowColor}; drop-shadow(0 3px 4px rgba(0,0,0,0.4)); z-index: -1;"></div>`;
             }
 

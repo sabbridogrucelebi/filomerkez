@@ -152,7 +152,35 @@ export default function TrackingScreen({ navigation }) {
                     const lat = parseFloat(v.Latitude);
                     const lng = parseFloat(v.Longitude);
                     const speed = parseInt(v.Speed || 0);
-                    const isOn = v.EngineStatus === 'Açık' || speed > 0;
+                    
+                    const now = Math.floor(Date.now() / 1000);
+                    const dataTime = v.Timestamp || 0;
+                    const diffMins = dataTime > 0 ? Math.floor((now - dataTime) / 60) : 999999;
+                    
+                    let markerColors = ['#F87171', '#DC2626']; // Red
+                    let borderColor = '#EF4444';
+                    let iconName = 'car-off';
+                    let isMoving = false;
+
+                    if (diffMins >= 48 * 60) {
+                        markerColors = ['#334155', '#1e293b']; // Black (Slate-800)
+                        borderColor = '#1e293b';
+                        iconName = 'cloud-off-outline';
+                    } else if (diffMins >= 15) {
+                        markerColors = ['#94a3b8', '#64748b']; // Gray
+                        borderColor = '#94a3b8';
+                        iconName = 'signal-off';
+                    } else if (speed > 0) {
+                        markerColors = ['#22d3ee', '#0891b2']; // Cyan
+                        borderColor = '#06b6d4';
+                        iconName = 'navigation';
+                        isMoving = true;
+                    } else if (v.ACC) {
+                        markerColors = ['#fb923c', '#ea580c']; // Orange
+                        borderColor = '#f97316';
+                        iconName = 'engine';
+                    }
+
                     const isSelected = selectedVehicle && selectedVehicle.LicensePlate === v.LicensePlate;
 
                     return (
@@ -166,14 +194,14 @@ export default function TrackingScreen({ navigation }) {
                             <View style={s.markerWrap}>
                                 <View style={[
                                     s.pulsingCircle, 
-                                    { borderColor: isOn ? '#10B981' : '#EF4444' },
+                                    { borderColor: borderColor },
                                     isSelected && { width: 50, height: 50, borderRadius: 25, borderWidth: 2 }
                                 ]}>
                                     <LinearGradient
-                                        colors={isOn ? ['#34D399', '#059669'] : ['#F87171', '#DC2626']}
+                                        colors={markerColors}
                                         style={s.markerCore}
                                     >
-                                        <Icon name={isOn ? "navigation" : "car-off"} size={14} color="#FFF" style={isOn ? { transform: [{ rotate: '45deg' }] } : {}} />
+                                        <Icon name={iconName} size={14} color="#FFF" style={isMoving ? { transform: [{ rotate: '45deg' }] } : {}} />
                                     </LinearGradient>
                                 </View>
                                 {isSelected && (
@@ -273,7 +301,34 @@ export default function TrackingScreen({ navigation }) {
                     ) : (
                         vehicles.map((v, i) => {
                             const speed = parseInt(v.Speed || 0);
-                            const isOn = v.EngineStatus === 'Açık' || speed > 0;
+                            
+                            const now = Math.floor(Date.now() / 1000);
+                            const dataTime = v.Timestamp || 0;
+                            const diffMins = dataTime > 0 ? Math.floor((now - dataTime) / 60) : 999999;
+                            
+                            let listColors = ['rgba(239, 68, 68, 0.2)', 'rgba(220, 38, 38, 0.1)']; // Red
+                            let listIconColor = '#F87171';
+                            let listIconName = 'car';
+                            const isOn = speed > 0; // For speed text color
+
+                            if (diffMins >= 48 * 60) {
+                                listColors = ['rgba(30, 41, 59, 0.5)', 'rgba(15, 23, 42, 0.4)']; // Black
+                                listIconColor = '#475569';
+                                listIconName = 'cloud-off-outline';
+                            } else if (diffMins >= 15) {
+                                listColors = ['rgba(148, 163, 184, 0.3)', 'rgba(100, 116, 139, 0.2)']; // Gray
+                                listIconColor = '#94a3b8';
+                                listIconName = 'signal-off';
+                            } else if (speed > 0) {
+                                listColors = ['rgba(6, 182, 212, 0.3)', 'rgba(8, 145, 178, 0.2)']; // Cyan
+                                listIconColor = '#22d3ee';
+                                listIconName = 'car-connected';
+                            } else if (v.ACC) {
+                                listColors = ['rgba(249, 115, 22, 0.3)', 'rgba(234, 88, 12, 0.2)']; // Orange
+                                listIconColor = '#fb923c';
+                                listIconName = 'engine';
+                            }
+
                             const isSelected = selectedVehicle && selectedVehicle.LicensePlate === v.LicensePlate;
 
                             return (
@@ -284,10 +339,10 @@ export default function TrackingScreen({ navigation }) {
                                     activeOpacity={0.7}
                                 >
                                     <LinearGradient
-                                        colors={isOn ? ['rgba(16, 185, 129, 0.2)', 'rgba(5, 150, 105, 0.1)'] : ['rgba(239, 68, 68, 0.2)', 'rgba(220, 38, 38, 0.1)']}
+                                        colors={listColors}
                                         style={s.vIconWrap}
                                     >
-                                        <Icon name={isOn ? "car-connected" : "car"} size={22} color={isOn ? "#34D399" : "#F87171"} />
+                                        <Icon name={listIconName} size={22} color={listIconColor} />
                                     </LinearGradient>
                                     <View style={s.vInfo}>
                                         <Text style={s.vPlate}>{v.LicensePlate}</Text>
