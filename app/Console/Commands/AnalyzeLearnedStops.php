@@ -103,7 +103,7 @@ class AnalyzeLearnedStops extends Command
                 foreach ($newClusters as $cluster) {
                     $isTrafficLight = false;
                     foreach ($trafficLights as $tl) {
-                        if ($this->haversineGreatCircleDistance($cluster['lat'], $cluster['lng'], $tl['lat'], $tl['lng']) <= 0.05) {
+                        if ($this->haversineGreatCircleDistance($cluster['lat'], $cluster['lng'], $tl['lat'], $tl['lng']) <= 0.15) {
                             $isTrafficLight = true;
                             break;
                         }
@@ -151,7 +151,7 @@ class AnalyzeLearnedStops extends Command
         try {
             $query = "[out:json];(";
             foreach ($clusters as $c) {
-                $query .= "node(around:50,{$c['lat']},{$c['lng']})['highway'='traffic_signals'];";
+                $query .= "node(around:150,{$c['lat']},{$c['lng']})['highway'='traffic_signals'];";
             }
             $query .= ");out;";
 

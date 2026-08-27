@@ -69,6 +69,13 @@ Route::get('/run-analyze-stops-secret', function () {
     }
 });
 
+Route::get('/debug-traffic-lights', function () {
+    $total = \Illuminate\Support\Facades\DB::table('learned_stops')->count();
+    $lights = \Illuminate\Support\Facades\DB::table('learned_stops')->where('is_traffic_light', 1)->count();
+    $all = \Illuminate\Support\Facades\DB::table('learned_stops')->get();
+    return "Total Stops: {$total} <br> Traffic Lights: {$lights} <br><br> Data: <pre>" . json_encode($all, JSON_PRETTY_PRINT) . "</pre>";
+});
+
 Route::get('/debug-logs-secret-123', function() {
     $files = glob(storage_path('logs/laravel-*.log'));
     if(empty($files)) { $files = [storage_path('logs/laravel.log')]; }
