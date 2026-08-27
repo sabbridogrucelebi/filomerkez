@@ -70,11 +70,12 @@ class AnalyzeLearnedStops extends Command
                 }
             }
 
-            // Save clusters that meet the threshold
             $savedCount = 0;
-            foreach ($clusters as $cluster) {
+            // Identify new clusters
+            $newClusters = [];
+            
+            foreach ($clusters as &$cluster) {
                 if ($cluster['count'] >= $minStopsToLearn) {
-                    // Check if already exists nearby
                     $existing = LearnedStop::where('company_id', $company->id)->get();
                     $isNew = true;
                     
@@ -89,26 +90,35 @@ class AnalyzeLearnedStops extends Command
                             break;
                         }
                     }
-
                     if ($isNew) {
-                        $isTrafficLight = $this->checkTrafficLight($cluster['lat'], $cluster['lng']);
-                        
-                        LearnedStop::create([
-                            'company_id' => $company->id,
-                            'latitude' => $cluster['lat'],
-                            'longitude' => $cluster['lng'],
-                            'radius_meters' => 50,
-                            'stop_count' => $cluster['count'],
-                            'last_stopped_at' => $cluster['last_stopped'],
-                            'is_traffic_light' => $isTrafficLight
-                        ]);
-                        $savedCount++;
-                        
-                        // Avoid hitting Overpass API rate limits if there are many new stops
-                        if ($isTrafficLight || true) {
-                            usleep(250000); // 0.25 saniye bekle
+                        $newClusters[] = $cluster;
+                    }
+                }
+            }
+
+            // Bulk check traffic lights for new clusters (ONE HTTP REQUEST)
+            if (count($newClusters) > 0) {
+                $trafficLights = $this->bulkCheckTrafficLights($newClusters);
+                
+                foreach ($newClusters as $cluster) {
+                    $isTrafficLight = false;
+                    foreach ($trafficLights as $tl) {
+                        if ($this->haversineGreatCircleDistance($cluster['lat'], $cluster['lng'], $tl['lat'], $tl['lng']) <= 0.05) {
+                            $isTrafficLight = true;
+                            break;
                         }
                     }
+                    
+                    LearnedStop::create([
+                        'company_id' => $company->id,
+                        'latitude' => $cluster['lat'],
+                        'longitude' => $cluster['lng'],
+                        'radius_meters' => 50,
+                        'stop_count' => $cluster['count'],
+                        'last_stopped_at' => $cluster['last_stopped'],
+                        'is_traffic_light' => $isTrafficLight
+                    ]);
+                    $savedCount++;
                 }
             }
             
@@ -135,27 +145,38 @@ class AnalyzeLearnedStops extends Command
         return $angle * $earthRadius;
     }
 
-    private function checkTrafficLight($lat, $lng)
+    private function bulkCheckTrafficLights($clusters)
     {
+        $trafficLights = [];
         try {
+            $query = "[out:json];(";
+            foreach ($clusters as $c) {
+                $query .= "node(around:50,{$c['lat']},{$c['lng']})['highway'='traffic_signals'];";
+            }
+            $query .= ");out;";
+
             $client = new \GuzzleHttp\Client();
             $url = "http://overpass-api.de/api/interpreter";
-            $query = "[out:json];node(around:50,{$lat},{$lng})['highway'='traffic_signals'];out;";
             
             $response = $client->post($url, [
                 'form_params' => ['data' => $query],
-                'timeout' => 5, // 5 saniyeden uzun sürerse iptal et
+                'timeout' => 15, // Maksimum 15 saniye bekle
             ]);
             
             $data = json_decode($response->getBody()->getContents(), true);
             
-            if (isset($data['elements']) && count($data['elements']) > 0) {
-                return true;
+            if (isset($data['elements'])) {
+                foreach ($data['elements'] as $el) {
+                    $trafficLights[] = [
+                        'lat' => $el['lat'],
+                        'lng' => $el['lon']
+                    ];
+                }
             }
         } catch (\Exception $e) {
-            // Hata olursa servisi engellememek için traffic light olmadığını varsay
+            // Sessizce geç
         }
         
-        return false;
+        return $trafficLights;
     }
 }
