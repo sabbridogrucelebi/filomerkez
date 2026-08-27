@@ -151,7 +151,7 @@ class AnalyzeLearnedStops extends Command
         try {
             $query = "[out:json];(";
             foreach ($clusters as $c) {
-                $query .= "node(around:150,{$c['lat']},{$c['lng']})['highway'='traffic_signals'];";
+                $query .= "node(around:150,{$c['lat']},{$c['lng']})[\"highway\"=\"traffic_signals\"];";
             }
             $query .= ");out;";
 
@@ -159,7 +159,7 @@ class AnalyzeLearnedStops extends Command
             $url = "http://overpass-api.de/api/interpreter";
             
             $response = $client->post($url, [
-                'body' => $query,
+                'form_params' => ['data' => $query],
                 'timeout' => 15, // Maksimum 15 saniye bekle
             ]);
             
