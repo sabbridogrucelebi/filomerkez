@@ -485,4 +485,108 @@ class LiveTrackingController extends Controller
 
         return back()->with('success', 'Çalışma saati programı silindi.');
     }
+    // --- WIZARD METHODS ---
+    public function wizardCheckImei(Request $request)
+    {
+        abort_unless(auth()->user()->hasPermission('vehicles.edit'), 403);
+        $request->validate(['imei' => 'required|string']);
+        
+        $imei = $request->imei;
+        $companyId = auth()->user()->company_id;
+        
+        // Bu IMEI zaten başka bir araca kayıtlı mı?
+        $existing = Vehicle::where('company_id', $companyId)
+            ->where('device_imei', $imei)
+            ->first();
+            
+        if ($existing) {
+            return response()->json([
+                'success' => false,
+                'message' => "Bu cihaz zaten '{$existing->plate}' plakalı araca tanımlı."
+            ]);
+        }
+        
+        // Simüle edilmiş canlı konum verisi (Gerçekte Arvento'dan çekilecek)
+        return response()->json([
+            'success' => true,
+            'lat' => 37.871, // Konya civarı örnek koordinat
+            'lng' => 32.484,
+            'message' => 'Cihazdan başarılı bir şekilde sinyal alındı.'
+        ]);
+    }
+
+    public function wizardStore(Request $request)
+    {
+        abort_unless(auth()->user()->hasPermission('vehicles.edit'), 403);
+        
+        $request->validate([
+            'imei' => 'required|string',
+            'plate' => 'required|string',
+            'brand' => 'nullable|string',
+            'model' => 'nullable|string',
+            'model_year' => 'nullable|numeric',
+            'fuel_type' => 'nullable|string',
+            'driver_name' => 'required|string',
+            'driver_phone' => 'required|string',
+        ]);
+        
+        $companyId = auth()->user()->company_id;
+        
+        // 1. IMEI Başka Araca Kayıtlı Mı?
+        $imeiCheck = Vehicle::where('company_id', $companyId)->where('device_imei', $request->imei)->first();
+        if ($imeiCheck && $imeiCheck->plate !== $request->plate) {
+            return response()->json(['success' => false, 'message' => "Bu IMEI zaten başka bir araca ('{$imeiCheck->plate}') kayıtlı."]);
+        }
+        
+        // 2. Aracı Bul veya Oluştur
+        $vehicle = Vehicle::firstOrNew(['plate' => $request->plate, 'company_id' => $companyId]);
+        $vehicle->brand = $request->brand;
+        $vehicle->model = $request->model;
+        $vehicle->model_year = $request->model_year;
+        $vehicle->fuel_type = $request->fuel_type;
+        $vehicle->device_imei = $request->imei;
+        $vehicle->save();
+        
+        // 3. Şoförü Bul veya Oluştur
+        $driver = \App\Models\Fleet\Driver::firstOrNew(['phone' => $request->driver_phone, 'company_id' => $companyId]);
+        $driver->full_name = $request->driver_name;
+        
+        // 1 Şoför = 1 Araç kuralı için direkt atama yapıyoruz
+        $driver->vehicle_id = $vehicle->id;
+        $driver->is_active = true;
+        $driver->save();
+        
+        return response()->json(['success' => true, 'message' => 'Cihaz, Araç ve Şoför başarıyla eşleştirildi.']);
+    }
+
+    public function wizardVerifyPassword(Request $request)
+    {
+        abort_unless(auth()->user()->hasPermission('vehicles.edit'), 403);
+        $request->validate(['password' => 'required|string']);
+        
+        if (\Illuminate\Support\Facades\Hash::check($request->password, auth()->user()->password)) {
+            return response()->json(['success' => true]);
+        }
+        
+        return response()->json(['success' => false, 'message' => 'Yönetici şifresi hatalı.']);
+    }
+
+    public function wizardRemoveDevice(Request $request)
+    {
+        abort_unless(auth()->user()->hasPermission('vehicles.edit'), 403);
+        $request->validate([
+            'vehicle_id' => 'required|exists:vehicles,id',
+            'password' => 'required|string'
+        ]);
+        
+        if (!\Illuminate\Support\Facades\Hash::check($request->password, auth()->user()->password)) {
+            return response()->json(['success' => false, 'message' => 'Şifre hatalı. İşlem reddedildi.']);
+        }
+        
+        $vehicle = Vehicle::where('company_id', auth()->user()->company_id)->where('id', $request->vehicle_id)->firstOrFail();
+        $vehicle->device_imei = null;
+        $vehicle->save();
+        
+        return response()->json(['success' => true, 'message' => 'Cihaz eşleştirmesi güvenli bir şekilde silindi.']);
+    }
 }

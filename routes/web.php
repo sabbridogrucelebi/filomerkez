@@ -403,9 +403,22 @@ Route::get('/vehicle-tracking/definitions', [\App\Http\Controllers\LiveTrackingC
     ->middleware(['auth', 'permission:vehicle_tracking.view'])
     ->name('vehicle-tracking.definitions');
 
-Route::post('/vehicle-tracking/assign-imei', [\App\Http\Controllers\LiveTrackingController::class, 'assignImei'])
+// Wizard routes
+Route::post('/vehicle-tracking/wizard/check-imei', [\App\Http\Controllers\LiveTrackingController::class, 'wizardCheckImei'])
     ->middleware(['auth', 'permission:vehicles.edit'])
-    ->name('vehicle-tracking.assign-imei');
+    ->name('vehicle-tracking.wizard.check-imei');
+
+Route::post('/vehicle-tracking/wizard/store', [\App\Http\Controllers\LiveTrackingController::class, 'wizardStore'])
+    ->middleware(['auth', 'permission:vehicles.edit'])
+    ->name('vehicle-tracking.wizard.store');
+
+Route::post('/vehicle-tracking/wizard/verify-password', [\App\Http\Controllers\LiveTrackingController::class, 'wizardVerifyPassword'])
+    ->middleware(['auth', 'permission:vehicles.edit'])
+    ->name('vehicle-tracking.wizard.verify-password');
+
+Route::post('/vehicle-tracking/wizard/remove-device', [\App\Http\Controllers\LiveTrackingController::class, 'wizardRemoveDevice'])
+    ->middleware(['auth', 'permission:vehicles.edit'])
+    ->name('vehicle-tracking.wizard.remove-device');
 
 // Alarms
 Route::post('/vehicle-tracking/definitions/alarms', [\App\Http\Controllers\LiveTrackingController::class, 'storeAlarm'])

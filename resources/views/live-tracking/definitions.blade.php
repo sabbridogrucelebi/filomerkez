@@ -4,7 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Filomerkez - Tanımlamalar</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
@@ -207,9 +211,14 @@
                                     <span class="block text-[10px] font-bold text-slate-400 uppercase">Cihaz IMEI</span>
                                     <span class="text-sm font-black text-indigo-600 font-mono">{{ $v->device_imei }}</span>
                                 </div>
-                                <button onclick="openImeiModal({{ $v->id }}, '{{ $v->plate }}', '{{ $v->device_imei }}')" class="h-8 w-8 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-200 flex items-center justify-center transition-colors shadow-sm">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                                </button>
+                                <div class="flex gap-2">
+                                    <button type="button" onclick="openAdminDeleteModal({{ $v->id }}, '{{ $v->plate }}')" class="h-8 w-8 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-200 flex items-center justify-center transition-colors shadow-sm" title="Eşleştirmeyi Sil">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
+                                    <button type="button" onclick="openWizardEditMode({{ $v->id }}, '{{ $v->plate }}', '{{ $v->device_imei }}', '{{ $v->brand }}', '{{ $v->model }}', '{{ $v->model_year }}', '{{ $v->fuel_type }}')" class="h-8 w-8 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-200 flex items-center justify-center transition-colors shadow-sm" title="Düzenle">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         @empty
@@ -320,61 +329,162 @@
 
     <!-- Modallar -->
     
-    <!-- 1. IMEI Modal -->
-    <div id="imeiModal" class="fixed inset-0 z-[2000] hidden flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeImeiModal()"></div>
-        <div class="relative bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300" id="imeiModalContent">
-            <form action="{{ route('vehicle-tracking.assign-imei') }}" method="POST">
-                @csrf
-                <!-- Gerçek form datası -->
-                <input type="hidden" name="vehicle_id" id="finalVehicleId">
+    <!-- 0. Yönetici Şifresi Modal (Silme Koruması) -->
+    <div id="adminDeleteModal" class="fixed inset-0 z-[2000] hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeAdminDeleteModal()"></div>
+        <div class="relative bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300" id="adminDeleteModalContent">
+            <div class="p-8 text-center">
+                <div class="w-16 h-16 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
+                <h3 class="text-xl font-black text-slate-800 mb-2">Güvenlik Onayı</h3>
+                <p class="text-xs font-bold text-slate-500 mb-6">Cihaz eşleştirmesini silmek üzeresiniz. İşleme devam etmek için <b class="text-rose-500">Yönetici Şifrenizi</b> girin.</p>
+                
+                <input type="hidden" id="deleteVehicleId">
+                <input type="password" id="adminDeletePassword" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-slate-900 font-black text-sm focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition outline-none mb-4 text-center" placeholder="Şifrenizi Girin">
+                
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeAdminDeleteModal()" class="flex-1 py-4 rounded-2xl bg-slate-100 text-slate-600 font-black text-sm hover:bg-slate-200 transition-all">İptal</button>
+                    <button type="button" onclick="confirmAdminDelete()" class="flex-1 py-4 rounded-2xl bg-rose-600 text-white font-black text-sm hover:bg-rose-700 transition-all shadow-xl shadow-rose-600/30">Sil</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                <div class="p-8">
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <h3 class="text-xl font-black text-slate-800" id="modalTitle">Yeni Cihaz Tanımla</h3>
-                            <p class="text-xs font-bold text-slate-400 mt-1">Cihaz Eşleştirme</p>
-                        </div>
-                        <button type="button" onclick="closeImeiModal()" class="h-8 w-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition flex items-center justify-center">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
+    <!-- 1. Gelişmiş Sihirbaz Modal (IMEI, Araç, Şoför) -->
+    <div id="wizardModal" class="fixed inset-0 z-[2000] hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeWizardModal()"></div>
+        <div class="relative bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300" id="wizardModalContent">
+            
+            <!-- Başlık -->
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div>
+                    <h3 class="text-xl font-black text-slate-800" id="wizardTitle">Yeni Cihaz Tanımla</h3>
+                    <p class="text-xs font-bold text-slate-400 mt-1">Cihaz, Araç ve Şoför Eşleştirme Sihirbazı</p>
+                </div>
+                <button type="button" onclick="closeWizardModal()" class="h-8 w-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition flex items-center justify-center shadow-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Adım Göstergeleri -->
+            <div class="px-8 pt-6 flex justify-between relative">
+                <div class="absolute top-1/2 left-8 right-8 h-1 bg-slate-100 -translate-y-1/2 z-0 rounded-full"></div>
+                <div class="absolute top-1/2 left-8 h-1 bg-indigo-500 -translate-y-1/2 z-0 rounded-full transition-all duration-500" id="wizardProgressBar" style="width: 0%;"></div>
+                
+                <div class="relative z-10 flex flex-col items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-indigo-500 text-white font-black text-xs flex items-center justify-center shadow-md border-4 border-white" id="step1Indicator">1</div>
+                    <span class="text-[10px] font-black text-slate-400">Cihaz</span>
+                </div>
+                <div class="relative z-10 flex flex-col items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 font-black text-xs flex items-center justify-center shadow-md border-4 border-white transition-colors" id="step2Indicator">2</div>
+                    <span class="text-[10px] font-black text-slate-400">Bağlantı</span>
+                </div>
+                <div class="relative z-10 flex flex-col items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 font-black text-xs flex items-center justify-center shadow-md border-4 border-white transition-colors" id="step3Indicator">3</div>
+                    <span class="text-[10px] font-black text-slate-400">Araç</span>
+                </div>
+                <div class="relative z-10 flex flex-col items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 font-black text-xs flex items-center justify-center shadow-md border-4 border-white transition-colors" id="step4Indicator">4</div>
+                    <span class="text-[10px] font-black text-slate-400">Şoför</span>
+                </div>
+            </div>
+
+            <div class="p-8">
+                <!-- Adım 1: IMEI -->
+                <div id="wizardStep1" class="space-y-4 transition-all duration-300">
+                    <h4 class="text-lg font-black text-slate-800 mb-4">Takip Cihazını Girin</h4>
+                    <div>
+                        <label class="block text-xs font-black uppercase tracking-wider text-slate-600 mb-2">Cihaz IMEI Numarası</label>
+                        <input type="text" id="wizImei" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-slate-900 font-mono text-lg font-bold focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition outline-none" placeholder="Örn: 353210110128749">
                     </div>
+                    <button type="button" onclick="goToStep2()" class="w-full py-4 mt-4 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/30 flex justify-center items-center gap-2">
+                        Bağlan ve Sinyal Ara
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    </button>
+                </div>
 
-                    <div class="space-y-4">
-                        <!-- Düzenleme Modunda Plaka Gösterimi -->
-                        <div id="modalVehiclePlateWrapper" class="hidden">
-                            <label class="block text-xs font-black uppercase tracking-wider text-slate-600 mb-2">Seçili Araç</label>
-                            <div class="w-full rounded-2xl border border-slate-200 bg-slate-100 px-5 py-4 text-slate-900 font-black text-sm">
-                                <span id="modalVehiclePlateText"></span>
-                            </div>
+                <!-- Adım 2: Harita (Canlı Konum) -->
+                <div id="wizardStep2" class="hidden space-y-4 transition-all duration-300">
+                    <h4 class="text-lg font-black text-slate-800 mb-2">Bağlantı Kuruldu</h4>
+                    <p class="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-100 inline-block mb-4">Sinyal başarıyla alındı. Aşağıdaki haritada aracın mevcut konumunu görebilirsiniz.</p>
+                    
+                    <div id="wizMap" class="w-full h-48 bg-slate-200 rounded-2xl border-4 border-white shadow-lg overflow-hidden"></div>
+                    
+                    <div class="flex gap-3 mt-6">
+                        <button type="button" onclick="goToStep(1)" class="w-1/3 py-4 rounded-2xl bg-slate-100 text-slate-600 font-black text-sm hover:bg-slate-200 transition-all">Geri Dön</button>
+                        <button type="button" onclick="goToStep3()" class="w-2/3 py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/30">Evet, Doğru Konum (İlerle)</button>
+                    </div>
+                </div>
+
+                <!-- Adım 3: Araç Bilgileri -->
+                <div id="wizardStep3" class="hidden space-y-4 transition-all duration-300">
+                    <h4 class="text-lg font-black text-slate-800 mb-4">Araç Bilgilerini Girin</h4>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-black uppercase text-slate-600 mb-2">Plaka <span class="text-rose-500">*</span></label>
+                            <input type="text" id="wizPlate" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 font-bold uppercase focus:border-indigo-500 outline-none" placeholder="34ABC123">
                         </div>
-
-                        <!-- Yeni Ekleme Modunda Araç Seçimi -->
-                        <div id="modalVehicleSelectWrapper">
-                            <label class="block text-xs font-black uppercase tracking-wider text-slate-600 mb-2">Eşleştirilecek Araç</label>
-                            <select id="modalVehicleIdSelect" onchange="document.getElementById('finalVehicleId').value = this.value" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-slate-900 font-bold text-sm focus:border-indigo-500 outline-none">
-                                <option value="">Araç Seçiniz...</option>
-                                @foreach($vehiclesWithoutDevice as $v)
-                                    <option value="{{ $v->id }}">{{ $v->plate }} ({{ $v->brand }})</option>
-                                @endforeach
+                        <div>
+                            <label class="block text-xs font-black uppercase text-slate-600 mb-2">Marka</label>
+                            <input type="text" id="wizBrand" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 font-bold focus:border-indigo-500 outline-none" placeholder="Renault">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-black uppercase text-slate-600 mb-2">Model</label>
+                            <input type="text" id="wizModel" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 font-bold focus:border-indigo-500 outline-none" placeholder="Megane">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-black uppercase text-slate-600 mb-2">Yıl</label>
+                            <input type="number" id="wizYear" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 font-bold focus:border-indigo-500 outline-none" placeholder="2023">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-black uppercase text-slate-600 mb-2">Yakıt Türü</label>
+                            <select id="wizFuel" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 font-bold focus:border-indigo-500 outline-none">
+                                <option value="Dizel">Dizel</option>
+                                <option value="Benzin">Benzin</option>
+                                <option value="LPG">LPG</option>
+                                <option value="Elektrik">Elektrik</option>
                             </select>
                         </div>
+                    </div>
+                    
+                    <div class="flex gap-3 mt-6">
+                        <button type="button" onclick="goToStep(2)" class="w-1/3 py-4 rounded-2xl bg-slate-100 text-slate-600 font-black text-sm hover:bg-slate-200 transition-all">Geri Dön</button>
+                        <button type="button" onclick="goToStep4()" class="w-2/3 py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/30">İlerle (Şoför Bilgileri)</button>
+                    </div>
+                </div>
 
+                <!-- Adım 4: Şoför Bilgileri -->
+                <div id="wizardStep4" class="hidden space-y-4 transition-all duration-300">
+                    <h4 class="text-lg font-black text-slate-800 mb-4">Şoför Bilgilerini Girin</h4>
+                    
+                    <div class="grid grid-cols-1 gap-4">
                         <div>
-                            <label class="block text-xs font-black uppercase tracking-wider text-slate-600 mb-2">Cihaz IMEI Numarası</label>
-                            <input type="text" name="device_imei" id="modalDeviceImei" required
-                                class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-slate-900 font-mono text-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition outline-none shadow-inner"
-                                placeholder="Örn: 353210110128749">
+                            <label class="block text-xs font-black uppercase text-slate-600 mb-2">Ad Soyad <span class="text-rose-500">*</span></label>
+                            <input type="text" id="wizDriverName" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 font-bold focus:border-indigo-500 outline-none" placeholder="Ahmet Yılmaz">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-black uppercase text-slate-600 mb-2">Telefon <span class="text-rose-500">*</span></label>
+                            <input type="text" id="wizDriverPhone" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 font-bold focus:border-indigo-500 outline-none" placeholder="05321234567">
+                        </div>
+                        <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mt-2">
+                            <div class="flex gap-3 items-start">
+                                <svg class="w-5 h-5 text-indigo-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <p class="text-[11px] font-bold text-indigo-800 leading-tight">Sisteme girilen şoför, girilen araca kilitlenecektir. (1 Şoför = 1 Araç Kuralı). Kayıt işlemi sonrası tüm veriler senkronize edilir.</p>
+                            </div>
                         </div>
                     </div>
-
-                    <div class="mt-8">
-                        <button type="submit" class="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700 hover:-translate-y-0.5 transition-all shadow-xl shadow-indigo-600/30">
-                            Kaydet ve Bağla
+                    
+                    <div class="flex gap-3 mt-6">
+                        <button type="button" onclick="goToStep(3)" class="w-1/3 py-4 rounded-2xl bg-slate-100 text-slate-600 font-black text-sm hover:bg-slate-200 transition-all">Geri Dön</button>
+                        <button type="button" onclick="submitWizard()" id="wizSubmitBtn" class="w-2/3 py-4 rounded-2xl bg-emerald-600 text-white font-black text-sm hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/30 flex justify-center items-center gap-2">
+                            Kayıtları Tamamla
                         </button>
                     </div>
                 </div>
-            </form>
+                
+            </div>
         </div>
     </div>
 
@@ -462,41 +572,27 @@
             document.getElementById('tab-btn-' + tabId).classList.add('text-indigo-600', 'border-indigo-600');
         }
 
-        // Modals
-        function openImeiModal(id = null, plate = null, imei = null) {
-            const title = document.getElementById('modalTitle');
-            const plateWrapper = document.getElementById('modalVehiclePlateWrapper');
-            const selectWrapper = document.getElementById('modalVehicleSelectWrapper');
-            const plateText = document.getElementById('modalVehiclePlateText');
-            const idHidden = document.getElementById('finalVehicleId');
-            const idSelect = document.getElementById('modalVehicleIdSelect');
-            const imeiInput = document.getElementById('modalDeviceImei');
+        // WIZARD AND ADMIN MODALS
+        let wizMapInstance = null;
+        let wizMarker = null;
 
-            if (id) {
-                // Düzenleme Modu
-                title.textContent = 'Cihaz Düzenle';
-                plateWrapper.classList.remove('hidden');
-                selectWrapper.classList.add('hidden');
-                
-                plateText.textContent = plate;
-                idHidden.value = id;
-                idSelect.removeAttribute('required');
-                idSelect.value = '';
-                imeiInput.value = imei || '';
-            } else {
-                // Yeni Ekleme Modu
-                title.textContent = 'Yeni Cihaz Tanımla';
-                plateWrapper.classList.add('hidden');
-                selectWrapper.classList.remove('hidden');
-                
-                idHidden.value = '';
-                idSelect.setAttribute('required', 'required');
-                idSelect.value = '';
-                imeiInput.value = '';
-            }
+        function openImeiModal() {
+            // "Yeni Cihaz Tanımla" button clicked
+            document.getElementById('wizardTitle').textContent = "Yeni Cihaz Tanımla";
             
-            const modal = document.getElementById('imeiModal');
-            const content = document.getElementById('imeiModalContent');
+            document.getElementById('wizImei').value = "";
+            document.getElementById('wizPlate').value = "";
+            document.getElementById('wizBrand').value = "";
+            document.getElementById('wizModel').value = "";
+            document.getElementById('wizYear').value = "";
+            document.getElementById('wizFuel').value = "Dizel";
+            document.getElementById('wizDriverName').value = "";
+            document.getElementById('wizDriverPhone').value = "";
+            
+            goToStep(1);
+            
+            const modal = document.getElementById('wizardModal');
+            const content = document.getElementById('wizardModalContent');
             modal.classList.remove('hidden');
             setTimeout(() => {
                 content.classList.remove('scale-95', 'opacity-0');
@@ -504,13 +600,219 @@
             }, 10);
         }
 
-        function closeImeiModal() {
-            const content = document.getElementById('imeiModalContent');
+        function openWizardEditMode(id, plate, imei, brand, model, year, fuel) {
+            document.getElementById('wizardTitle').textContent = "Cihazı Düzenle";
+            
+            document.getElementById('wizImei').value = imei || "";
+            document.getElementById('wizPlate').value = plate || "";
+            document.getElementById('wizBrand').value = brand || "";
+            document.getElementById('wizModel').value = model || "";
+            document.getElementById('wizYear').value = year || "";
+            if (fuel) document.getElementById('wizFuel').value = fuel;
+            document.getElementById('wizDriverName').value = "";
+            document.getElementById('wizDriverPhone').value = "";
+            
+            // Skip directly to Step 3 for editing
+            goToStep(3);
+            
+            const modal = document.getElementById('wizardModal');
+            const content = document.getElementById('wizardModalContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function closeWizardModal() {
+            const content = document.getElementById('wizardModalContent');
             content.classList.remove('scale-100', 'opacity-100');
             content.classList.add('scale-95', 'opacity-0');
             setTimeout(() => {
-                document.getElementById('imeiModal').classList.add('hidden');
+                document.getElementById('wizardModal').classList.add('hidden');
             }, 300);
+        }
+
+        function goToStep(stepIndex) {
+            // Hide all steps
+            for (let i = 1; i <= 4; i++) {
+                document.getElementById('wizardStep' + i).classList.add('hidden');
+                
+                // Reset Indicators
+                const ind = document.getElementById('step' + i + 'Indicator');
+                if (i < stepIndex) {
+                    ind.className = "w-8 h-8 rounded-full bg-indigo-500 text-white font-black text-xs flex items-center justify-center shadow-md border-4 border-white transition-colors";
+                    ind.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>';
+                } else if (i === stepIndex) {
+                    ind.className = "w-8 h-8 rounded-full bg-indigo-500 text-white font-black text-xs flex items-center justify-center shadow-md border-4 border-white transition-colors";
+                    ind.innerHTML = i;
+                } else {
+                    ind.className = "w-8 h-8 rounded-full bg-slate-200 text-slate-500 font-black text-xs flex items-center justify-center shadow-md border-4 border-white transition-colors";
+                    ind.innerHTML = i;
+                }
+            }
+            
+            // Show target step
+            document.getElementById('wizardStep' + stepIndex).classList.remove('hidden');
+            
+            // Update progress bar width
+            const percentages = {1: '0%', 2: '33%', 3: '66%', 4: '100%'};
+            document.getElementById('wizardProgressBar').style.width = percentages[stepIndex];
+        }
+
+        async function goToStep2() {
+            const imei = document.getElementById('wizImei').value.trim();
+            if(!imei) return alert('Lütfen IMEI numarasını girin.');
+            
+            const btn = event.currentTarget;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Bağlanıyor... <span class="animate-pulse">⏳</span>';
+            btn.disabled = true;
+            
+            try {
+                const fd = new FormData();
+                fd.append('imei', imei);
+                const res = await fetch("{{ route('vehicle-tracking.wizard.check-imei') }}", {
+                    method: 'POST',
+                    headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')},
+                    body: fd
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    goToStep(2);
+                    setTimeout(() => {
+                        initWizMap(data.lat, data.lng);
+                    }, 400); // Wait for transition
+                } else {
+                    alert(data.message || 'Bir hata oluştu.');
+                }
+            } catch (err) {
+                alert('Bağlantı hatası.');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function initWizMap(lat, lng) {
+            if (!wizMapInstance) {
+                wizMapInstance = L.map('wizMap', { zoomControl: false }).setView([lat, lng], 15);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(wizMapInstance);
+            }
+            wizMapInstance.setView([lat, lng], 15);
+            
+            if (wizMarker) wizMapInstance.removeLayer(wizMarker);
+            wizMarker = L.marker([lat, lng]).addTo(wizMapInstance);
+            
+            setTimeout(() => { wizMapInstance.invalidateSize(); }, 200);
+        }
+
+        function goToStep3() {
+            goToStep(3);
+        }
+
+        function goToStep4() {
+            const plate = document.getElementById('wizPlate').value.trim();
+            if(!plate) return alert('Plaka girmek zorunludur.');
+            goToStep(4);
+        }
+
+        async function submitWizard() {
+            const imei = document.getElementById('wizImei').value.trim();
+            const plate = document.getElementById('wizPlate').value.trim();
+            const driverName = document.getElementById('wizDriverName').value.trim();
+            const driverPhone = document.getElementById('wizDriverPhone').value.trim();
+            
+            if(!driverName || !driverPhone) return alert('Lütfen şoför ad soyad ve telefon bilgilerini giriniz.');
+            
+            const btn = document.getElementById('wizSubmitBtn');
+            btn.innerHTML = 'Kaydediliyor... <span class="animate-pulse">⏳</span>';
+            btn.disabled = true;
+            
+            const fd = new FormData();
+            fd.append('imei', imei);
+            fd.append('plate', plate);
+            fd.append('brand', document.getElementById('wizBrand').value);
+            fd.append('model', document.getElementById('wizModel').value);
+            fd.append('model_year', document.getElementById('wizYear').value);
+            fd.append('fuel_type', document.getElementById('wizFuel').value);
+            fd.append('driver_name', driverName);
+            fd.append('driver_phone', driverPhone);
+            
+            try {
+                const res = await fetch("{{ route('vehicle-tracking.wizard.store') }}", {
+                    method: 'POST',
+                    headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')},
+                    body: fd
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.message || 'Kayıt başarısız.');
+                    btn.innerHTML = 'Kayıtları Tamamla';
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                alert('Bağlantı hatası.');
+                btn.innerHTML = 'Kayıtları Tamamla';
+                btn.disabled = false;
+            }
+        }
+
+        // ADMIN DELETE MODAL
+        function openAdminDeleteModal(vehicleId, plate) {
+            document.getElementById('deleteVehicleId').value = vehicleId;
+            document.getElementById('adminDeletePassword').value = '';
+            
+            const modal = document.getElementById('adminDeleteModal');
+            const content = document.getElementById('adminDeleteModalContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+                document.getElementById('adminDeletePassword').focus();
+            }, 10);
+        }
+
+        function closeAdminDeleteModal() {
+            const content = document.getElementById('adminDeleteModalContent');
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                document.getElementById('adminDeleteModal').classList.add('hidden');
+            }, 300);
+        }
+
+        async function confirmAdminDelete() {
+            const vid = document.getElementById('deleteVehicleId').value;
+            const pwd = document.getElementById('adminDeletePassword').value;
+            
+            if(!pwd) return alert('Lütfen yönetici şifrenizi girin.');
+            
+            const fd = new FormData();
+            fd.append('vehicle_id', vid);
+            fd.append('password', pwd);
+            
+            try {
+                const res = await fetch("{{ route('vehicle-tracking.wizard.remove-device') }}", {
+                    method: 'POST',
+                    headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')},
+                    body: fd
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.message);
+                }
+            } catch (e) {
+                alert('Bağlantı hatası');
+            }
         }
 
         function openAlarmModal() {
