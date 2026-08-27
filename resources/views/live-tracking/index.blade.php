@@ -1741,7 +1741,6 @@
             if(historyStopMarkers) historyStopMarkers.clearLayers();
             historyStopMarkers.addTo(map);
             
-            let stopsToRender = [];
             let currentStop = null;
             historyData.forEach((loc, idx) => {
                 const speed = parseFloat(loc.speed);
@@ -1754,93 +1753,41 @@
                 } else {
                     if (currentStop) {
                         if (currentStop.duration >= 15) { // Sadece 15 saniyeden uzun duruşları al
-                            stopsToRender.push(currentStop);
+                            addStopMarkerToMap(currentStop);
                         }
                         currentStop = null;
                     }
                 }
             });
             if (currentStop && currentStop.duration >= 15) {
-                stopsToRender.push(currentStop);
+                addStopMarkerToMap(currentStop);
             }
 
-            // İlk olarak eldeki verilerle çiz
-            stopsToRender.forEach(stop => addStopMarkerToMap(stop, false));
-
-            // Frontend üzerinden Overpass API ile trafik ışıklarını canlı çek! (Sunucu firewall'unu aşmak için)
-            if (historyPolyline && stopsToRender.length > 0) {
-                let bounds = historyPolyline.getBounds();
-                let q = `[out:json];node(${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()})["highway"="traffic_signals"];out;`;
-                fetch('https://overpass-api.de/api/interpreter', {
-                    method: 'POST',
-                    body: q
-                }).then(r => r.json()).then(data => {
-                    if (data && data.elements) {
-                        window.liveTrafficLights = data.elements;
-                        // Işıklar gelince haritadaki noktaları güncelle
-                        historyStopMarkers.clearLayers();
-                        stopsToRender.forEach(stop => addStopMarkerToMap(stop, true));
-                    }
-                }).catch(e => console.error("Frontend Overpass hatası:", e));
-            }
-
-            function addStopMarkerToMap(stop, useLiveLights) {
+            function addStopMarkerToMap(stop) {
                 let color = '';
                 let title = '';
                 
-                let isLearnedTrafficLight = false;
-                
-                // 1. Canlı frontend verisine bak
-                if (useLiveLights && window.liveTrafficLights) {
-                    for(let tl of window.liveTrafficLights) {
-                        let dist = map.distance([stop.lat, stop.lng], [tl.lat, tl.lon]);
-                        if (dist <= 50) {
-                            isLearnedTrafficLight = true;
-                            break;
-                        }
-                    }
-                }
-                
-                // 2. Sunucu verisine (Learned Stops) bak
-                let isLearnedStop = false;
-                if (window.learnedStopsData && window.learnedStopsData.length > 0) {
-                    for(let ls of window.learnedStopsData) {
-                        let dist = map.distance([stop.lat, stop.lng], [ls.latitude, ls.longitude]);
-                        if (dist <= (ls.radius_meters || 50)) {
-                            isLearnedStop = true;
-                            if (ls.is_traffic_light) isLearnedTrafficLight = true;
-                            break;
-                        }
-                    }
-                }
-
-                // RENK VE İSİM MANTIĞI:
-                // 60 DK ÜZERİ KESİN KIRMIZI
-                // TRAFİK IŞIĞI KESİN SARI
-                // YOLCU DURAKLAMASI MOR
-                
                 let durationMins = Math.floor(stop.duration / 60);
                 let durationSecs = stop.duration % 60;
+                let formattedTime = durationMins > 0 ? `${durationMins} dk ${durationSecs} sn` : `${durationSecs} sn`;
                 
-                if (stop.duration >= 3600) { // 60 dk üzeri
+                // KURAL: 0 - 20 dk arası -> Turuncu
+                // KURAL: 50 dk üzeri -> Kırmızı
+                // (Ara değer 20 - 50 dk arası -> Mor)
+                
+                if (stop.duration > 3000) { // 50 dk üzeri (50 * 60 = 3000 saniye)
                     color = '#ef4444'; // Kırmızı
-                    title = `🛑 Uzun Süreli Park / Bekleme (${Math.floor(durationMins/60)} saat ${durationMins%60} dk)`;
-                } else if (isLearnedTrafficLight) {
-                    color = '#eab308'; // Sarı
-                    title = `🚥 Kırmızı Işık / Kavşak (${durationMins > 0 ? durationMins + ' dk ' : ''}${durationSecs} sn)`;
-                } else if (isLearnedStop) {
+                    title = `🛑 Uzun Süreli Park (${formattedTime})`;
+                } else if (stop.duration <= 1200) { // 0 - 20 dk arası (20 * 60 = 1200 saniye)
+                    color = '#f97316'; // Turuncu
+                    title = `🔸 Kısa Bekleme / Durak (${formattedTime})`;
+                } else { // 20 - 50 dk arası
                     color = '#a855f7'; // Mor
-                    title = `🚏 Durak / Yolcu İşlemi (${durationMins > 0 ? durationMins + ' dk ' : ''}${durationSecs} sn)`;
-                } else if (stop.duration < 60) {
-                    color = '#eab308'; // Sarı (Kısa bekleme muhtemelen trafik)
-                    title = `Trafik / Kısa Bekleme (${stop.duration} sn)`;
-                } else {
-                    color = '#a855f7'; // Mor (Varsayılan yolcu)
-                    title = `Geçici Duraklama / Yolcu (${durationMins > 0 ? durationMins + ' dk ' : ''}${durationSecs} sn)`;
+                    title = `🚏 Orta Süreli Bekleme (${formattedTime})`;
                 }
                 
                 const marker = L.circleMarker([stop.lat, stop.lng], {
-                    radius: (isLearnedStop || stop.duration >= 3600) ? 8 : 6,
+                    radius: stop.duration > 3000 ? 8 : 6,
                     fillColor: color,
                     color: '#ffffff',
                     weight: 2,
