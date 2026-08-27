@@ -414,6 +414,10 @@ Route::get('/vehicle-tracking/reports', [LiveTrackingController::class, 'reports
     ->middleware(['auth', 'permission:vehicle_tracking.view'])
     ->name('vehicle-tracking.reports');
 
+Route::get('/vehicle-tracking/reports/data', [\App\Http\Controllers\Api\V1\ReportsApiController::class, 'dashboardData'])
+    ->middleware(['auth', 'permission:vehicle_tracking.view'])
+    ->name('vehicle-tracking.reports.data');
+
 // Wizard routes
 Route::post('/vehicle-tracking/wizard/check-imei', [\App\Http\Controllers\LiveTrackingController::class, 'wizardCheckImei'])
     ->middleware(['auth', 'permission:vehicles.edit'])
