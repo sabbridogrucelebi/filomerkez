@@ -1741,6 +1741,7 @@
             if(historyStopMarkers) historyStopMarkers.clearLayers();
             historyStopMarkers.addTo(map);
             
+            let stopsToRender = [];
             let currentStop = null;
             historyData.forEach((loc, idx) => {
                 const speed = parseFloat(loc.speed);
@@ -1753,57 +1754,93 @@
                 } else {
                     if (currentStop) {
                         if (currentStop.duration >= 15) { // Sadece 15 saniyeden uzun duruşları al
-                            addStopMarkerToMap(currentStop);
+                            stopsToRender.push(currentStop);
                         }
                         currentStop = null;
                     }
                 }
             });
             if (currentStop && currentStop.duration >= 15) {
-                addStopMarkerToMap(currentStop);
+                stopsToRender.push(currentStop);
             }
 
-            function addStopMarkerToMap(stop) {
+            // İlk olarak eldeki verilerle çiz
+            stopsToRender.forEach(stop => addStopMarkerToMap(stop, false));
+
+            // Frontend üzerinden Overpass API ile trafik ışıklarını canlı çek! (Sunucu firewall'unu aşmak için)
+            if (historyPolyline && stopsToRender.length > 0) {
+                let bounds = historyPolyline.getBounds();
+                let q = `[out:json];node(${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()})["highway"="traffic_signals"];out;`;
+                fetch('https://overpass-api.de/api/interpreter', {
+                    method: 'POST',
+                    body: q
+                }).then(r => r.json()).then(data => {
+                    if (data && data.elements) {
+                        window.liveTrafficLights = data.elements;
+                        // Işıklar gelince haritadaki noktaları güncelle
+                        historyStopMarkers.clearLayers();
+                        stopsToRender.forEach(stop => addStopMarkerToMap(stop, true));
+                    }
+                }).catch(e => console.error("Frontend Overpass hatası:", e));
+            }
+
+            function addStopMarkerToMap(stop, useLiveLights) {
                 let color = '';
                 let title = '';
                 
-                // Öğrenilmiş Durak (Learned Stop) veya Kırmızı Işık Kontrolü
-                let isLearnedStop = false;
                 let isLearnedTrafficLight = false;
                 
+                // 1. Canlı frontend verisine bak
+                if (useLiveLights && window.liveTrafficLights) {
+                    for(let tl of window.liveTrafficLights) {
+                        let dist = map.distance([stop.lat, stop.lng], [tl.lat, tl.lon]);
+                        if (dist <= 50) {
+                            isLearnedTrafficLight = true;
+                            break;
+                        }
+                    }
+                }
+                
+                // 2. Sunucu verisine (Learned Stops) bak
+                let isLearnedStop = false;
                 if (window.learnedStopsData && window.learnedStopsData.length > 0) {
                     for(let ls of window.learnedStopsData) {
-                        // Leaflet map.distance meters olarak hesaplar
                         let dist = map.distance([stop.lat, stop.lng], [ls.latitude, ls.longitude]);
                         if (dist <= (ls.radius_meters || 50)) {
                             isLearnedStop = true;
-                            if (ls.is_traffic_light) {
-                                isLearnedTrafficLight = true;
-                            }
+                            if (ls.is_traffic_light) isLearnedTrafficLight = true;
                             break;
                         }
                     }
                 }
 
-                if (isLearnedTrafficLight) {
-                    color = '#eab308'; // Trafik Işığı (Sarı)
-                    title = `🚦 Öğrenilmiş Kırmızı Işık / Kavşak (${Math.floor(stop.duration/60)} dk ${stop.duration%60} sn)`;
+                // RENK VE İSİM MANTIĞI:
+                // 60 DK ÜZERİ KESİN KIRMIZI
+                // TRAFİK IŞIĞI KESİN SARI
+                // YOLCU DURAKLAMASI MOR
+                
+                let durationMins = Math.floor(stop.duration / 60);
+                let durationSecs = stop.duration % 60;
+                
+                if (stop.duration >= 3600) { // 60 dk üzeri
+                    color = '#ef4444'; // Kırmızı
+                    title = `🛑 Uzun Süreli Park / Bekleme (${Math.floor(durationMins/60)} saat ${durationMins%60} dk)`;
+                } else if (isLearnedTrafficLight) {
+                    color = '#eab308'; // Sarı
+                    title = `🚥 Kırmızı Işık / Kavşak (${durationMins > 0 ? durationMins + ' dk ' : ''}${durationSecs} sn)`;
                 } else if (isLearnedStop) {
-                    color = '#a855f7'; // Durak (Mor)
-                    title = `🚏 Öğrenilmiş Durak / Yolcu İşlemi (${Math.floor(stop.duration/60)} dk ${stop.duration%60} sn)`;
+                    color = '#a855f7'; // Mor
+                    title = `🚏 Durak / Yolcu İşlemi (${durationMins > 0 ? durationMins + ' dk ' : ''}${durationSecs} sn)`;
                 } else if (stop.duration < 60) {
-                    color = '#eab308'; // Trafik Işığı / Kısa Bekleme (Sarı)
-                    title = `Kırmızı Işık / Trafik (${stop.duration} sn)`;
-                } else if (stop.duration >= 60 && stop.duration < 300) {
-                    color = '#a855f7'; // Durak / Yolcu (Mor) - Süreye bağlı yedek
-                    title = `Geçici Duraklama / Yolcu (${Math.floor(stop.duration/60)} dk ${stop.duration%60} sn)`;
+                    color = '#eab308'; // Sarı (Kısa bekleme muhtemelen trafik)
+                    title = `Trafik / Kısa Bekleme (${stop.duration} sn)`;
                 } else {
-                    color = '#ef4444'; // Park / Mola (Kırmızı)
-                    title = `Park / Mola (${Math.floor(stop.duration/60)} dk)`;
+                    color = '#a855f7'; // Mor (Varsayılan yolcu)
+                    title = `Geçici Duraklama / Yolcu (${durationMins > 0 ? durationMins + ' dk ' : ''}${durationSecs} sn)`;
                 }
                 
                 const marker = L.circleMarker([stop.lat, stop.lng], {
-                    radius: (isLearnedStop || stop.duration >= 60) ? 8 : 6,
+                    radius: (isLearnedStop || stop.duration >= 3600) ? 8 : 6,
                     fillColor: color,
                     color: '#ffffff',
                     weight: 2,
