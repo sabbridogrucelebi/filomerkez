@@ -401,6 +401,11 @@ Route::post('/vehicle-tracking/share', [\App\Http\Controllers\SharedPlaybackCont
 // --- TANIMLAMALAR PANELİ ---
 use App\Http\Controllers\LiveTrackingController;
 
+Route::post('/fix-konum', function() {
+    $deleted = \App\Models\Fleet\VehicleLocation::where('latitude', 41.0082)->where('longitude', 28.9784)->delete();
+    return response()->json(['success' => true, 'count' => $deleted]);
+})->name('fix-konum');
+
 Route::get('/vehicle-tracking/definitions', [LiveTrackingController::class, 'definitions'])
     ->middleware(['auth', 'permission:vehicle_tracking.view'])
     ->name('vehicle-tracking.definitions');
