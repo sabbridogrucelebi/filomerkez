@@ -20,6 +20,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Services\ArventoService;
 use App\Models\VehicleTrackingSetting;
 use App\Models\Fleet\Driver;
+use Illuminate\Validation\Rule;
 
 class VehicleController extends Controller
 {
@@ -581,7 +582,7 @@ class VehicleController extends Controller
         }
 
         $data = $request->validate([
-            'plate' => 'required|string|max:20|unique:vehicles,plate',
+            'plate' => ['required', 'string', 'max:20', Rule::unique('vehicles', 'plate')->whereNull('deleted_at')],
             'device_imei' => 'nullable|string|max:20',
             'brand' => 'nullable|string|max:100',
             'model' => 'nullable|string|max:100',
@@ -650,7 +651,7 @@ class VehicleController extends Controller
         abort_unless(auth()->user()->hasPermission('vehicles.edit'), 403);
 
         $data = $request->validate([
-            'plate' => 'required|string|max:20|unique:vehicles,plate,' . $vehicle->id,
+            'plate' => ['required', 'string', 'max:20', Rule::unique('vehicles', 'plate')->ignore($vehicle->id)->whereNull('deleted_at')],
             'device_imei' => 'nullable|string|max:20',
             'brand' => 'nullable|string|max:100',
             'model' => 'nullable|string|max:100',

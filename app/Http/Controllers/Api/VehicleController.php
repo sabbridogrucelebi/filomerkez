@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class VehicleController extends Controller
 {
@@ -131,7 +132,8 @@ class VehicleController extends Controller
         }
 
         $validated = $request->validate([
-            'plate' => 'required|string|max:20|unique:vehicles,plate',
+            'plate' => ['required', 'string', 'max:20', Rule::unique('vehicles', 'plate')->whereNull('deleted_at')],
+            'device_imei' => 'nullable|string|max:20',
             'brand' => 'nullable|string|max:100',
             'model' => 'nullable|string|max:100',
             'vehicle_type' => 'nullable|string|max:100',
@@ -206,7 +208,7 @@ class VehicleController extends Controller
         }
 
         $validated = $request->validate([
-            'plate' => 'required|string|max:20|unique:vehicles,plate,' . $vehicle->id,
+            'plate' => ['required', 'string', 'max:20', Rule::unique('vehicles', 'plate')->ignore($vehicle->id)->whereNull('deleted_at')],
             'brand' => 'nullable|string|max:100',
             'model' => 'nullable|string|max:100',
             'vehicle_type' => 'nullable|string|max:100',
