@@ -506,11 +506,24 @@ class LiveTrackingController extends Controller
             ]);
         }
         
-        // Simüle edilmiş canlı konum verisi (Gerçekte Arvento'dan çekilecek)
+        // Veritabanından bu IMEI'nin bilinen son konumunu çek (Yüksek doğruluk / Gerçek veri)
+        $lastLocation = \App\Models\Fleet\VehicleLocation::where('imei', $imei)
+            ->orderBy('recorded_at', 'desc')
+            ->first();
+            
+        if ($lastLocation) {
+            $lat = $lastLocation->latitude;
+            $lng = $lastLocation->longitude;
+        } else {
+            // Hiç sinyal yoksa varsayılan Konya konumu
+            $lat = 37.871;
+            $lng = 32.484;
+        }
+        
         return response()->json([
             'success' => true,
-            'lat' => 37.871, // Konya civarı örnek koordinat
-            'lng' => 32.484,
+            'lat' => $lat,
+            'lng' => $lng,
             'message' => 'Cihazdan başarılı bir şekilde sinyal alındı.'
         ]);
     }
@@ -555,6 +568,12 @@ class LiveTrackingController extends Controller
         $driver->vehicle_id = $vehicle->id;
         $driver->is_active = true;
         $driver->save();
+        
+        // 4. OTOMATİK SİNYAL ÇÖZÜMÜ:
+        // Cihazın geçmişteki tüm sinyallerini yeni eklenen bu araca bağla
+        // Böylece "Sinyal Yok" hatası olmadan haritada anında son bilinen konumuyla çıkar.
+        \App\Models\Fleet\VehicleLocation::where('imei', $request->imei)
+            ->update(['vehicle_id' => $vehicle->id]);
         
         return response()->json(['success' => true, 'message' => 'Cihaz, Araç ve Şoför başarıyla eşleştirildi.']);
     }
