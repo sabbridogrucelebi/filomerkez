@@ -91,15 +91,23 @@ class AnalyzeLearnedStops extends Command
                     }
 
                     if ($isNew) {
+                        $isTrafficLight = $this->checkTrafficLight($cluster['lat'], $cluster['lng']);
+                        
                         LearnedStop::create([
                             'company_id' => $company->id,
                             'latitude' => $cluster['lat'],
                             'longitude' => $cluster['lng'],
                             'radius_meters' => 50,
                             'stop_count' => $cluster['count'],
-                            'last_stopped_at' => $cluster['last_stopped']
+                            'last_stopped_at' => $cluster['last_stopped'],
+                            'is_traffic_light' => $isTrafficLight
                         ]);
                         $savedCount++;
+                        
+                        // Avoid hitting Overpass API rate limits if there are many new stops
+                        if ($isTrafficLight || true) {
+                            sleep(1); 
+                        }
                     }
                 }
             }
@@ -125,5 +133,29 @@ class AnalyzeLearnedStops extends Command
             cos($lat1) * cos($lat2) * pow(sin($lonDelta / 2), 2)));
         
         return $angle * $earthRadius;
+    }
+
+    private function checkTrafficLight($lat, $lng)
+    {
+        try {
+            $client = new \GuzzleHttp\Client();
+            $url = "http://overpass-api.de/api/interpreter";
+            $query = "[out:json];node(around:50,{$lat},{$lng})['highway'='traffic_signals'];out;";
+            
+            $response = $client->post($url, [
+                'form_params' => ['data' => $query],
+                'timeout' => 5, // 5 saniyeden uzun sürerse iptal et
+            ]);
+            
+            $data = json_decode($response->getBody()->getContents(), true);
+            
+            if (isset($data['elements']) && count($data['elements']) > 0) {
+                return true;
+            }
+        } catch (\Exception $e) {
+            // Hata olursa servisi engellememek için traffic light olmadığını varsay
+        }
+        
+        return false;
     }
 }

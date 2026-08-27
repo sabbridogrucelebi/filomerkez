@@ -271,7 +271,7 @@ class LiveTrackingController extends Controller
         }
 
         $learnedStops = \App\Models\LearnedStop::where('company_id', $companyId)
-            ->select('latitude', 'longitude', 'radius_meters')
+            ->select('latitude', 'longitude', 'radius_meters', 'is_traffic_light')
             ->get();
 
         return response()->json([

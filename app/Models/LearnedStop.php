@@ -16,7 +16,8 @@ class LearnedStop extends Model
         'longitude',
         'radius_meters',
         'stop_count',
-        'last_stopped_at'
+        'last_stopped_at',
+        'is_traffic_light'
     ];
 
     protected $casts = [
@@ -24,6 +25,7 @@ class LearnedStop extends Model
         'longitude' => 'decimal:8',
         'radius_meters' => 'integer',
         'stop_count' => 'integer',
-        'last_stopped_at' => 'datetime'
+        'last_stopped_at' => 'datetime',
+        'is_traffic_light' => 'boolean'
     ];
 }

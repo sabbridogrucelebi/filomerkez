@@ -1767,22 +1767,30 @@
                 let color = '';
                 let title = '';
                 
-                // Öğrenilmiş Durak (Learned Stop) Kontrolü
+                // Öğrenilmiş Durak (Learned Stop) veya Kırmızı Işık Kontrolü
                 let isLearnedStop = false;
+                let isLearnedTrafficLight = false;
+                
                 if (window.learnedStopsData && window.learnedStopsData.length > 0) {
                     for(let ls of window.learnedStopsData) {
                         // Leaflet map.distance meters olarak hesaplar
                         let dist = map.distance([stop.lat, stop.lng], [ls.latitude, ls.longitude]);
                         if (dist <= (ls.radius_meters || 50)) {
                             isLearnedStop = true;
+                            if (ls.is_traffic_light) {
+                                isLearnedTrafficLight = true;
+                            }
                             break;
                         }
                     }
                 }
 
-                if (isLearnedStop) {
+                if (isLearnedTrafficLight) {
+                    color = '#eab308'; // Trafik Işığı (Sarı)
+                    title = `🚦 Öğrenilmiş Kırmızı Işık / Kavşak (${Math.floor(stop.duration/60)} dk ${stop.duration%60} sn)`;
+                } else if (isLearnedStop) {
                     color = '#a855f7'; // Durak (Mor)
-                    title = `Öğrenilmiş Durak / Yolcu İşlemi (${Math.floor(stop.duration/60)} dk ${stop.duration%60} sn)`;
+                    title = `🚏 Öğrenilmiş Durak / Yolcu İşlemi (${Math.floor(stop.duration/60)} dk ${stop.duration%60} sn)`;
                 } else if (stop.duration < 60) {
                     color = '#eab308'; // Trafik Işığı / Kısa Bekleme (Sarı)
                     title = `Kırmızı Işık / Trafik (${stop.duration} sn)`;
