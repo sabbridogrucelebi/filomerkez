@@ -399,7 +399,28 @@ Route::post('/vehicle-tracking/share', [\App\Http\Controllers\SharedPlaybackCont
     ->name('vehicle.tracking.share');
 
 // --- TANIMLAMALAR PANELİ ---
-Route::get('/vehicle-tracking/definitions', [\App\Http\Controllers\LiveTrackingController::class, 'definitions'])
+use App\Http\Controllers\LiveTrackingController;
+use App\Models\Fleet\VehicleLocation;
+
+Route::get('/test-ping', function() {
+    $vehicle = Vehicle::where('device_imei', '353210110128749')->first();
+    if ($vehicle) {
+        VehicleLocation::create([
+            'company_id' => $vehicle->company_id,
+            'vehicle_id' => $vehicle->id,
+            'imei' => '353210110128749',
+            'latitude' => 41.0082,
+            'longitude' => 28.9784,
+            'speed' => 60,
+            'course' => 90,
+            'recorded_at' => now(),
+        ]);
+        return 'Sinyal eklendi for plate: ' . $vehicle->plate;
+    }
+    return 'Vehicle not found';
+});
+
+Route::get('/vehicle-tracking/definitions', [LiveTrackingController::class, 'definitions'])
     ->middleware(['auth', 'permission:vehicle_tracking.view'])
     ->name('vehicle-tracking.definitions');
 
