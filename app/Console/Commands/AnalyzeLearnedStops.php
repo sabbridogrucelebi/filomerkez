@@ -156,7 +156,7 @@ class AnalyzeLearnedStops extends Command
             $query .= ");out;";
 
             $client = new \GuzzleHttp\Client();
-            $url = "http://overpass-api.de/api/interpreter";
+            $url = "https://overpass-api.de/api/interpreter";
             
             $response = $client->post($url, [
                 'form_params' => ['data' => $query],
