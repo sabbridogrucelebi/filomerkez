@@ -481,10 +481,6 @@
                 transform: translateY(120%) !important;
             }
             
-            #rightHistoryPanel.mobile-collapsed {
-                transform: translateY(calc(100% - 90px)) !important;
-            }
-            
             /* Leaflet Harita Kontrolleri */
             .leaflet-top.leaflet-right { margin-top: 130px !important; margin-right: 10px !important; }
             .leaflet-top.leaflet-left { margin-top: 130px !important; margin-left: 10px !important; }
@@ -1981,7 +1977,7 @@
                 if(window.innerWidth <= 768) {
                     const panel = document.getElementById('rightHistoryPanel');
                     const icon = document.getElementById('mobileCollapseIcon');
-                    if (panel) panel.classList.remove('mobile-collapsed');
+                    if (panel) panel.classList.remove('panel-collapsed');
                     if (icon) icon.style.transform = 'rotate(0deg)';
                 }
             } else {
@@ -1996,7 +1992,7 @@
                 if(window.innerWidth <= 768) {
                     const panel = document.getElementById('rightHistoryPanel');
                     const icon = document.getElementById('mobileCollapseIcon');
-                    if (panel) panel.classList.add('mobile-collapsed');
+                    if (panel) panel.classList.add('panel-collapsed');
                     if (icon) icon.style.transform = 'rotate(180deg)';
                 }
             }
