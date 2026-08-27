@@ -58,6 +58,15 @@ Route::get('/run-migrations-secret', function () {
     }
 });
 
+Route::get('/run-analyze-stops-secret', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('trips:analyze-stops');
+        return "Sanal duraklar başarıyla öğrenildi! Çıktı:<br><pre>" . \Illuminate\Support\Facades\Artisan::output() . "</pre>";
+    } catch (\Exception $e) {
+        return "Hata oluştu: " . $e->getMessage();
+    }
+});
+
 Route::get('/debug-logs-secret-123', function() {
     $files = glob(storage_path('logs/laravel-*.log'));
     if(empty($files)) { $files = [storage_path('logs/laravel.log')]; }
