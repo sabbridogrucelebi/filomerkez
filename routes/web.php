@@ -401,11 +401,6 @@ Route::post('/vehicle-tracking/share', [\App\Http\Controllers\SharedPlaybackCont
 // --- TANIMLAMALAR PANELİ ---
 use App\Http\Controllers\LiveTrackingController;
 
-Route::get('/fix-konum', function() {
-    $deleted = \App\Models\Fleet\VehicleLocation::where('latitude', 41.0082)->where('longitude', 28.9784)->delete();
-    return "İstanbul'daki sahte test konumları silindi. Toplam: " . $deleted;
-});
-
 Route::get('/vehicle-tracking/definitions', [LiveTrackingController::class, 'definitions'])
     ->middleware(['auth', 'permission:vehicle_tracking.view'])
     ->name('vehicle-tracking.definitions');
