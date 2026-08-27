@@ -60,8 +60,9 @@ Route::get('/run-migrations-secret', function () {
 
 Route::get('/run-analyze-stops-secret', function () {
     try {
+        \Illuminate\Support\Facades\DB::table('learned_stops')->truncate();
         \Illuminate\Support\Facades\Artisan::call('trips:analyze-stops');
-        return "Sanal duraklar başarıyla öğrenildi! Çıktı:<br><pre>" . \Illuminate\Support\Facades\Artisan::output() . "</pre>";
+        return "Tüm eski duraklar silindi ve Sanal duraklar baştan başarıyla öğrenildi! Çıktı:<br><pre>" . \Illuminate\Support\Facades\Artisan::output() . "</pre>";
     } catch (\Exception $e) {
         return "Hata oluştu: " . $e->getMessage();
     }
