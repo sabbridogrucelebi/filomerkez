@@ -1650,6 +1650,7 @@
                     if (data.success && data.history.length > 0) {
                         historyData = data.history;
                         tripData = data.trips || [];
+                        window.learnedStopsData = data.learnedStops || [];
                         initArventoPlaybackUI();
                     } else {
                         alert('Seçilen tarih aralığında araca ait konum verisi bulunamadı.');
@@ -1765,19 +1766,36 @@
             function addStopMarkerToMap(stop) {
                 let color = '';
                 let title = '';
-                if (stop.duration < 60) {
+                
+                // Öğrenilmiş Durak (Learned Stop) Kontrolü
+                let isLearnedStop = false;
+                if (window.learnedStopsData && window.learnedStopsData.length > 0) {
+                    for(let ls of window.learnedStopsData) {
+                        // Leaflet map.distance meters olarak hesaplar
+                        let dist = map.distance([stop.lat, stop.lng], [ls.latitude, ls.longitude]);
+                        if (dist <= (ls.radius_meters || 50)) {
+                            isLearnedStop = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (isLearnedStop) {
+                    color = '#a855f7'; // Durak (Mor)
+                    title = `Öğrenilmiş Durak / Yolcu İşlemi (${Math.floor(stop.duration/60)} dk ${stop.duration%60} sn)`;
+                } else if (stop.duration < 60) {
                     color = '#eab308'; // Trafik Işığı / Kısa Bekleme (Sarı)
                     title = `Kırmızı Işık / Trafik (${stop.duration} sn)`;
                 } else if (stop.duration >= 60 && stop.duration < 300) {
-                    color = '#a855f7'; // Durak / Yolcu (Mor)
-                    title = `Durak / Yolcu Alma (${Math.floor(stop.duration/60)} dk ${stop.duration%60} sn)`;
+                    color = '#a855f7'; // Durak / Yolcu (Mor) - Süreye bağlı yedek
+                    title = `Geçici Duraklama / Yolcu (${Math.floor(stop.duration/60)} dk ${stop.duration%60} sn)`;
                 } else {
                     color = '#ef4444'; // Park / Mola (Kırmızı)
                     title = `Park / Mola (${Math.floor(stop.duration/60)} dk)`;
                 }
                 
                 const marker = L.circleMarker([stop.lat, stop.lng], {
-                    radius: stop.duration >= 60 ? 8 : 6,
+                    radius: (isLearnedStop || stop.duration >= 60) ? 8 : 6,
                     fillColor: color,
                     color: '#ffffff',
                     weight: 2,

@@ -266,10 +266,15 @@ class LiveTrackingController extends Controller
             $trips[] = $currentTrip;
         }
 
+        $learnedStops = \App\Models\LearnedStop::where('company_id', $companyId)
+            ->select('latitude', 'longitude', 'radius_meters')
+            ->get();
+
         return response()->json([
             'success' => true, 
             'history' => $historyData,
-            'trips' => array_reverse($trips) // newest trips first
+            'trips' => array_reverse($trips), // newest trips first
+            'learnedStops' => $learnedStops
         ]);
     }
 
