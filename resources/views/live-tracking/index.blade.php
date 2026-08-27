@@ -410,6 +410,11 @@
             border-color: rgba(255,255,255,0.3) !important;
         }
 
+        /* Ortak Collapse Sınıfı */
+        .panel-collapsed {
+            transform: translateY(calc(100% - 90px)) !important;
+        }
+
         /* =============================================
            MOBİL UYUMLULUK (RESPONSIVE)
            ============================================= */
@@ -845,7 +850,7 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <button onclick="toggleMobileHistoryPanel()" class="md:hidden w-10 h-10 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 flex justify-center items-center text-blue-400 transition-all border border-blue-500/20" title="Paneli Küçült/Büyüt">
+                <button onclick="toggleMobileHistoryPanel()" class="w-10 h-10 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 flex justify-center items-center text-blue-400 transition-all border border-blue-500/20" title="Paneli Küçült/Büyüt">
                     <svg id="mobileCollapseIcon" class="w-5 h-5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
                 </button>
                 @if(!isset($isGuest))
@@ -1015,9 +1020,9 @@
                         <div class="text-[10px] font-black text-indigo-300 uppercase tracking-[0.2em] mb-2 drop-shadow-md">Toplam Mesafe</div>
                         <div class="text-3xl font-black text-white tracking-tight" id="summaryTotalDistance">0<span class="text-sm font-bold text-indigo-300 ml-1">km</span></div>
                     </div>
-                    <div class="bg-gradient-to-br from-purple-900/40 to-purple-800/20 border border-purple-500/30 p-6 rounded-[2rem] flex flex-col items-center justify-center text-center shadow-[0_10px_30px_rgba(168,85,247,0.2)]">
-                        <div class="text-[10px] font-black text-purple-300 uppercase tracking-[0.2em] mb-2 drop-shadow-md">Maksimum Hız</div>
-                        <div class="text-3xl font-black text-white tracking-tight" id="summaryMaxSpeed">0<span class="text-sm font-bold text-purple-300 ml-1">km/s</span></div>
+                    <div class="bg-gradient-to-br from-slate-800/40 to-slate-800/20 border border-slate-600/30 p-6 rounded-[2rem] flex flex-col items-center justify-center text-center shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
+                        <div class="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-2 drop-shadow-md">Maksimum Hız</div>
+                        <div class="text-3xl font-black text-white tracking-tight" id="summaryMaxSpeed">0<span class="text-sm font-bold text-slate-400 ml-1">km/s</span></div>
                     </div>
                 </div>
                 <!-- Premium Pasta Grafik -->
@@ -2294,11 +2299,31 @@
             const rightPanel = document.getElementById('rightHistoryPanel');
             if (rightPanel) {
                 rightPanel.style.transform = 'translateX(0)';
+                rightPanel.classList.remove('panel-collapsed'); // Açılırken collapse durumunu sıfırla
             }
             
             // Eğer bir araç daha önce seçildiyse, dropdown'ı doldur
             if (currentAdvVehicle) {
                 selectVehicle(currentAdvVehicle.Node, currentAdvVehicle.LicensePlate);
+            }
+        }
+
+        // Mobil (ve artık Web) için paneli aşağıya/yukarıya gizleme
+        function toggleMobileHistoryPanel() {
+            const panel = document.getElementById('rightHistoryPanel');
+            const icon = document.getElementById('mobileCollapseIcon');
+            
+            if (panel.classList.contains('panel-collapsed')) {
+                // Paneli Yukarı Kaldır
+                panel.classList.remove('panel-collapsed');
+                icon.style.transform = 'rotate(0deg)';
+                // Panelin orijinal yerine geçmesini sağlamak için
+                panel.style.transform = 'translateX(0)';
+            } else {
+                // Paneli Aşağı Gizle
+                panel.classList.add('panel-collapsed');
+                icon.style.transform = 'rotate(180deg)';
+                // translateY ile gizliyoruz (CSS tarafında hallediliyor)
             }
         }
 
