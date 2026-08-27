@@ -2061,21 +2061,39 @@
 
             const addrEl = document.getElementById('playbackCurrentAddress');
             if(addrEl) {
-                // Performans için geçici olarak koordinat yazalım, oynatma durduğunda adres çekeceğiz.
-                if (!loc.addressFetched && !isPlaying) {
-                    addrEl.innerText = "Adres yükleniyor...";
-                    fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${loc.lat}&lon=${loc.lng}`)
-                        .then(r => r.json())
-                        .then(data => {
-                            const addr = data.display_name || 'Adres bulunamadı';
-                            loc.addressCache = addr;
-                            loc.addressFetched = true;
-                            addrEl.innerText = addr;
-                        }).catch(() => {
-                            addrEl.innerText = `${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}`;
-                        });
+                if (!loc.addressFetched) {
+                    // API banlanmaması için 1.5 saniyede bir istek atalım
+                    if (Date.now() - (window.lastNominatimFetch || 0) > 1500) {
+                        window.lastNominatimFetch = Date.now();
+                        addrEl.innerText = window.lastPlaybackAddress || "Adres yükleniyor...";
+                        
+                        fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${loc.lat}&lon=${loc.lng}`)
+                            .then(r => r.json())
+                            .then(data => {
+                                const addr = data.display_name || 'Adres bulunamadı';
+                                // Uzun adresleri kısalt (Mahalle, İlçe, İl)
+                                let addrParts = addr.split(', ');
+                                let shortAddr = addrParts.length > 3 ? addrParts.slice(0, 3).join(', ') + '...' : addr;
+                                
+                                loc.addressCache = shortAddr;
+                                loc.addressFetched = true;
+                                window.lastPlaybackAddress = shortAddr;
+                                
+                                // Eğer hala aynı noktadaysak (hızlı geçmediyse) ekrana yaz
+                                if (historyData[currentPlaybackIndex] === loc) {
+                                    addrEl.innerText = shortAddr;
+                                }
+                            }).catch(() => {
+                                addrEl.innerText = window.lastPlaybackAddress || 'Adres alınamadı';
+                            });
+                    } else {
+                        // İstek atılamıyorsa son bilinen adresi göster, koordinat GÖSTERME
+                        addrEl.innerText = window.lastPlaybackAddress || "Adres taranıyor...";
+                    }
                 } else {
-                    addrEl.innerText = loc.addressCache || `${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}`;
+                    // Önceden çekilmişse direkt yaz
+                    addrEl.innerText = loc.addressCache;
+                    window.lastPlaybackAddress = loc.addressCache;
                 }
             }
             
