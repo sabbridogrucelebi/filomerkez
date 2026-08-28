@@ -209,15 +209,20 @@ class ReportsApiController extends Controller
                 $dayEndUtc = $currentDate->copy()->endOfDay()->setTimezone('UTC');
                 
                 foreach ($vehicles as $vehicle) {
-                    // İlk hareket veya kontak
                     $firstLocation = \App\Models\Fleet\VehicleLocation::where('vehicle_id', $vehicle->id)
                         ->whereBetween('recorded_at', [$dayStartUtc, $dayEndUtc])
-                        ->where('speed', '>', 0)
+                        ->where(function($q) {
+                            $q->where('speed', '>', 2)
+                              ->orWhereRaw("JSON_EXTRACT(status, '$.acc') = true");
+                        })
                         ->orderBy('recorded_at', 'asc')
                         ->first();
                         
                     if ($firstLocation) {
-                        $localTime = \Carbon\Carbon::parse($firstLocation->recorded_at)->setTimezone('Europe/Istanbul');
+                        // Veritabanındaki string UTC, ancak Laravel timezone config'i nedeniyle yanlış yorumlanmış olabilir.
+                        // getRawOriginal ile ham stringi alıp UTC olarak tanıtıyor, sonra İstanbul saatine çeviriyoruz.
+                        $rawDate = $firstLocation->getRawOriginal('recorded_at');
+                        $localTime = \Carbon\Carbon::parse($rawDate, 'UTC')->setTimezone('Europe/Istanbul');
                         
                         $driver = $vehicle->drivers->first();
                         $driverName = $driver ? trim(($driver->first_name ?? $driver->name ?? '') . ' ' . ($driver->last_name ?? $driver->surname ?? '')) : 'Şoför Atanmamış';
