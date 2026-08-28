@@ -147,7 +147,6 @@ class ArventoService
                                 !empty($v['ACC']) ||
                                 !empty($v['Engine'])
                             ),
-                            'Raw'          => $v, // Debugging için ham veri
                         ];
                 }
                 return $vehicles;

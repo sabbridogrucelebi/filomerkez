@@ -3,7 +3,7 @@ const net = require('net');
 const axios = require('axios');
 const parser = require('./parser');
 
-// Store connected devices: { imei: { socket } }
+// Store connected devices: { imei: { socket, lastAcc, lastVoltage, lastLat, lastLng, lastSpeed, lastCourse } }
 const devices = {};
 
 const PORT = process.env.TCP_PORT || 36025;
@@ -33,9 +33,20 @@ const server = net.createServer((socket) => {
                     deviceImei = packet.imei;
                     console.log(`[LOGIN] Cihaz IMEI: ${deviceImei}`);
                     
-                    devices[deviceImei] = {
-                        socket: socket
-                    };
+                    // Cihaz state'ini başlat veya güncelle
+                    if (!devices[deviceImei]) {
+                        devices[deviceImei] = {
+                            socket: socket,
+                            lastAcc: false,
+                            lastVoltage: null,
+                            lastLat: null,
+                            lastLng: null,
+                            lastSpeed: 0,
+                            lastCourse: 0
+                        };
+                    } else {
+                        devices[deviceImei].socket = socket;
+                    }
 
                     // Cihaza Login Response gönder
                     const response = parser.createResponse(0x01, packet.serialNumber);
@@ -43,11 +54,58 @@ const server = net.createServer((socket) => {
                 }
 
                 // 2. HEARTBEAT PAKETI (0x13)
+                // GT06N'de ACC (Kontak) bilgisi SADECE burada bulunur!
                 else if (packet.protocolId === 0x13) {
                     console.log(`[HEARTBEAT] IMEI: ${deviceImei || 'Bilinmiyor'}`);
+                    
                     // Cihaza Heartbeat Response gönder (Cihazın kopmamasını saglar)
                     const response = parser.createResponse(0x13, packet.serialNumber);
                     socket.write(response);
+
+                    // Heartbeat'ten ACC ve voltaj bilgisini al ve sakla
+                    if (packet.heartbeat && deviceImei && devices[deviceImei]) {
+                        const prevAcc = devices[deviceImei].lastAcc;
+                        const newAcc = packet.heartbeat.acc;
+                        
+                        devices[deviceImei].lastAcc = newAcc;
+                        devices[deviceImei].lastVoltage = packet.heartbeat.voltage;
+
+                        console.log(`[HEARTBEAT] IMEI: ${deviceImei} | ACC: ${prevAcc ? 'AÇIK' : 'KAPALI'} → ${newAcc ? 'AÇIK' : 'KAPALI'} | Voltaj: ${packet.heartbeat.voltage}V`);
+
+                        // ACC durumu değiştiğinde VEYA periyodik olarak durumu API'ye bildir
+                        // (Son bilinen konum ile gönder, böylece cihaz duruyor olsa bile ACC güncellensin)
+                        if (devices[deviceImei].lastLat !== null) {
+                            try {
+                                await axios.post(API_URL, {
+                                    imei: deviceImei,
+                                    latitude: devices[deviceImei].lastLat,
+                                    longitude: devices[deviceImei].lastLng,
+                                    speed: devices[deviceImei].lastSpeed,
+                                    course: devices[deviceImei].lastCourse,
+                                    status: {
+                                        acc: newAcc,
+                                        voltage: packet.heartbeat.voltage,
+                                        gsmSignal: packet.heartbeat.gsmSignal,
+                                        charging: packet.heartbeat.charging,
+                                        alarm: packet.heartbeat.alarm,
+                                        defense: packet.heartbeat.defense
+                                    },
+                                    recorded_at: new Date().toISOString().replace('T', ' ').split('.')[0]
+                                }, {
+                                    headers: {
+                                        'X-Telemetry-Secret': API_SECRET,
+                                        'Content-Type': 'application/json'
+                                    },
+                                    timeout: 5000
+                                });
+                                console.log(`[+] Heartbeat ACC verisi API'ye gonderildi (ACC: ${newAcc ? 'AÇIK' : 'KAPALI'}).`);
+                            } catch (apiError) {
+                                console.error(`[-] Heartbeat API'ye gonderilemedi:`, apiError.message);
+                            }
+                        } else {
+                            console.log(`[HEARTBEAT] Henuz konum verisi yok, API'ye gonderilmedi.`);
+                        }
+                    }
                 }
 
                 // 3. LOKASYON PAKETI (0x12) veya ALARM PAKETI (0x16)
@@ -55,9 +113,29 @@ const server = net.createServer((socket) => {
                     const loc = packet.location;
                     if (!loc) continue;
 
-                    console.log(`[LOCATION] IMEI: ${deviceImei} | Enlem: ${loc.lat}, Boylam: ${loc.lng}, Hiz: ${loc.speed} km/s`);
+                    console.log(`[LOCATION] IMEI: ${deviceImei} | Enlem: ${loc.lat}, Boylam: ${loc.lng}, Hiz: ${loc.speed} km/s | Uydu: ${loc.satellites}`);
 
                     if (deviceImei) {
+                        // Son bilinen konumu cihaz state'ine kaydet
+                        if (devices[deviceImei]) {
+                            devices[deviceImei].lastLat = loc.lat;
+                            devices[deviceImei].lastLng = loc.lng;
+                            devices[deviceImei].lastSpeed = loc.speed;
+                            devices[deviceImei].lastCourse = loc.course;
+                        }
+
+                        // Heartbeat'ten gelen son ACC durumunu konum verisiyle birleştir
+                        const currentAcc = devices[deviceImei] ? devices[deviceImei].lastAcc : false;
+                        const currentVoltage = devices[deviceImei] ? devices[deviceImei].lastVoltage : null;
+
+                        const statusPayload = {
+                            ...(loc.status || {}),
+                            acc: currentAcc,  // Heartbeat'ten gelen gerçek ACC
+                        };
+                        if (currentVoltage !== null) {
+                            statusPayload.voltage = currentVoltage;
+                        }
+
                         try {
                             // API'ye HTTP POST gonder
                             await axios.post(API_URL, {
@@ -66,7 +144,7 @@ const server = net.createServer((socket) => {
                                 longitude: loc.lng,
                                 speed: loc.speed,
                                 course: loc.course,
-                                status: loc.status || {},
+                                status: statusPayload,
                                 recorded_at: loc.datetime
                             }, {
                                 headers: {
@@ -75,7 +153,7 @@ const server = net.createServer((socket) => {
                                 },
                                 timeout: 5000
                             });
-                            console.log(`[+] Veri API'ye basariyla gonderildi.`);
+                            console.log(`[+] Veri API'ye basariyla gonderildi. (ACC: ${currentAcc ? 'AÇIK ✓' : 'KAPALI ✗'})`);
                         } catch (apiError) {
                             console.error(`[-] API'ye gonderilemedi:`, apiError.message);
                         }
@@ -97,7 +175,11 @@ const server = net.createServer((socket) => {
     socket.on('close', () => {
         console.log(`[-] Cihaz Baglantisi Koptu: ${socket.remoteAddress}:${socket.remotePort}`);
         if (deviceImei && devices[deviceImei]) {
-            delete devices[deviceImei];
+            // Bağlantı koptuğunda ACC'yi false yap (Cihaz kapandı veya sinyal kesildi)
+            devices[deviceImei].lastAcc = false;
+            devices[deviceImei].socket = null;
+            // Cihazı sil (bellek yönetimi için)
+            // delete devices[deviceImei]; // İsteğe bağlı: Reconnect'te son durumu korumak için silme
         }
     });
 
@@ -108,4 +190,6 @@ const server = net.createServer((socket) => {
 
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`GPS TCP Server ${PORT} portunda dinleniyor...`);
+    console.log(`API URL: ${API_URL}`);
+    console.log(`Concox GT06N Protokolü: ACC bilgisi Heartbeat (0x13) paketinden okunuyor.`);
 });

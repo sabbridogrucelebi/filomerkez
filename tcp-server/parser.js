@@ -57,6 +57,60 @@ function parseConcox(buffer) {
                 else if (protocolId === 0x12) {
                     packet.location = parseLocation(packetInfoContent);
                 }
+
+                // 3. HEARTBEAT PAKETİ (0x13)
+                // GT06N Heartbeat: Terminal Bilgi Bayt'ı + Voltaj Seviyesi + GSM Sinyal Gücü
+                // Terminal Bilgi Bayt'ı (Byte 0):
+                //   Bit 0: Yağ/Elektrik Bağlı (1) / Bağlı Değil (0)
+                //   Bit 1: GPS İzleme Açık (1) / Kapalı (0)
+                //   Bit 2-4: Alarm türleri (000=Normal, 001=SOS, 010=Düşük Pil, 011=Güç Kesildi, 100=Titreşim)
+                //   Bit 5: Şarj Durumu (1=Şarjda, 0=Şarj Değil)
+                //   Bit 6: ACC/Kontak Durumu (1=AÇIK, 0=KAPALI) ← BU BİZİM İHTİYACIMIZ!
+                //   Bit 7: Savunma/Tahkimat durumu
+                else if (protocolId === 0x13) {
+                    if (packetInfoContent.length >= 1) {
+                        const terminalInfo = packetInfoContent[0];
+                        const acc = (terminalInfo & 0x40) >> 6;           // Bit 6: ACC (Kontak)
+                        const charging = (terminalInfo & 0x20) >> 5;      // Bit 5: Şarj
+                        const gpsTracking = (terminalInfo & 0x02) >> 1;   // Bit 1: GPS İzleme
+                        const oilElec = terminalInfo & 0x01;              // Bit 0: Yağ/Elektrik
+                        const defense = (terminalInfo & 0x80) >> 7;       // Bit 7: Savunma
+
+                        // Alarm türü (Bit 2-4)
+                        const alarmBits = (terminalInfo >> 2) & 0x07;
+                        const alarmTypes = ['Normal', 'SOS', 'Düşük Pil', 'Güç Kesildi', 'Titreşim', 'Bilinmeyen', 'Bilinmeyen', 'Bilinmeyen'];
+                        const alarm = alarmTypes[alarmBits] || 'Bilinmeyen';
+
+                        // Voltaj seviyesi (Byte 1) ve GSM sinyal gücü (Byte 2)
+                        const voltageLevel = packetInfoContent.length >= 2 ? packetInfoContent[1] : 0;
+                        const gsmSignal = packetInfoContent.length >= 3 ? packetInfoContent[2] : 0;
+
+                        // Voltaj seviyesini gerçek voltaja çevir (GT06N standart aralıkları)
+                        // 0=Kapalı, 1=Çok Düşük, 2=Düşük, 3=Orta, 4=Yüksek, 5=Çok Yüksek, 6=Tam
+                        const voltageMap = { 0: 0, 1: 10.8, 2: 11.4, 3: 11.8, 4: 12.2, 5: 12.6, 6: 13.2 };
+                        const voltage = voltageMap[voltageLevel] || 12.0;
+
+                        packet.heartbeat = {
+                            acc: acc === 1,
+                            charging: charging === 1,
+                            gpsTracking: gpsTracking === 1,
+                            oilElecConnected: oilElec === 1,
+                            defense: defense === 1,
+                            alarm: alarm,
+                            voltageLevel: voltageLevel,
+                            voltage: voltage,
+                            gsmSignal: gsmSignal,
+                            terminalInfoRaw: '0x' + terminalInfo.toString(16).padStart(2, '0')
+                        };
+
+                        console.log(`[HEARTBEAT] ACC: ${packet.heartbeat.acc ? 'AÇIK ✓' : 'KAPALI ✗'} | Voltaj: ${voltage}V | GSM: ${gsmSignal} | Alarm: ${alarm} | Raw: ${packet.heartbeat.terminalInfoRaw}`);
+                    }
+                }
+
+                // 4. ALARM PAKETİ (0x16) - Konum + Alarm bilgisi içerir
+                else if (protocolId === 0x16) {
+                    packet.location = parseLocation(packetInfoContent);
+                }
             }
 
             packets.push(packet);
@@ -81,22 +135,39 @@ function parseLocation(buffer) {
     const second = buffer[5];
     const datetime = `20${year.toString().padStart(2, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`;
 
-    // Latitude & Longitude
+    // GPS Bilgi Uzunluğu & Uydu Sayısı (Byte 6)
+    const gpsInfoLength = (buffer[6] >> 4) & 0x0F; // Üst 4 bit: GPS bilgi uzunluğu
+    const satellites = buffer[6] & 0x0F;             // Alt 4 bit: Uydu sayısı
+
+    // Latitude & Longitude (Ham değerler, Kuzey/Güney ve Doğu/Batı bayrakları ile düzeltilecek)
     const latDec = buffer.readUInt32BE(7);
     const lngDec = buffer.readUInt32BE(11);
-    const lat = latDec / 30000 / 60;
-    const lng = lngDec / 30000 / 60;
+    let lat = latDec / 30000 / 60;
+    let lng = lngDec / 30000 / 60;
 
     // Speed
     const speed = buffer[15];
 
-    // Course & Status
+    // Course & Status (2 byte)
+    // GT06N Protokolü:
+    //   Bit 0-9:   Yön açısı (Course, 0-360 derece)
+    //   Bit 10:    Gerçek zamanlı GPS (1) / Diferansiyel GPS (0)
+    //   Bit 11:    GPS konumlanmış (1) / konumlanmamış (0)
+    //   Bit 12:    Boylam göstergesi (0=Doğu, 1=Batı)
+    //   Bit 13:    Enlem göstergesi (0=Kuzey, 1=Güney)  ← BU ACC DEĞİL, YARIKÜRE BİLGİSİDİR!
+    //   Bit 14-15: Ayrılmış (Reserved)
     const courseStatus = buffer.readUInt16BE(16);
-    const course = courseStatus & 0x03FF; // Ilk 10 bit
-    const acc = (courseStatus & 0x2000) >> 13; // 13. bit (0x2000) ACC durumudur
-    const gpsFix = (courseStatus & 0x1000) >> 12;
+    const course = courseStatus & 0x03FF;                      // Bit 0-9: Yön açısı
+    const gpsPositioned = (courseStatus & 0x0800) >> 11;       // Bit 11: GPS konumlanmış mı
+    const isWest = (courseStatus & 0x1000) >> 12;              // Bit 12: Batı Boylamı mı
+    const isSouth = (courseStatus & 0x2000) >> 13;             // Bit 13: Güney Enlemi mi (ESKİ KODDA YANLIŞ OLARAK ACC OKUNUYORDU!)
 
-    // Gerçek LBS ve status bitleri PDF'e göre çok daha detayli ama temelleri aldik.
+    // Enlem/Boylam işaretlerini uygula
+    if (isSouth) lat = -lat;
+    if (isWest) lng = -lng;
+
+    // NOT: ACC bilgisi bu pakette YOK! GT06N'de ACC sadece Heartbeat (0x13) paketinde bulunur.
+    // Konum paketinde ACC durumu heartbeat'ten gelen son bilgiyle birleştirilecek.
 
     return {
         datetime,
@@ -104,7 +175,10 @@ function parseLocation(buffer) {
         lng: parseFloat(lng.toFixed(6)),
         speed,
         course,
-        status: { acc: acc === 1, gpsFix: gpsFix === 1 }
+        satellites,
+        gpsPositioned: gpsPositioned === 1,
+        status: { gpsFix: gpsPositioned === 1 }
+        // ACC burada yok! server.js'de heartbeat'ten gelen ACC ile birleştirilecek.
     };
 }
 
