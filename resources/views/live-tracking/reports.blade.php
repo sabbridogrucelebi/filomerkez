@@ -192,7 +192,28 @@
                     </div>
                 </div>
 
-                <!-- 2. Mesafe Bilgisi Raporu -->
+                <!-- 2. İlk Kontak Açılma Raporu -->
+                <div class="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col report-card">
+                    <div class="flex items-start gap-4 mb-4">
+                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-50 flex items-center justify-center shrink-0 report-icon-wrapper shadow-inner border border-amber-100">
+                            <svg class="w-8 h-8 text-amber-600 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black text-slate-800">İlk Kontak Açılma Raporu</h3>
+                            <p class="text-xs font-semibold text-slate-500 mt-1 leading-relaxed">
+                                Araçların seçilen tarih aralığında, güne ilk başladığı saati (ilk hareket veya kontak açılma anı) ve şoför bilgisini listeler.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                        <button class="px-4 py-2 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors">Önizle</button>
+                        <button @click="openAssistant('first_ignition')" class="open-btn px-6 py-2 bg-amber-500 text-white text-sm font-black rounded-xl hover:bg-amber-600 transition-all shadow-sm">
+                            Raporu Aç
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3. Mesafe Bilgisi Raporu -->
                 <div class="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col report-card opacity-70">
                     <div class="flex items-start gap-4 mb-4">
                         <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-50 flex items-center justify-center shrink-0 report-icon-wrapper shadow-inner border border-blue-100">
@@ -326,8 +347,8 @@
                 <!-- Sonuç Tablosu -->
                 <div x-show="!loading && reportData.length > 0" class="flex-1 p-8 overflow-y-auto custom-scrollbar" style="display: none;">
                     
-                    <!-- Özet Kartları (Eğer data geldiyse en üste mini özet koyalım) -->
-                    <div class="grid grid-cols-2 gap-4 mb-6">
+                    <!-- Özet Kartları -->
+                    <div x-show="assistantType === 'working_report'" class="grid grid-cols-2 gap-4 mb-6">
                         <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center py-6">
                             <p class="text-xs font-bold text-slate-400 uppercase mb-1">Toplam Mesafe</p>
                             <h4 class="text-3xl font-black text-slate-800" x-text="totalSummary.distance + ' KM'"></h4>
@@ -344,9 +365,23 @@
                                 <tr>
                                     <th class="py-3 px-6 font-black text-slate-500 uppercase tracking-wider text-xs">Tarih</th>
                                     <th class="py-3 px-6 font-black text-slate-500 uppercase tracking-wider text-xs">Plaka</th>
-                                    <th class="py-3 px-6 font-black text-slate-500 uppercase tracking-wider text-xs text-center">Çalışma (Dk)</th>
-                                    <th class="py-3 px-6 font-black text-slate-500 uppercase tracking-wider text-xs text-center">Rölanti (Dk)</th>
-                                    <th class="py-3 px-6 font-black text-slate-500 uppercase tracking-wider text-xs text-right">Mesafe (KM)</th>
+                                    
+                                    <template x-if="assistantType === 'working_report'">
+                                        <th class="py-3 px-6 font-black text-slate-500 uppercase tracking-wider text-xs text-center">Çalışma (Dk)</th>
+                                    </template>
+                                    <template x-if="assistantType === 'working_report'">
+                                        <th class="py-3 px-6 font-black text-slate-500 uppercase tracking-wider text-xs text-center">Rölanti (Dk)</th>
+                                    </template>
+                                    <template x-if="assistantType === 'working_report'">
+                                        <th class="py-3 px-6 font-black text-slate-500 uppercase tracking-wider text-xs text-right">Mesafe (KM)</th>
+                                    </template>
+
+                                    <template x-if="assistantType === 'first_ignition'">
+                                        <th class="py-3 px-6 font-black text-slate-500 uppercase tracking-wider text-xs">Şoför Ad Soyad</th>
+                                    </template>
+                                    <template x-if="assistantType === 'first_ignition'">
+                                        <th class="py-3 px-6 font-black text-slate-500 uppercase tracking-wider text-xs">İlk Kontak Saati</th>
+                                    </template>
                                 </tr>
                             </thead>
                             <tbody>
@@ -356,13 +391,27 @@
                                         <td class="py-3 px-6">
                                             <div class="font-black text-slate-800" x-text="row.plate"></div>
                                         </td>
-                                        <td class="py-3 px-6 text-center">
-                                            <span class="inline-block px-2.5 py-1 rounded bg-emerald-50 text-emerald-700 font-bold text-xs" x-text="row.active_mins"></span>
-                                        </td>
-                                        <td class="py-3 px-6 text-center">
-                                            <span class="inline-block px-2.5 py-1 rounded bg-rose-50 text-rose-700 font-bold text-xs" x-text="row.idle_mins"></span>
-                                        </td>
-                                        <td class="py-3 px-6 text-right font-black text-slate-700" x-text="row.distance"></td>
+                                        
+                                        <template x-if="assistantType === 'working_report'">
+                                            <td class="py-3 px-6 text-center">
+                                                <span class="inline-block px-2.5 py-1 rounded bg-emerald-50 text-emerald-700 font-bold text-xs" x-text="row.active_mins"></span>
+                                            </td>
+                                        </template>
+                                        <template x-if="assistantType === 'working_report'">
+                                            <td class="py-3 px-6 text-center">
+                                                <span class="inline-block px-2.5 py-1 rounded bg-rose-50 text-rose-700 font-bold text-xs" x-text="row.idle_mins"></span>
+                                            </td>
+                                        </template>
+                                        <template x-if="assistantType === 'working_report'">
+                                            <td class="py-3 px-6 text-right font-black text-slate-700" x-text="row.distance"></td>
+                                        </template>
+
+                                        <template x-if="assistantType === 'first_ignition'">
+                                            <td class="py-3 px-6 font-bold text-indigo-700" x-text="row.driver"></td>
+                                        </template>
+                                        <template x-if="assistantType === 'first_ignition'">
+                                            <td class="py-3 px-6 font-black text-slate-700" x-text="row.first_ignition_time"></td>
+                                        </template>
                                     </tr>
                                 </template>
                             </tbody>
@@ -434,6 +483,7 @@
                 openAssistant(type) {
                     this.assistantType = type;
                     if(type === 'working_report') this.assistantTitle = 'Araç Çalışma Raporu';
+                    else if(type === 'first_ignition') this.assistantTitle = 'İlk Kontak Açılma Raporu';
                     else this.assistantTitle = 'Rapor Asistanı';
                     
                     // Verileri temizle
@@ -482,18 +532,25 @@
                         end = new Date().toISOString().split('T')[0];
                     }
                     
-                    // Gerçek production API çağrısı yapılana kadar simüle edelim, API tarafı hazır.
                     try {
-                        const res = await fetch(`{{ route('vehicle-tracking.reports.working') }}?start_date=${start}&end_date=${end}&vehicle_id=${this.selectedVehicle}`);
+                        let endpoint = '';
+                        if (this.assistantType === 'working_report') {
+                            endpoint = `{{ route('vehicle-tracking.reports.working') }}?start_date=${start}&end_date=${end}&vehicle_id=${this.selectedVehicle}`;
+                        } else if (this.assistantType === 'first_ignition') {
+                            endpoint = `{{ route('vehicle-tracking.reports.first-ignition') }}?start_date=${start}&end_date=${end}&vehicle_id=${this.selectedVehicle}`;
+                        }
+
+                        const res = await fetch(endpoint);
                         
                         if(res.ok) {
                             const data = await res.json();
                             this.reportData = data.rows;
                             
-                            // Özetleri hesapla
-                            this.totalSummary.distance = this.reportData.reduce((acc, val) => acc + val.distance, 0);
-                            this.totalSummary.idle = this.reportData.reduce((acc, val) => acc + val.idle_mins, 0);
-                            this.totalSummary.loss = this.reportData.reduce((acc, val) => acc + val.idle_loss_tl, 0);
+                            if (this.assistantType === 'working_report') {
+                                this.totalSummary.distance = this.reportData.reduce((acc, val) => acc + val.distance, 0);
+                                this.totalSummary.idle = this.reportData.reduce((acc, val) => acc + val.idle_mins, 0);
+                                this.totalSummary.loss = this.reportData.reduce((acc, val) => acc + val.idle_loss_tl, 0);
+                            }
                         } else {
                             throw new Error("API Hatası");
                         }
@@ -508,20 +565,29 @@
                 downloadExcel() {
                     if (this.reportData.length === 0) return;
                     
-                    const wsData = [
-                        ["Tarih", "Plaka", "Calisma (Dk)", "Rolanti (Dk)", "Mesafe (KM)"]
-                    ];
-                    this.reportData.forEach(row => {
-                        wsData.push([row.date, row.plate, row.active_mins, row.idle_mins, row.distance]);
-                    });
-                    
-                    wsData.push([]);
-                    wsData.push(["TOPLAM", "", "", this.totalSummary.idle + " Dk", this.totalSummary.distance + " KM"]);
+                    let wsData = [];
+                    let fileName = "Rapor.xlsx";
+
+                    if (this.assistantType === 'working_report') {
+                        wsData.push(["Tarih", "Plaka", "Calisma (Dk)", "Rolanti (Dk)", "Mesafe (KM)"]);
+                        this.reportData.forEach(row => {
+                            wsData.push([row.date, row.plate, row.active_mins, row.idle_mins, row.distance]);
+                        });
+                        wsData.push([]);
+                        wsData.push(["TOPLAM", "", "", this.totalSummary.idle + " Dk", this.totalSummary.distance + " KM"]);
+                        fileName = "FiloTakip_Arac_Calisma_Raporu.xlsx";
+                    } else if (this.assistantType === 'first_ignition') {
+                        wsData.push(["Tarih", "Plaka", "Sofor Ad Soyad", "Ilk Kontak Saati"]);
+                        this.reportData.forEach(row => {
+                            wsData.push([row.date, row.plate, row.driver, row.first_ignition_time]);
+                        });
+                        fileName = "FiloTakip_Ilk_Kontak_Raporu.xlsx";
+                    }
                     
                     const ws = XLSX.utils.aoa_to_sheet(wsData);
                     const wb = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(wb, ws, "Calisma Raporu");
-                    XLSX.writeFile(wb, "FiloTakip_Arac_Calisma_Raporu.xlsx");
+                    XLSX.utils.book_append_sheet(wb, ws, "Rapor");
+                    XLSX.writeFile(wb, fileName);
                 },
 
                 downloadPDF() {
@@ -530,33 +596,45 @@
                     const { jsPDF } = window.jspdf;
                     const doc = new jsPDF();
                     
-                    // Header (Premium Look)
                     doc.setFontSize(18);
-                    doc.setTextColor(30, 58, 138); // Indigo-900
-                    doc.text("FiloTakip - Arac Calisma Raporu", 14, 22);
+                    doc.setTextColor(30, 58, 138);
+                    doc.text("FiloTakip - " + this.assistantTitle, 14, 22);
                     
                     doc.setFontSize(10);
                     doc.setTextColor(100);
                     doc.text("Olusturulma Tarihi: " + new Date().toLocaleString('tr-TR'), 14, 30);
                     
-                    // Table Data
-                    const tableBody = this.reportData.map(row => [
-                        row.date, row.plate, row.active_mins + " Dk", row.idle_mins + " Dk", row.distance + " KM"
-                    ]);
+                    let tableBody = [];
+                    let headParams = [];
+                    let footParams = null;
+                    let fileName = "Rapor.pdf";
+
+                    if (this.assistantType === 'working_report') {
+                        headParams = [["Tarih", "Plaka", "Calisma", "Rolanti", "Mesafe"]];
+                        tableBody = this.reportData.map(row => [
+                            row.date, row.plate, row.active_mins + " Dk", row.idle_mins + " Dk", row.distance + " KM"
+                        ]);
+                        footParams = [["TOPLAM", "", "-", this.totalSummary.idle + " Dk", this.totalSummary.distance + " KM"]];
+                        fileName = "FiloTakip_Arac_Calisma_Raporu.pdf";
+                    } else if (this.assistantType === 'first_ignition') {
+                        headParams = [["Tarih", "Plaka", "Sofor", "Ilk Kontak Saati"]];
+                        tableBody = this.reportData.map(row => [
+                            row.date, row.plate, row.driver, row.first_ignition_time
+                        ]);
+                        fileName = "FiloTakip_Ilk_Kontak_Raporu.pdf";
+                    }
                     
-                    // Draw Table with custom premium styling
                     doc.autoTable({
                         startY: 35,
-                        head: [["Tarih", "Plaka", "Calisma", "Rolanti", "Mesafe"]],
+                        head: headParams,
                         body: tableBody,
                         theme: 'striped',
                         headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontStyle: 'bold' },
                         styles: { fontSize: 10, cellPadding: 4 },
-                        foot: [["TOPLAM", "", "-", this.totalSummary.idle + " Dk", this.totalSummary.distance + " KM"]],
-                        footStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold' }
+                        ...(footParams && { foot: footParams, footStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold' } })
                     });
                     
-                    doc.save("FiloTakip_Arac_Calisma_Raporu.pdf");
+                    doc.save(fileName);
                 }
             }));
         });

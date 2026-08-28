@@ -168,4 +168,81 @@ class ReportsApiController extends Controller
 
         return response()->json(['rows' => $rows]);
     }
+
+    public function firstIgnitionReportData(Request $request)
+    {
+        $companyId = auth()->user()->company_id;
+        abort_unless(auth()->user()->hasPermission('vehicle_tracking.view'), 403);
+
+        $startDate = $request->input('start_date', Carbon::today()->toDateString());
+        $endDate = $request->input('end_date', Carbon::today()->toDateString());
+        $vehicleId = $request->input('vehicle_id', 'all');
+
+        $start = Carbon::parse($startDate);
+        $end = Carbon::parse($endDate);
+        
+        if ($end->isFuture()) {
+            $end = Carbon::today();
+        }
+        if ($start->isAfter($end)) {
+            $start = $end->copy();
+        }
+        
+        $query = \App\Models\Fleet\Vehicle::with('drivers')
+            ->whereNotNull('device_imei')
+            ->where('device_imei', '!=', '')
+            ->where('company_id', $companyId);
+            
+        if ($vehicleId !== 'all') {
+            $query->where('id', $vehicleId);
+        }
+        
+        $vehicles = $query->get();
+        $rows = [];
+
+        // Güvenlik için maksimum 30 günlük aralık hesaplanabilir
+        if ($start->diffInDays($end) <= 30) {
+            $currentDate = $start->copy();
+            
+            while ($currentDate->lte($end)) {
+                $dayStartUtc = $currentDate->copy()->startOfDay()->setTimezone('UTC');
+                $dayEndUtc = $currentDate->copy()->endOfDay()->setTimezone('UTC');
+                
+                foreach ($vehicles as $vehicle) {
+                    // İlk hareket veya kontak
+                    $firstLocation = \App\Models\Fleet\VehicleLocation::where('vehicle_id', $vehicle->id)
+                        ->whereBetween('recorded_at', [$dayStartUtc, $dayEndUtc])
+                        ->where('speed', '>', 0)
+                        ->orderBy('recorded_at', 'asc')
+                        ->first();
+                        
+                    if ($firstLocation) {
+                        $localTime = \Carbon\Carbon::parse($firstLocation->recorded_at)->setTimezone('Europe/Istanbul');
+                        
+                        $driver = $vehicle->drivers->first();
+                        $driverName = $driver ? trim(($driver->first_name ?? $driver->name ?? '') . ' ' . ($driver->last_name ?? $driver->surname ?? '')) : 'Şoför Atanmamış';
+                        if (empty(trim($driverName))) $driverName = 'Bilinmiyor';
+                        
+                        $rows[] = [
+                            'id' => $vehicle->id . '_' . $currentDate->format('Ymd'),
+                            'date' => $currentDate->format('d.m.Y'),
+                            'plate' => $vehicle->plate,
+                            'driver' => $driverName,
+                            'first_ignition_time' => $localTime->format('H:i:s'),
+                            'first_ignition_location' => round($firstLocation->latitude, 4) . ', ' . round($firstLocation->longitude, 4),
+                            'distance' => 0 // To make UI table sorting easier if needed
+                        ];
+                    }
+                }
+                $currentDate->addDay();
+            }
+        }
+
+        // Tarihe göre ters sırala (en yeni en üstte)
+        usort($rows, function($a, $b) {
+            return strtotime(\Carbon\Carbon::createFromFormat('d.m.Y', $b['date'])->format('Y-m-d')) - strtotime(\Carbon\Carbon::createFromFormat('d.m.Y', $a['date'])->format('Y-m-d'));
+        });
+
+        return response()->json(['rows' => $rows]);
+    }
 }
