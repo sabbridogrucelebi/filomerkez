@@ -360,7 +360,7 @@
                 </div>
 
                 <!-- Boş Durum (İlk açılış) -->
-                <div x-show="!loading && reportData.length === 0" class="flex-1 flex flex-col items-center justify-center p-8 text-center" style="display: none;">
+                <div x-show="!loading && !hasSearched" class="flex-1 flex flex-col items-center justify-center p-8 text-center" style="display: none;">
                     <div class="w-24 h-24 mb-6 relative">
                         <div class="absolute inset-0 bg-slate-200 rounded-full animate-ping opacity-20"></div>
                         <div class="absolute inset-2 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200">
@@ -370,6 +370,17 @@
                     <h3 class="text-xl font-black text-slate-700 mb-2">Parametreleri Belirleyin</h3>
                     <p class="text-sm font-semibold text-slate-500 max-w-sm">
                         Raporu oluşturmak için sol taraftaki panelden araç ve tarih aralığı seçip "Raporu Sorgula" butonuna basın.
+                    </p>
+                </div>
+
+                <!-- Sonuç Bulunamadı -->
+                <div x-show="!loading && hasSearched && reportData.length === 0" class="flex-1 flex flex-col items-center justify-center p-8 text-center" style="display: none;">
+                    <div class="w-24 h-24 mb-6 bg-rose-50 rounded-full flex items-center justify-center">
+                        <svg class="w-10 h-10 text-rose-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <h3 class="text-xl font-black text-slate-700 mb-2">Sonuç Bulunamadı</h3>
+                    <p class="text-sm font-semibold text-slate-500 max-w-sm">
+                        Seçtiğiniz tarih aralığında bu araca ait herhangi bir rapor verisi oluşturulmamış. Lütfen "Dün" veya "Son 7 Gün" seçeneğini deneyin.
                     </p>
                 </div>
 
@@ -392,6 +403,7 @@
                 
                 // Data State
                 loading: false,
+                hasSearched: false,
                 reportData: [],
                 totalSummary: { distance: 0, idle: 0, loss: 0 },
 
@@ -406,6 +418,7 @@
                     else this.assistantTitle = 'Rapor Asistanı';
                     
                     // Verileri temizle
+                    this.hasSearched = false;
                     this.reportData = [];
                     this.totalSummary = { distance: 0, idle: 0, loss: 0 };
                     
@@ -419,6 +432,7 @@
 
                 async generateReport() {
                     this.loading = true;
+                    this.hasSearched = true;
                     
                     // Parametreleri hazırla
                     const today = new Date();
