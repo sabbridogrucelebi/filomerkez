@@ -75,7 +75,12 @@ class CalculateDailyReports extends Command
         $prevLoc = null;
         
         foreach ($locations as $loc) {
-            $acc = isset($loc->status['acc']) ? (bool) $loc->status['acc'] : false;
+            $status = $loc->status ?? [];
+            $acc = isset($status['acc']) ? (bool) $status['acc'] : (
+                isset($status['ignition']) ? (bool) $status['ignition'] : (
+                    isset($status['engine']) ? (bool) $status['engine'] : null
+                )
+            );
             
             if ($prevLoc) {
                 // Mesafe hesaplama (Zaman farkından bağımsız olarak her nokta arası hesaplanmalı)
@@ -93,6 +98,12 @@ class CalculateDailyReports extends Command
 
                 // Zaman farkı saniye
                 $timeDiff = abs($loc->recorded_at->diffInSeconds($prevLoc->recorded_at));
+                
+                // Kontak (ACC) bilgisi yoksa (Simüle veri veya bağlanmamış kablo):
+                // 5 dakikadan (300 sn) kısa süreli duraklamaları trafik ışığı vs. diyerek rölanti say.
+                if (is_null($acc) && $loc->speed == 0 && $timeDiff < 300) {
+                    $acc = true;
+                }
                 
                 // Zaman gerektiren metrikler (İvme, Rölanti, Çalışma Süresi)
                 if ($timeDiff > 0 && $timeDiff < 86400) { 
