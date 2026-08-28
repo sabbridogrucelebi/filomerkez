@@ -114,10 +114,18 @@ class ReportsApiController extends Controller
         $endDate = $request->input('end_date', Carbon::today()->toDateString());
         $vehicleId = $request->input('vehicle_id', 'all');
 
-        // Anlık hesaplama (On-the-fly calculation)
-        // Kullanıcı butona bastığında verilerin güncel (anlık) olması için seçili tarih aralığını hesaplıyoruz.
+        // Gelecek günlerin raporlanmasını engelle (Bugünü baz al)
         $start = Carbon::parse($startDate);
         $end = Carbon::parse($endDate);
+        
+        if ($end->isFuture()) {
+            $end = Carbon::today();
+            $endDate = $end->toDateString();
+        }
+        if ($start->isAfter($end)) {
+            $start = $end->copy();
+            $startDate = $start->toDateString();
+        }
         
         // Güvenlik için maksimum 30 günlük aralık hesaplanabilir
         if ($start->diffInDays($end) <= 30) {
@@ -137,7 +145,8 @@ class ReportsApiController extends Controller
                 $q->whereNotNull('device_imei')->where('device_imei', '!=', '');
             })
             ->where('company_id', $companyId)
-            ->whereBetween('report_date', [$startDate, $endDate]);
+            ->whereBetween('report_date', [$startDate, $endDate])
+            ->where('active_minutes', '>', 0);
             
         if ($vehicleId !== 'all') {
             $query->where('vehicle_id', $vehicleId);
