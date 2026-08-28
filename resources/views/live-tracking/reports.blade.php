@@ -521,7 +521,7 @@
                     const ws = XLSX.utils.aoa_to_sheet(wsData);
                     const wb = XLSX.utils.book_new();
                     XLSX.utils.book_append_sheet(wb, ws, "Calisma Raporu");
-                    XLSX.writeFile(wb, "FiloMerkez_Arac_Calisma_Raporu.xlsx");
+                    XLSX.writeFile(wb, "FiloTakip_Arac_Calisma_Raporu.xlsx");
                 },
 
                 downloadPDF() {
@@ -533,7 +533,7 @@
                     // Header (Premium Look)
                     doc.setFontSize(18);
                     doc.setTextColor(30, 58, 138); // Indigo-900
-                    doc.text("FiloMerkez - Arac Calisma Raporu", 14, 22);
+                    doc.text("FiloTakip - Arac Calisma Raporu", 14, 22);
                     
                     doc.setFontSize(10);
                     doc.setTextColor(100);
@@ -556,7 +556,7 @@
                         footStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold' }
                     });
                     
-                    doc.save("FiloMerkez_Arac_Calisma_Raporu.pdf");
+                    doc.save("FiloTakip_Arac_Calisma_Raporu.pdf");
                 }
             }));
         });
