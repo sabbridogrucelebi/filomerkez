@@ -78,12 +78,24 @@ class CalculateDailyReports extends Command
             $acc = isset($loc->status['acc']) ? (bool) $loc->status['acc'] : false;
             
             if ($prevLoc) {
-                // Zaman farkı saniye
-                $timeDiff = $loc->recorded_at->diffInSeconds($prevLoc->recorded_at);
+                // Mesafe hesaplama (Zaman farkından bağımsız olarak her nokta arası hesaplanmalı)
+                $latFrom = deg2rad($prevLoc->latitude);
+                $lonFrom = deg2rad($prevLoc->longitude);
+                $latTo = deg2rad($loc->latitude);
+                $lonTo = deg2rad($loc->longitude);
                 
-                // Simüle veri veya düşük frekanslı veri için zaman kısıtlamasını 24 saate çıkaralım.
+                $latDelta = $latTo - $latFrom;
+                $lonDelta = $lonTo - $lonFrom;
+                
+                $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) + cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
+                $segmentDist = $angle * 6371;
+                $distanceKm += $segmentDist;
+
+                // Zaman farkı saniye
+                $timeDiff = abs($loc->recorded_at->diffInSeconds($prevLoc->recorded_at));
+                
+                // Zaman gerektiren metrikler (İvme, Rölanti, Çalışma Süresi)
                 if ($timeDiff > 0 && $timeDiff < 86400) { 
-                    // Hız (km/h) farkı ve ivme (sadece 15 dk'dan kısa ardışık sinyallerde fren ölçülür)
                     if ($timeDiff < 900) {
                         $speedDiff = $loc->speed - $prevLoc->speed;
                         $accel = $speedDiff / $timeDiff; // İvme
@@ -96,19 +108,6 @@ class CalculateDailyReports extends Command
                             $ecoScore -= 1;
                         }
                     }
-                    
-                    // Mesafe hesaplama (Haversine)
-                    $latFrom = deg2rad($prevLoc->latitude);
-                    $lonFrom = deg2rad($prevLoc->longitude);
-                    $latTo = deg2rad($loc->latitude);
-                    $lonTo = deg2rad($loc->longitude);
-                    
-                    $latDelta = $latTo - $latFrom;
-                    $lonDelta = $lonTo - $lonFrom;
-                    
-                    $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) + cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
-                    $segmentDist = $angle * 6371;
-                    $distanceKm += $segmentDist;
                     
                     // Rölanti ve Aktiflik
                     if ($loc->speed > 0) {
