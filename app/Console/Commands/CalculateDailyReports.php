@@ -36,7 +36,7 @@ class CalculateDailyReports extends Command
         $endOfDay = $date->copy()->endOfDay()->setTimezone('UTC');
 
         $vehicleId = $this->option('vehicle');
-        $query = Vehicle::query();
+        $query = Vehicle::whereNotNull('device_imei')->where('device_imei', '!=', '');
         
         if ($vehicleId) {
             $query->where('id', $vehicleId);

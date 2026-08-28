@@ -19,6 +19,9 @@ class ReportsApiController extends Controller
         $endDate = $request->input('end_date', Carbon::now()->toDateString());
 
         $summaries = VehicleReportSummary::with('vehicle')
+            ->whereHas('vehicle', function($q) {
+                $q->whereNotNull('device_imei')->where('device_imei', '!=', '');
+            })
             ->where('company_id', $companyId)
             ->whereBetween('report_date', [$startDate, $endDate])
             ->get();
@@ -129,7 +132,11 @@ class ReportsApiController extends Controller
             }
         }
 
-        $query = VehicleReportSummary::with('vehicle')->where('company_id', $companyId)
+        $query = VehicleReportSummary::with('vehicle')
+            ->whereHas('vehicle', function($q) {
+                $q->whereNotNull('device_imei')->where('device_imei', '!=', '');
+            })
+            ->where('company_id', $companyId)
             ->whereBetween('report_date', [$startDate, $endDate]);
             
         if ($vehicleId !== 'all') {
