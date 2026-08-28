@@ -58,9 +58,8 @@ class CalculateDailyReports extends Command
             ->orderBy('recorded_at', 'asc')
             ->get();
 
-        if ($locations->count() < 10) {
-            return; // Yeterli veri yok
-        }
+        // Eğer o gün hiç veri yoksa, 0 değerleriyle kaydedecek (çalışmadı olarak)
+        // Bu yüzden return yapmıyoruz, hesaplamaya devam ediyoruz.
 
         $ecoScore = 100;
         $harshBraking = 0;
