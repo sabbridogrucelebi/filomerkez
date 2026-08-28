@@ -30,9 +30,10 @@ class CalculateDailyReports extends Command
     public function handle()
     {
         $dateParam = $this->argument('date');
-        $date = $dateParam ? Carbon::parse($dateParam) : Carbon::yesterday();
-        $startOfDay = $date->copy()->startOfDay();
-        $endOfDay = $date->copy()->endOfDay();
+        $date = $dateParam ? Carbon::parse($dateParam, 'Europe/Istanbul') : Carbon::yesterday('Europe/Istanbul');
+        
+        $startOfDay = $date->copy()->startOfDay()->setTimezone('UTC');
+        $endOfDay = $date->copy()->endOfDay()->setTimezone('UTC');
 
         $vehicleId = $this->option('vehicle');
         $query = Vehicle::query();
@@ -45,13 +46,13 @@ class CalculateDailyReports extends Command
         $this->info("Calculating reports for " . $vehicles->count() . " vehicles on " . $date->format('Y-m-d'));
 
         foreach ($vehicles as $vehicle) {
-            $this->calculateForVehicle($vehicle, $startOfDay, $endOfDay);
+            $this->calculateForVehicle($vehicle, $date, $startOfDay, $endOfDay);
         }
 
         $this->info("Daily report calculations completed successfully.");
     }
 
-    private function calculateForVehicle($vehicle, $startOfDay, $endOfDay)
+    private function calculateForVehicle($vehicle, $date, $startOfDay, $endOfDay)
     {
         $locations = VehicleLocation::where('vehicle_id', $vehicle->id)
             ->whereBetween('recorded_at', [$startOfDay, $endOfDay])
@@ -149,7 +150,7 @@ class CalculateDailyReports extends Command
         VehicleReportSummary::updateOrCreate(
             [
                 'vehicle_id' => $vehicle->id,
-                'report_date' => $startOfDay->toDateString(),
+                'report_date' => $date->toDateString(),
             ],
             [
                 'company_id' => $vehicle->company_id,
