@@ -254,6 +254,15 @@
             </div>
             
             <div class="ml-auto flex items-center gap-4">
+                <!-- PDF -->
+                <button x-show="hasSearched && reportData.length > 0" class="w-10 h-10 flex items-center justify-center bg-white text-rose-500 rounded-xl transition-all shadow-[0_4px_15px_rgba(225,29,72,0.3)] hover:-translate-y-1 hover:scale-105" title="PDF Olarak İndir" style="display: none;">
+                    <svg class="w-5 h-5 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </button>
+                <!-- Excel -->
+                <button x-show="hasSearched && reportData.length > 0" class="w-10 h-10 flex items-center justify-center bg-white text-emerald-500 rounded-xl transition-all shadow-[0_4px_15px_rgba(16,185,129,0.3)] hover:-translate-y-1 hover:scale-105 mr-2" title="Excel Olarak İndir" style="display: none;">
+                    <svg class="w-5 h-5 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </button>
+
                 <button @click="generateReport()" class="px-6 py-2 bg-emerald-500 hover:bg-emerald-400 text-white font-black text-sm rounded-lg transition-all shadow-[0_0_15px_rgba(16,185,129,0.5)] flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     Raporu Sorgula
@@ -285,7 +294,13 @@
                         <option value="yesterday">Dün</option>
                         <option value="this_week">Bu Hafta</option>
                         <option value="last_7_days">Son 7 Gün</option>
+                        <option value="custom">Özel Tarih Seç</option>
                     </select>
+
+                    <div x-show="selectedDateRange === 'custom'" class="flex gap-2 mb-3" style="display: none;">
+                        <input type="date" x-model="customStartDate" class="w-1/2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all">
+                        <input type="date" x-model="customEndDate" class="w-1/2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all">
+                    </div>
                 </div>
 
                 <div class="mt-auto p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
@@ -312,18 +327,14 @@
                 <div x-show="!loading && reportData.length > 0" class="flex-1 p-8 overflow-y-auto custom-scrollbar" style="display: none;">
                     
                     <!-- Özet Kartları (Eğer data geldiyse en üste mini özet koyalım) -->
-                    <div class="grid grid-cols-3 gap-4 mb-6">
-                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center py-6">
                             <p class="text-xs font-bold text-slate-400 uppercase mb-1">Toplam Mesafe</p>
-                            <h4 class="text-2xl font-black text-slate-800" x-text="totalSummary.distance + ' KM'"></h4>
+                            <h4 class="text-3xl font-black text-slate-800" x-text="totalSummary.distance + ' KM'"></h4>
                         </div>
-                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center py-6">
                             <p class="text-xs font-bold text-slate-400 uppercase mb-1">Toplam Rölanti</p>
-                            <h4 class="text-2xl font-black text-rose-600" x-text="totalSummary.idle + ' Dk'"></h4>
-                        </div>
-                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">Rölanti Zararı</p>
-                            <h4 class="text-2xl font-black text-slate-800" x-text="'₺' + totalSummary.loss"></h4>
+                            <h4 class="text-3xl font-black text-rose-600" x-text="totalSummary.idle + ' Dk'"></h4>
                         </div>
                     </div>
 
@@ -400,6 +411,8 @@
                 // Form State
                 selectedVehicle: 'all',
                 selectedDateRange: 'today',
+                customStartDate: '',
+                customEndDate: '',
                 
                 // Data State
                 loading: false,
@@ -435,20 +448,37 @@
                     this.hasSearched = true;
                     
                     // Parametreleri hazırla
-                    const today = new Date();
-                    let start = new Date();
-                    if(this.selectedDateRange === 'today') start = today;
-                    else if(this.selectedDateRange === 'yesterday') { start.setDate(today.getDate()-1); today.setDate(today.getDate()-1); }
-                    else if(this.selectedDateRange === 'this_week') {
-                        const day = today.getDay();
-                        const diff = today.getDate() - day + (day == 0 ? -6:1); // Monday
-                        start = new Date(today.setDate(diff));
+                    let start = '';
+                    let end = '';
+
+                    if (this.selectedDateRange === 'custom') {
+                        if (!this.customStartDate || !this.customEndDate) {
+                            alert("Lütfen özel tarih aralığı için başlangıç ve bitiş tarihlerini seçin.");
+                            this.loading = false;
+                            return;
+                        }
+                        start = this.customStartDate;
+                        end = this.customEndDate;
+                    } else {
+                        const todayDate = new Date();
+                        let startDate = new Date();
+                        
+                        if(this.selectedDateRange === 'today') startDate = todayDate;
+                        else if(this.selectedDateRange === 'yesterday') { startDate.setDate(todayDate.getDate()-1); todayDate.setDate(todayDate.getDate()-1); }
+                        else if(this.selectedDateRange === 'this_week') {
+                            const day = todayDate.getDay();
+                            const diff = todayDate.getDate() - day + (day == 0 ? -6:1);
+                            startDate = new Date(todayDate.setDate(diff));
+                        }
+                        else if(this.selectedDateRange === 'last_7_days') startDate.setDate(todayDate.getDate()-7);
+
+                        start = startDate.toISOString().split('T')[0];
+                        end = new Date().toISOString().split('T')[0];
                     }
-                    else if(this.selectedDateRange === 'last_7_days') start.setDate(today.getDate()-7);
                     
                     // Gerçek production API çağrısı yapılana kadar simüle edelim, API tarafı hazır.
                     try {
-                        const res = await fetch(`{{ route('vehicle-tracking.reports.working') }}?start_date=${start.toISOString().split('T')[0]}&end_date=${new Date().toISOString().split('T')[0]}&vehicle_id=${this.selectedVehicle}`);
+                        const res = await fetch(`{{ route('vehicle-tracking.reports.working') }}?start_date=${start}&end_date=${end}&vehicle_id=${this.selectedVehicle}`);
                         
                         if(res.ok) {
                             const data = await res.json();
