@@ -111,6 +111,24 @@ class ReportsApiController extends Controller
         $endDate = $request->input('end_date', Carbon::today()->toDateString());
         $vehicleId = $request->input('vehicle_id', 'all');
 
+        // Anlık hesaplama (On-the-fly calculation)
+        // Kullanıcı butona bastığında verilerin güncel (anlık) olması için seçili tarih aralığını hesaplıyoruz.
+        $start = Carbon::parse($startDate);
+        $end = Carbon::parse($endDate);
+        
+        // Güvenlik için maksimum 30 günlük aralık hesaplanabilir
+        if ($start->diffInDays($end) <= 30) {
+            $currentDate = $start->copy();
+            while ($currentDate->lte($end)) {
+                $params = ['date' => $currentDate->toDateString()];
+                if ($vehicleId !== 'all') {
+                    $params['--vehicle'] = $vehicleId;
+                }
+                \Illuminate\Support\Facades\Artisan::call('reports:calculate-daily', $params);
+                $currentDate->addDay();
+            }
+        }
+
         $query = VehicleReportSummary::with('vehicle')->where('company_id', $companyId)
             ->whereBetween('report_date', [$startDate, $endDate]);
             
