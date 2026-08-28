@@ -178,11 +178,11 @@ class ReportsApiController extends Controller
         $endDate = $request->input('end_date', Carbon::today()->toDateString());
         $vehicleId = $request->input('vehicle_id', 'all');
 
-        $start = Carbon::parse($startDate);
-        $end = Carbon::parse($endDate);
+        $start = Carbon::parse($startDate, 'Europe/Istanbul');
+        $end = Carbon::parse($endDate, 'Europe/Istanbul');
         
         if ($end->isFuture()) {
-            $end = Carbon::today();
+            $end = Carbon::today('Europe/Istanbul');
         }
         if ($start->isAfter($end)) {
             $start = $end->copy();
