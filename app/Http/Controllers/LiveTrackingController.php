@@ -26,7 +26,10 @@ class LiveTrackingController extends Controller
         abort_unless(auth()->user()->hasPermission('vehicle_tracking.view'), 403);
 
         $companyId = auth()->user()->company_id;
-        $vehicles = Vehicle::where('company_id', $companyId)->get();
+        $vehicles = Vehicle::where('company_id', $companyId)
+            ->whereNotNull('device_imei')
+            ->where('device_imei', '!=', '')
+            ->get();
 
         return view('live-tracking.reports', compact('vehicles'));
     }

@@ -80,20 +80,23 @@ class CalculateDailyReports extends Command
                 // Zaman farkı saniye
                 $timeDiff = $loc->recorded_at->diffInSeconds($prevLoc->recorded_at);
                 
-                if ($timeDiff > 0 && $timeDiff < 300) { // 5 dakikadan kısa ardışık veriler
-                    // Hız (km/h) farkı
-                    $speedDiff = $loc->speed - $prevLoc->speed;
-                    $accel = $speedDiff / $timeDiff; // İvme
-                    
-                    if ($accel < -2.5) { // Sert fren
-                        $harshBraking++;
-                        $ecoScore -= 2;
-                    } elseif ($accel > 2.5) { // Ani kalkış
-                        $rapidAccel++;
-                        $ecoScore -= 1;
+                // Simüle veri veya düşük frekanslı veri için zaman kısıtlamasını 24 saate çıkaralım.
+                if ($timeDiff > 0 && $timeDiff < 86400) { 
+                    // Hız (km/h) farkı ve ivme (sadece 15 dk'dan kısa ardışık sinyallerde fren ölçülür)
+                    if ($timeDiff < 900) {
+                        $speedDiff = $loc->speed - $prevLoc->speed;
+                        $accel = $speedDiff / $timeDiff; // İvme
+                        
+                        if ($accel < -2.5) { // Sert fren
+                            $harshBraking++;
+                            $ecoScore -= 2;
+                        } elseif ($accel > 2.5) { // Ani kalkış
+                            $rapidAccel++;
+                            $ecoScore -= 1;
+                        }
                     }
                     
-                    // Mesafe hesaplama
+                    // Mesafe hesaplama (Haversine)
                     $latFrom = deg2rad($prevLoc->latitude);
                     $lonFrom = deg2rad($prevLoc->longitude);
                     $latTo = deg2rad($loc->latitude);
