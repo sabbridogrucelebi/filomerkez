@@ -106,6 +106,16 @@ class ArventoService
                             'Address'      => (string)($v['Address'] ?? ''),
                             'Course'       => (int)($v['Course'] ?? 0),
                             'Datetime'     => isset($v['LocalDateTime']) ? date('d.m.Y H:i', strtotime($v['LocalDateTime'])) : '',
+                            'ACC'          => (
+                                (isset($v['Alarm']) && (stripos($v['Alarm'], 'Kontak A') !== false || stripos($v['Alarm'], 'Motor') !== false)) ||
+                                (isset($v['Status']) && (stripos($v['Status'], 'Kontak A') !== false || stripos($v['Status'], 'Motor') !== false)) ||
+                                (isset($v['AlarmName']) && (stripos($v['AlarmName'], 'Kontak A') !== false)) ||
+                                (isset($v['Icon']) && $v['Icon'] == 2) ||
+                                !empty($v['Ignition']) ||
+                                !empty($v['Acc']) ||
+                                !empty($v['ACC']) ||
+                                !empty($v['Engine'])
+                            ),
                         ];
                     }
                     return $vehicles;
@@ -118,16 +128,27 @@ class ArventoService
                 $vehicles = [];
                 foreach ($data['GetVehicleStatusJSON'] as $v) {
                     $node = (string)($v['Node'] ?? '');
-                    $vehicles[] = [
-                        'Node'         => $node,
-                        'LicensePlate' => $mappedPlates[$node] ?? (string)($v['LicensePlate'] ?? $node ?? 'Plakasız'),
-                        'Latitude'     => (float)($v['LatitudeY'] ?? $v['Latitude'] ?? 0),
-                        'Longitude'    => (float)($v['LongitudeX'] ?? $v['Longitude'] ?? 0),
-                        'Speed'        => (int)($v['Speed'] ?? 0),
-                        'Address'      => (string)($v['Address'] ?? ''),
-                        'Course'       => (int)($v['Course'] ?? 0),
-                        'Datetime'     => isset($v['LocalDateTime']) ? date('d.m.Y H:i', strtotime($v['LocalDateTime'])) : '',
-                    ];
+                        $vehicles[] = [
+                            'Node'         => $node,
+                            'LicensePlate' => $mappedPlates[$node] ?? (string)($v['LicensePlate'] ?? $node ?? 'Plakasız'),
+                            'Latitude'     => (float)($v['LatitudeY'] ?? $v['Latitude'] ?? 0),
+                            'Longitude'    => (float)($v['LongitudeX'] ?? $v['Longitude'] ?? 0),
+                            'Speed'        => (int)($v['Speed'] ?? 0),
+                            'Address'      => (string)($v['Address'] ?? ''),
+                            'Course'       => (int)($v['Course'] ?? 0),
+                            'Datetime'     => isset($v['LocalDateTime']) ? date('d.m.Y H:i', strtotime($v['LocalDateTime'])) : '',
+                            'ACC'          => (
+                                (isset($v['Alarm']) && (stripos($v['Alarm'], 'Kontak A') !== false || stripos($v['Alarm'], 'Motor') !== false)) ||
+                                (isset($v['Status']) && (stripos($v['Status'], 'Kontak A') !== false || stripos($v['Status'], 'Motor') !== false)) ||
+                                (isset($v['AlarmName']) && (stripos($v['AlarmName'], 'Kontak A') !== false)) ||
+                                (isset($v['Icon']) && $v['Icon'] == 2) ||
+                                !empty($v['Ignition']) ||
+                                !empty($v['Acc']) ||
+                                !empty($v['ACC']) ||
+                                !empty($v['Engine'])
+                            ),
+                            'Raw'          => $v, // Debugging için ham veri
+                        ];
                 }
                 return $vehicles;
             }
