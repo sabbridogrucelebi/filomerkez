@@ -2316,12 +2316,15 @@
                 fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${vehicle.Latitude}&lon=${vehicle.Longitude}`)
                     .then(r => r.json())
                     .then(data => {
-                        document.getElementById('advTabAdres').innerText = data.display_name || 'Adres bulunamadı';
+                        document.getElementById('advTabAdres').innerHTML = (data.display_name || 'Adres bulunamadı') + 
+                        `<br><br><span style="color:red; font-size:9px;">DEBUG JSON: ${JSON.stringify(vehicle.Raw)}</span>`;
                     }).catch(() => {
-                        document.getElementById('advTabAdres').innerText = 'Adres alınamadı';
+                        document.getElementById('advTabAdres').innerHTML = 'Adres alınamadı' +
+                        `<br><br><span style="color:red; font-size:9px;">DEBUG JSON: ${JSON.stringify(vehicle.Raw)}</span>`;
                     });
             } else {
-                document.getElementById('advTabAdres').innerText = '-';
+                document.getElementById('advTabAdres').innerHTML = '-' +
+                `<br><br><span style="color:red; font-size:9px;">DEBUG JSON: ${JSON.stringify(vehicle.Raw)}</span>`;
             }
             
             // Sadece Anlık Görünümü Aç

@@ -432,6 +432,12 @@ Route::get('/run-migrations', function() {
     return "Migrate tamamlandı: " . \Illuminate\Support\Facades\Artisan::output();
 });
 
+Route::get('/debug-arvento', function() {
+    $s = \App\Models\VehicleTrackingSetting::where('provider', 'arvento')->first();
+    $a = new \App\Services\ArventoService($s);
+    return response()->json($a->getVehicleStatus());
+});
+
 Route::get('/run-reports', function() {
     \Illuminate\Support\Facades\Artisan::call('reports:calculate-daily');
     return "Raporlar hesaplandı: " . \Illuminate\Support\Facades\Artisan::output();
