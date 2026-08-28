@@ -255,11 +255,11 @@
             
             <div class="ml-auto flex items-center gap-4">
                 <!-- PDF -->
-                <button x-show="hasSearched && reportData.length > 0" class="w-10 h-10 flex items-center justify-center bg-white text-rose-500 rounded-xl transition-all shadow-[0_4px_15px_rgba(225,29,72,0.3)] hover:-translate-y-1 hover:scale-105" title="PDF Olarak İndir" style="display: none;">
+                <button @click="downloadPDF()" x-show="hasSearched && reportData.length > 0" class="w-10 h-10 flex items-center justify-center bg-white text-rose-500 rounded-xl transition-all shadow-[0_4px_15px_rgba(225,29,72,0.3)] hover:-translate-y-1 hover:scale-105" title="PDF Olarak İndir" style="display: none;">
                     <svg class="w-5 h-5 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 </button>
                 <!-- Excel -->
-                <button x-show="hasSearched && reportData.length > 0" class="w-10 h-10 flex items-center justify-center bg-white text-emerald-500 rounded-xl transition-all shadow-[0_4px_15px_rgba(16,185,129,0.3)] hover:-translate-y-1 hover:scale-105 mr-2" title="Excel Olarak İndir" style="display: none;">
+                <button @click="downloadExcel()" x-show="hasSearched && reportData.length > 0" class="w-10 h-10 flex items-center justify-center bg-white text-emerald-500 rounded-xl transition-all shadow-[0_4px_15px_rgba(16,185,129,0.3)] hover:-translate-y-1 hover:scale-105 mr-2" title="Excel Olarak İndir" style="display: none;">
                     <svg class="w-5 h-5 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 </button>
 
@@ -399,6 +399,12 @@
         </div>
     </div>
 
+    <!-- SheetJS (Excel Export) -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <!-- jsPDF & jsPDF AutoTable -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    
     <!-- Alpine.js (Core Logic) -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script>
@@ -497,6 +503,60 @@
                     } finally {
                         this.loading = false;
                     }
+                },
+
+                downloadExcel() {
+                    if (this.reportData.length === 0) return;
+                    
+                    const wsData = [
+                        ["Tarih", "Plaka", "Calisma (Dk)", "Rolanti (Dk)", "Mesafe (KM)"]
+                    ];
+                    this.reportData.forEach(row => {
+                        wsData.push([row.date, row.plate, row.active_mins, row.idle_mins, row.distance]);
+                    });
+                    
+                    wsData.push([]);
+                    wsData.push(["TOPLAM", "", "", this.totalSummary.idle + " Dk", this.totalSummary.distance + " KM"]);
+                    
+                    const ws = XLSX.utils.aoa_to_sheet(wsData);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "Calisma Raporu");
+                    XLSX.writeFile(wb, "FiloMerkez_Arac_Calisma_Raporu.xlsx");
+                },
+
+                downloadPDF() {
+                    if (this.reportData.length === 0) return;
+                    
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
+                    
+                    // Header (Premium Look)
+                    doc.setFontSize(18);
+                    doc.setTextColor(30, 58, 138); // Indigo-900
+                    doc.text("FiloMerkez - Arac Calisma Raporu", 14, 22);
+                    
+                    doc.setFontSize(10);
+                    doc.setTextColor(100);
+                    doc.text("Olusturulma Tarihi: " + new Date().toLocaleString('tr-TR'), 14, 30);
+                    
+                    // Table Data
+                    const tableBody = this.reportData.map(row => [
+                        row.date, row.plate, row.active_mins + " Dk", row.idle_mins + " Dk", row.distance + " KM"
+                    ]);
+                    
+                    // Draw Table with custom premium styling
+                    doc.autoTable({
+                        startY: 35,
+                        head: [["Tarih", "Plaka", "Calisma", "Rolanti", "Mesafe"]],
+                        body: tableBody,
+                        theme: 'striped',
+                        headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontStyle: 'bold' },
+                        styles: { fontSize: 10, cellPadding: 4 },
+                        foot: [["TOPLAM", "", "-", this.totalSummary.idle + " Dk", this.totalSummary.distance + " KM"]],
+                        footStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold' }
+                    });
+                    
+                    doc.save("FiloMerkez_Arac_Calisma_Raporu.pdf");
                 }
             }));
         });
