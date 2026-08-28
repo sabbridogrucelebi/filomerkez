@@ -101,4 +101,37 @@ class ReportsApiController extends Controller
             ]
         ];
     }
+
+    public function workingReportData(Request $request)
+    {
+        abort_unless(auth()->user()->hasPermission('vehicle_tracking.view'), 403);
+        $companyId = auth()->user()->company_id;
+        
+        $startDate = $request->input('start_date', Carbon::today()->toDateString());
+        $endDate = $request->input('end_date', Carbon::today()->toDateString());
+        $vehicleId = $request->input('vehicle_id', 'all');
+
+        $query = VehicleReportSummary::with('vehicle')->where('company_id', $companyId)
+            ->whereBetween('report_date', [$startDate, $endDate]);
+            
+        if ($vehicleId !== 'all') {
+            $query->where('vehicle_id', $vehicleId);
+        }
+
+        $summaries = $query->orderBy('report_date', 'desc')->get();
+
+        $rows = $summaries->map(function ($row) {
+            return [
+                'id' => $row->id,
+                'date' => $row->report_date->format('d.m.Y'),
+                'plate' => $row->vehicle->plate ?? 'Bilinmeyen',
+                'active_mins' => $row->active_minutes,
+                'idle_mins' => $row->idle_minutes,
+                'idle_loss_tl' => $row->idle_fuel_loss_tl,
+                'distance' => $row->total_distance_km
+            ];
+        });
+
+        return response()->json(['rows' => $rows]);
+    }
 }

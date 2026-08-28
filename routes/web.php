@@ -418,6 +418,10 @@ Route::get('/vehicle-tracking/reports/data', [\App\Http\Controllers\Api\V1\Repor
     ->middleware(['auth', 'permission:vehicle_tracking.view'])
     ->name('vehicle-tracking.reports.data');
 
+Route::get('/vehicle-tracking/reports/working', [\App\Http\Controllers\Api\V1\ReportsApiController::class, 'workingReportData'])
+    ->middleware(['auth', 'permission:vehicle_tracking.view'])
+    ->name('vehicle-tracking.reports.working');
+
 // cPanel Terminal Alternatifi (Geçici)
 Route::get('/run-migrations', function() {
     \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
