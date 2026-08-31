@@ -1453,7 +1453,19 @@
             let speedColor = '#ef4444';
             let speedBg = '#fef2f2';
             let statusText = 'DURUYOR';
-            if (vehicle.Speed > 0) {
+            
+            // Sinyal Yok kontrolü (Örn: 15 dakikadan eski veri)
+            const nowSeconds = Math.floor(Date.now() / 1000);
+            const isOffline = vehicle.Timestamp && (nowSeconds - vehicle.Timestamp > 15 * 60);
+            
+            // Hız filtresi (GPS sürüklenmesini önlemek için 3 km/s altı DURUYOR sayılır)
+            const displaySpeed = vehicle.Speed && vehicle.Speed > 2 ? vehicle.Speed : 0;
+
+            if (isOffline) {
+                speedColor = '#64748b'; // slate-500
+                speedBg = '#f1f5f9';    // slate-100
+                statusText = 'SİNYAL YOK';
+            } else if (displaySpeed > 0) {
                 speedColor = '#0ea5e9';
                 speedBg = '#f0f9ff';
                 statusText = 'HAREKET HALİNDE';
@@ -1488,11 +1500,11 @@
                     <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed #e2e8f0;">
                         <div>
                             <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 2px;">Anlık Hız</div>
-                            <div style="color: ${speedColor}; font-size: 18px; font-weight: 900; line-height: 1;">${vehicle.Speed} <span style="font-size: 11px; font-weight: 700;">km/h</span></div>
+                            <div style="color: ${speedColor}; font-size: 18px; font-weight: 900; line-height: 1;">${displaySpeed} <span style="font-size: 11px; font-weight: 700;">km/h</span></div>
                         </div>
                         <div style="text-align: right;">
                             <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 2px;">Son Sinyal</div>
-                            <div style="font-size: 11px; font-weight: 700; color: #334155;">${timeStr}</div>
+                            <div style="font-size: 11px; font-weight: 700; color: ${isOffline ? '#ef4444' : '#334155'}; ${isOffline ? 'text-decoration: underline;' : ''}">${timeStr}</div>
                         </div>
                     </div>
                     
