@@ -69,8 +69,10 @@ const server = net.createServer((socket) => {
                         
                         devices[deviceImei].lastAcc = newAcc;
                         devices[deviceImei].lastVoltage = packet.heartbeat.voltage;
+                        devices[deviceImei].lastCharging = packet.heartbeat.charging;
+                        devices[deviceImei].lastAlarm = packet.heartbeat.alarm;
 
-                        console.log(`[HEARTBEAT] IMEI: ${deviceImei} | ACC: ${prevAcc ? 'AÇIK' : 'KAPALI'} → ${newAcc ? 'AÇIK' : 'KAPALI'} | Voltaj: ${packet.heartbeat.voltage}V`);
+                        console.log(`[HEARTBEAT] IMEI: ${deviceImei} | ACC: ${prevAcc ? 'AÇIK' : 'KAPALI'} → ${newAcc ? 'AÇIK' : 'KAPALI'} | Voltaj: ${packet.heartbeat.voltage}V | Charging: ${packet.heartbeat.charging}`);
 
                         // ACC durumu değiştiğinde VEYA periyodik olarak durumu API'ye bildir
                         // (Son bilinen konum ile gönder, böylece cihaz duruyor olsa bile ACC güncellensin)
@@ -124,13 +126,17 @@ const server = net.createServer((socket) => {
                             devices[deviceImei].lastCourse = loc.course;
                         }
 
-                        // Heartbeat'ten gelen son ACC durumunu konum verisiyle birleştir
+                        // Heartbeat'ten gelen son durumlari konum verisiyle birleştir
                         const currentAcc = devices[deviceImei] ? devices[deviceImei].lastAcc : false;
                         const currentVoltage = devices[deviceImei] ? devices[deviceImei].lastVoltage : null;
+                        const currentCharging = devices[deviceImei] && devices[deviceImei].lastCharging !== undefined ? devices[deviceImei].lastCharging : true;
+                        const currentAlarm = devices[deviceImei] ? devices[deviceImei].lastAlarm : null;
 
                         const statusPayload = {
                             ...(loc.status || {}),
                             acc: currentAcc,  // Heartbeat'ten gelen gerçek ACC
+                            charging: currentCharging,
+                            alarm: currentAlarm
                         };
                         if (currentVoltage !== null) {
                             statusPayload.voltage = currentVoltage;
