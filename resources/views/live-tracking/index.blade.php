@@ -1725,7 +1725,31 @@
 
         // ==========================================
         // GEÇMİŞ İZLEME (HISTORY PLAYBACK) LOGIC
+        // ==========================================
+        let isHistoryMode = false;
+        let historyData = [];
+        let tripData = [];
+        let historyPolyline = null;
+        let historyStopMarkers = L.layerGroup();
+        let historyMarker = null;
+        let playbackInterval = null;
+        let currentPlaybackIndex = 0;
+        let playbackSpeed = 1; // 1x, 5x, 10x
+        let isPlaying = false;
+        let activeTripIndex = null;
 
+        function openHistoryPanel() {
+            document.getElementById('arventoTopBar').classList.remove('hidden');
+        }
+
+        function checkCustomDateFilter() {
+            const val = document.getElementById('arventoDateSelect').value;
+            if (val === 'custom') {
+                document.getElementById('customDatePanel').classList.remove('hidden');
+            } else {
+                document.getElementById('customDatePanel').classList.add('hidden');
+            }
+        }
         // ==========================================
         // ARAÇ ARAMA DROPDOWN LOGIC
         // ==========================================
