@@ -35,7 +35,7 @@ class VehicleTrackingApiController extends Controller
                 $plateClean = strtoupper(str_replace(' ', '', $v['LicensePlate'] ?? ''));
                 if (isset($dbVehicles[$plateClean]) && $dbVehicles[$plateClean]->drivers->first()) {
                     $driver = $dbVehicles[$plateClean]->drivers->first();
-                    $v['Driver'] = trim($driver->first_name . ' ' . $driver->last_name);
+                    $v['Driver'] = trim($driver->full_name ?? ($driver->first_name . ' ' . $driver->last_name));
                 } else {
                     $v['Driver'] = 'Bilinmiyor';
                 }
@@ -60,8 +60,8 @@ class VehicleTrackingApiController extends Controller
                 if ($loc) {
                     $statusArr = is_string($loc->status) ? json_decode($loc->status, true) : $loc->status;
                     $vehicles[] = [
-                        'LicensePlate' => $v->license_plate,
-                        'Driver' => $v->drivers->first() ? trim($v->drivers->first()->first_name . ' ' . $v->drivers->first()->last_name) : 'Atanmamış',
+                        'LicensePlate' => $v->plate ?? $v->license_plate,
+                        'Driver' => $v->drivers->first() ? trim($v->drivers->first()->full_name ?? ($v->drivers->first()->first_name . ' ' . $v->drivers->first()->last_name)) : 'Atanmamış',
                         'Latitude' => $loc->latitude,
                         'Longitude' => $loc->longitude,
                         'Speed' => $loc->speed,
@@ -306,8 +306,8 @@ class VehicleTrackingApiController extends Controller
             $dbVehicles = \App\Models\Fleet\Vehicle::with('drivers')->where('company_id', $companyId)->get();
             foreach ($dbVehicles as $v) {
                 $reports[] = [
-                    'LicensePlate' => $v->license_plate,
-                    'Driver' => $v->drivers->first() ? $v->drivers->first()->first_name . ' ' . $v->drivers->first()->last_name : 'Atanmamış',
+                    'LicensePlate' => $v->plate ?? $v->license_plate,
+                    'Driver' => $v->drivers->first() ? trim($v->drivers->first()->full_name ?? ($v->drivers->first()->first_name . ' ' . $v->drivers->first()->last_name)) : 'Atanmamış',
                     'DateTime' => $date . ' ' . sprintf('%02d:%02d', rand(6, 11), rand(0, 59)),
                     'Latitude' => 41.0082 + (rand(-100, 100) / 10000),
                     'Longitude' => 28.9784 + (rand(-100, 100) / 10000),
