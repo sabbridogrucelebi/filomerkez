@@ -726,9 +726,9 @@
                         <div class="absolute -left-10 top-0 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl group-hover:bg-yellow-500/20 transition-colors duration-700"></div>
                         <div class="relative z-10">
                             <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Araç Voltajı</div>
-                            <div class="text-xl font-black text-white flex items-center gap-2 drop-shadow-md">
-                                <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                                <span id="advTabVoltage">12.4V</span>
+                            <div id="advTabVoltageContainer" class="text-xl font-black text-white flex items-center gap-2 drop-shadow-md">
+                                <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                <span id="advTabVoltage" class="text-slate-400 text-base">Veri Yok</span>
                             </div>
                         </div>
                         <div class="text-right relative z-10">
@@ -2301,10 +2301,22 @@
                 kontakEl.style.color = '#fb7185'; // Rose (Off)
                 ignitionStatusEl.innerText = 'Kapalı';
             }
-            
             // Ekstra Sensör ve Veriler
             document.getElementById('advTabMaxHiz').innerText = (vehicle.MaxSpeed || vehicle.Speed || 0) + ' km/s';
-            document.getElementById('advTabVoltage').innerText = vehicle.Voltage ? (vehicle.Voltage + 'V') : 'Veri Yok';
+            
+            let voltageHtml = `<svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                               <span class="text-slate-400 text-base">Veri Yok</span>`;
+            if (vehicle.Voltage) {
+                let vColor = 'text-red-500';
+                if (vehicle.Voltage >= 13.0) vColor = 'text-emerald-400';
+                else if (vehicle.Voltage >= 12.0) vColor = 'text-yellow-400';
+                else if (vehicle.Voltage >= 11.0) vColor = 'text-orange-400';
+                
+                voltageHtml = `<svg class="w-5 h-5 ${vColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                               <span class="${vColor}">${vehicle.Voltage}V</span>`;
+            }
+            document.getElementById('advTabVoltageContainer').innerHTML = voltageHtml;
+            
             document.getElementById('advTabFirstIgnition').innerText = vehicle.FirstIgnitionTime || 'Veri Yok';
             
             // Altitude & Satellites (Eğer API'den geliyorsa)
