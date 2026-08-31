@@ -591,6 +591,11 @@ class LiveTrackingController extends Controller
         $vehicle->device_imei = $request->imei;
         $vehicle->save();
         
+        // Eski şoförleri bu araçtan çıkar (1 Araç = 1 Şoför kuralı)
+        \App\Models\Fleet\Driver::where('vehicle_id', $vehicle->id)
+            ->where('company_id', $companyId)
+            ->update(['vehicle_id' => null]);
+            
         // 3. Şoförü Bul veya Oluştur
         $driver = \App\Models\Fleet\Driver::firstOrNew(['phone' => $request->driver_phone, 'company_id' => $companyId]);
         $driver->full_name = $request->driver_name;
