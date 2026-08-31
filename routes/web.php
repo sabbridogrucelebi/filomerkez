@@ -430,6 +430,10 @@ Route::get('/vehicle-tracking/reports/speed-alarm', [\App\Http\Controllers\Api\V
     ->middleware(['auth', 'permission:vehicle_tracking.view'])
     ->name('vehicle-tracking.reports.speed-alarm');
 
+Route::get('/vehicle-tracking/reports/idle-time', [\App\Http\Controllers\Api\V1\ReportsApiController::class, 'idleTimeReportData'])
+    ->middleware(['auth', 'permission:vehicle_tracking.view'])
+    ->name('vehicle-tracking.reports.idle-time');
+
 // cPanel Terminal Alternatifi (Geçici)
 Route::get('/run-migrations', function() {
     \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);

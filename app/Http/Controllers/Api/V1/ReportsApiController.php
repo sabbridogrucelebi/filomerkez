@@ -430,4 +430,226 @@ class ReportsApiController extends Controller
             'longitude' => round($first->longitude, 5),
         ];
     }
+
+    /**
+     * Rölanti Süresi Raporu
+     * ACC=true ve speed<3 olan kayıtları tespit ederek rölanti olaylarını gruplar.
+     * Özet mod: Günlük toplam rölanti süresi
+     * Detay mod: Her rölanti olayı ayrı satır olarak konum bilgisiyle
+     */
+    public function idleTimeReportData(Request $request)
+    {
+        abort_unless(auth()->user()->hasPermission('vehicle_tracking.view'), 403);
+        $companyId = auth()->user()->company_id;
+
+        $startDate = $request->input('start_date', Carbon::today()->toDateString());
+        $endDate = $request->input('end_date', Carbon::today()->toDateString());
+        $vehicleId = $request->input('vehicle_id', 'all');
+        $mode = $request->input('mode', 'summary'); // 'summary' veya 'detail'
+        $minIdleMinutes = (int) $request->input('min_idle', 2); // Minimum rölanti süresi filtresi (dk)
+
+        $start = Carbon::parse($startDate, 'Europe/Istanbul');
+        $end = Carbon::parse($endDate, 'Europe/Istanbul');
+
+        if ($end->isFuture()) $end = Carbon::today('Europe/Istanbul');
+        if ($start->isAfter($end)) $start = $end->copy();
+        if ($start->diffInDays($end) > 30) $start = $end->copy()->subDays(30);
+
+        $vehicleQuery = \App\Models\Fleet\Vehicle::whereNotNull('device_imei')
+            ->where('device_imei', '!=', '')
+            ->where('company_id', $companyId);
+
+        if ($vehicleId !== 'all') {
+            $vehicleQuery->where('id', $vehicleId);
+        }
+        $vehicles = $vehicleQuery->get();
+
+        $rows = [];
+        $totalIdleMinutes = 0;
+        $totalIdleEvents = 0;
+        $totalDistanceKm = 0;
+
+        foreach ($vehicles as $vehicle) {
+            $currentDate = $start->copy();
+
+            while ($currentDate->lte($end)) {
+                $dayStartUtc = $currentDate->copy()->startOfDay()->setTimezone('UTC');
+                $dayEndUtc = $currentDate->copy()->endOfDay()->setTimezone('UTC');
+
+                // O günün tüm konum kayıtlarını getir (sıralı)
+                $locations = \App\Models\Fleet\VehicleLocation::where('vehicle_id', $vehicle->id)
+                    ->whereBetween('recorded_at', [$dayStartUtc, $dayEndUtc])
+                    ->orderBy('recorded_at', 'asc')
+                    ->get(['id', 'latitude', 'longitude', 'speed', 'recorded_at', 'status']);
+
+                if ($locations->isEmpty()) {
+                    $currentDate->addDay();
+                    continue;
+                }
+
+                // Rölanti olaylarını tespit et
+                $idleEvents = [];
+                $currentIdleGroup = [];
+                $dayDistance = 0;
+                $prevLat = null;
+                $prevLng = null;
+
+                foreach ($locations as $loc) {
+                    $acc = isset($loc->status['acc']) ? (bool) $loc->status['acc'] : false;
+                    $isIdle = ($acc && $loc->speed < 3); // Motor çalışıyor ama hareket yok
+
+                    if ($isIdle) {
+                        $currentIdleGroup[] = $loc;
+                    } else {
+                        // Önceki rölanti grubunu işle
+                        if (count($currentIdleGroup) >= 2) {
+                            $event = $this->processIdleGroup($currentIdleGroup, $vehicle, $currentDate);
+                            if ($event && $event['duration_minutes'] >= $minIdleMinutes) {
+                                $idleEvents[] = $event;
+                            }
+                        }
+                        $currentIdleGroup = [];
+                    }
+
+                    // Mesafe hesapla
+                    if ($prevLat !== null && $prevLng !== null && $loc->speed >= 3) {
+                        $dayDistance += $this->haversine($prevLat, $prevLng, $loc->latitude, $loc->longitude);
+                    }
+                    $prevLat = $loc->latitude;
+                    $prevLng = $loc->longitude;
+                }
+
+                // Son grubu işle
+                if (count($currentIdleGroup) >= 2) {
+                    $event = $this->processIdleGroup($currentIdleGroup, $vehicle, $currentDate);
+                    if ($event && $event['duration_minutes'] >= $minIdleMinutes) {
+                        $idleEvents[] = $event;
+                    }
+                }
+
+                $dayDistance = round($dayDistance, 1);
+
+                if ($mode === 'detail') {
+                    // Detay mod: Her rölanti olayı ayrı satır
+                    foreach ($idleEvents as $event) {
+                        $event['distance'] = $dayDistance;
+                        $rows[] = $event;
+                        $totalIdleMinutes += $event['duration_minutes'];
+                        $totalIdleEvents++;
+                    }
+                } else {
+                    // Özet mod: Günlük toplam rölanti
+                    $dayIdleMinutes = array_sum(array_column($idleEvents, 'duration_minutes'));
+                    $dayIdleCount = count($idleEvents);
+
+                    if ($dayIdleMinutes > 0) {
+                        // Süreyi okunaklı formata çevir
+                        $durationStr = $this->formatDuration($dayIdleMinutes);
+
+                        $rows[] = [
+                            'id' => $vehicle->id . '_' . $currentDate->format('Ymd'),
+                            'date' => $currentDate->format('d.m.Y'),
+                            'plate' => $vehicle->plate,
+                            'idle_count' => $dayIdleCount,
+                            'idle_duration' => $durationStr,
+                            'duration_minutes' => $dayIdleMinutes,
+                            'distance' => $dayDistance,
+                            'idle_ratio' => $dayDistance > 0 ? round(($dayIdleMinutes / max(1, $dayIdleMinutes + ($dayDistance / 0.5))) * 100, 1) : 0,
+                        ];
+                        $totalIdleMinutes += $dayIdleMinutes;
+                        $totalIdleEvents += $dayIdleCount;
+                    }
+                }
+
+                $totalDistanceKm += $dayDistance;
+                $currentDate->addDay();
+            }
+        }
+
+        // Tarihe göre ters sırala
+        usort($rows, function ($a, $b) {
+            $dateA = isset($a['sort_date']) ? $a['sort_date'] : $a['date'];
+            $dateB = isset($b['sort_date']) ? $b['sort_date'] : $b['date'];
+            // d.m.Y formatını Y-m-d'ye çevirelim
+            if (strpos($dateA, '.') !== false) {
+                $dateA = Carbon::createFromFormat('d.m.Y', $dateA)->format('Y-m-d');
+            }
+            if (strpos($dateB, '.') !== false) {
+                $dateB = Carbon::createFromFormat('d.m.Y', $dateB)->format('Y-m-d');
+            }
+            return strcmp($dateB, $dateA);
+        });
+
+        return response()->json([
+            'rows' => $rows,
+            'summary' => [
+                'total_idle_minutes' => $totalIdleMinutes,
+                'total_idle_str' => $this->formatDuration($totalIdleMinutes),
+                'total_events' => $totalIdleEvents,
+                'total_distance' => round($totalDistanceKm, 1),
+            ]
+        ]);
+    }
+
+    /**
+     * Bir rölanti grubunu tek satıra çevirir (detay mod)
+     */
+    private function processIdleGroup(array $group, $vehicle, $date): ?array
+    {
+        if (count($group) < 2) return null;
+
+        $first = $group[0];
+        $last = end($group);
+
+        $firstRaw = $first->getRawOriginal('recorded_at');
+        $lastRaw = $last->getRawOriginal('recorded_at');
+
+        $startTime = Carbon::parse($firstRaw, 'UTC')->setTimezone('Europe/Istanbul');
+        $endTime = Carbon::parse($lastRaw, 'UTC')->setTimezone('Europe/Istanbul');
+
+        $durationMinutes = max(1, $startTime->diffInMinutes($endTime));
+
+        return [
+            'id' => $vehicle->id . '_' . $startTime->format('YmdHis'),
+            'date' => $date->format('d.m.Y'),
+            'sort_date' => $startTime->format('Y-m-d H:i:s'),
+            'plate' => $vehicle->plate,
+            'start_time' => $startTime->format('H:i'),
+            'end_time' => $endTime->format('H:i'),
+            'idle_duration' => $this->formatDuration($durationMinutes),
+            'duration_minutes' => $durationMinutes,
+            'latitude' => round($first->latitude, 5),
+            'longitude' => round($first->longitude, 5),
+            'location' => round($first->latitude, 4) . ', ' . round($first->longitude, 4),
+            'distance' => 0, // Günlük mesafe sonradan eklenir
+        ];
+    }
+
+    /**
+     * Dakikayı okunaklı formata çevirir
+     */
+    private function formatDuration(int $minutes): string
+    {
+        if ($minutes >= 60) {
+            $hours = floor($minutes / 60);
+            $mins = $minutes % 60;
+            return $hours . ' sa ' . $mins . ' dk';
+        }
+        return $minutes . ' dk';
+    }
+
+    /**
+     * İki koordinat arasındaki mesafe (km) - Haversine formülü
+     */
+    private function haversine($lat1, $lon1, $lat2, $lon2): float
+    {
+        $latFrom = deg2rad($lat1);
+        $lonFrom = deg2rad($lon1);
+        $latTo = deg2rad($lat2);
+        $lonTo = deg2rad($lon2);
+        $latDelta = $latTo - $latFrom;
+        $lonDelta = $lonTo - $lonFrom;
+        $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) + cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
+        return $angle * 6371;
+    }
 }
