@@ -40,7 +40,8 @@ class LiveTrackingController extends Controller
 
         $companyId = auth()->user()->company_id;
         
-        $vehicles = Vehicle::where('company_id', $companyId)
+        $vehicles = Vehicle::with('drivers')
+            ->where('company_id', $companyId)
             ->whereNotNull('device_imei')
             ->where('device_imei', '!=', '')
             ->get();
@@ -106,6 +107,7 @@ class LiveTrackingController extends Controller
                 $liveData[] = [
                     'Node' => $vehicle->id,
                     'LicensePlate' => $vehicle->plate,
+                    'Driver' => $vehicle->drivers->first() ? trim($vehicle->drivers->first()->full_name) : null,
                     'Latitude' => $lastLocation->latitude,
                     'Longitude' => $lastLocation->longitude,
                     'Speed' => $lastLocation->speed,
@@ -123,6 +125,7 @@ class LiveTrackingController extends Controller
                 $liveData[] = [
                     'Node' => $vehicle->id,
                     'LicensePlate' => $vehicle->plate,
+                    'Driver' => $vehicle->drivers->first() ? trim($vehicle->drivers->first()->full_name) : null,
                     'Latitude' => null,
                     'Longitude' => null,
                     'Speed' => 0,
