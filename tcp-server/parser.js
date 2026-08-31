@@ -178,21 +178,21 @@ function parseLocation(buffer) {
 
     // Course & Status (2 byte)
     // GT06N Protokolü:
-    //   Bit 0-9:   Yön açısı (Course, 0-360 derece)
-    //   Bit 10:    Gerçek zamanlı GPS (1) / Diferansiyel GPS (0)
-    //   Bit 11:    GPS konumlanmış (1) / konumlanmamış (0)
-    //   Bit 12:    Boylam göstergesi (0=Doğu, 1=Batı)
-    //   Bit 13:    Enlem göstergesi (0=Kuzey, 1=Güney)  ← BU ACC DEĞİL, YARIKÜRE BİLGİSİDİR!
-    //   Bit 14-15: Ayrılmış (Reserved)
+    // Byte 16:
+    //   Bit 7 (Bit 15): Reserved
+    //   Bit 6 (Bit 14): Reserved
+    //   Bit 5 (Bit 13): Longitude (0=East, 1=West)
+    //   Bit 4 (Bit 12): Latitude (0=South, 1=North)
     const courseStatus = buffer.readUInt16BE(16);
     const course = courseStatus & 0x03FF;                      // Bit 0-9: Yön açısı
     const gpsPositioned = (courseStatus & 0x0800) >> 11;       // Bit 11: GPS konumlanmış mı
-    const isWest = (courseStatus & 0x1000) >> 12;              // Bit 12: Batı Boylamı mı
-    const isSouth = (courseStatus & 0x2000) >> 13;             // Bit 13: Güney Enlemi mi (ESKİ KODDA YANLIŞ OLARAK ACC OKUNUYORDU!)
+    const isWest = (courseStatus & 0x2000) >> 13;              // Bit 13: 1=West, 0=East
+    const isNorth = (courseStatus & 0x1000) >> 12;             // Bit 12: 1=North, 0=South
+    const isSouth = isNorth === 0;
 
     // Enlem/Boylam işaretlerini uygula
     if (isSouth) lat = -lat;
-    if (isWest) lng = -lng;
+    if (isWest === 1) lng = -lng;
 
     // NOT: ACC bilgisi bu pakette YOK! GT06N'de ACC sadece Heartbeat (0x13) paketinde bulunur.
     // Konum paketinde ACC durumu heartbeat'ten gelen son bilgiyle birleştirilecek.
