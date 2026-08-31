@@ -187,12 +187,21 @@ function parseLocation(buffer) {
     const course = courseStatus & 0x03FF;                      // Bit 0-9: Yön açısı
     const gpsPositioned = (courseStatus & 0x0800) >> 11;       // Bit 11: GPS konumlanmış mı
     const isWest = (courseStatus & 0x2000) >> 13;              // Bit 13: 1=West, 0=East
-    const isNorth = (courseStatus & 0x1000) >> 12;             // Bit 12: 1=North, 0=South
-    const isSouth = isNorth === 0;
+    const isNorth = (courseStatus & 0x1000) >> 12;             // Bit 12: 1=North (Bazı cihazlarda 1=South)
 
-    // Enlem/Boylam işaretlerini uygula
-    if (isSouth) lat = -lat;
-    if (isWest === 1) lng = -lng;
+    // Çin malı cihazların (klonların) yarımküre bitleri genelde hatalı veya tutarsızdır.
+    // Profesyonel çözüm: Eğer lokasyon Türkiye/Avrasya (Enlem 30-50, Boylam 20-50) civarındaysa
+    // Cihazın gönderdiği bitleri görmezden gel ve daima pozitif (Kuzey/Doğu) olarak kabul et.
+    lat = Math.abs(lat);
+    lng = Math.abs(lng);
+
+    // Eğer gerçekten çok uzak bir ülkeye gidilirse (Amerika/Güney Afrika vs.) bitlere güvenebiliriz.
+    // Ancak klon cihazlarda bu bitler hep hatalı geldiği için varsayılan olarak Kuzey/Doğu'da tutmak en güvenlisidir.
+    if (lat > 50 || lat < 30 || lng > 55 || lng < 20) {
+        const isSouthFallback = isNorth === 0; // Veya cihaza göre değişebilir
+        if (isSouthFallback) lat = -lat;
+        if (isWest === 1) lng = -lng;
+    }
 
     // NOT: ACC bilgisi bu pakette YOK! GT06N'de ACC sadece Heartbeat (0x13) paketinde bulunur.
     // Konum paketinde ACC durumu heartbeat'ten gelen son bilgiyle birleştirilecek.
