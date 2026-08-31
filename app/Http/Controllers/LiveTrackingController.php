@@ -63,15 +63,24 @@ class LiveTrackingController extends Controller
                     $locations = \App\Models\Fleet\VehicleLocation::where('vehicle_id', $vehicle->id)
                         ->where('recorded_at', '>=', $todayStart)
                         ->orderBy('recorded_at', 'asc')
-                        ->get(['latitude', 'longitude', 'speed']);
+                        ->get(['latitude', 'longitude', 'speed', 'status', 'recorded_at']);
                         
                     $distance = 0;
                     $maxSpeed = 0;
                     $prevLat = null;
                     $prevLng = null;
+                    $firstIgnitionTime = null;
                     
                     foreach ($locations as $loc) {
                         if ($loc->speed > $maxSpeed) $maxSpeed = $loc->speed;
+                        
+                        // İlk kontağı bul (statüsünde acc=true veya speed>2 olan ilk kayıt)
+                        if ($firstIgnitionTime === null) {
+                            $isAcc = isset($loc->status['acc']) && $loc->status['acc'] == true;
+                            if ($isAcc || $loc->speed > 2) {
+                                $firstIgnitionTime = $loc->recorded_at ? $loc->recorded_at->copy()->addHours(3)->format('H:i') : null;
+                            }
+                        }
                         
                         if ($prevLat !== null && $prevLng !== null) {
                             $latFrom = deg2rad($prevLat);
@@ -89,7 +98,8 @@ class LiveTrackingController extends Controller
                     
                     return [
                         'DailyDistance' => round($distance, 1),
-                        'MaxSpeed' => round($maxSpeed, 1)
+                        'MaxSpeed' => round($maxSpeed, 1),
+                        'FirstIgnitionTime' => $firstIgnitionTime
                     ];
                 });
                 
@@ -106,6 +116,7 @@ class LiveTrackingController extends Controller
                     'Address' => 'Konum: ' . $lastLocation->latitude . ', ' . $lastLocation->longitude,
                     'DailyDistance' => $stats['DailyDistance'],
                     'MaxSpeed' => $stats['MaxSpeed'],
+                    'FirstIgnitionTime' => $stats['FirstIgnitionTime'],
                     'Voltage' => isset($lastLocation->status['voltage']) ? (float)$lastLocation->status['voltage'] : null,
                 ];
             } else {
@@ -122,6 +133,8 @@ class LiveTrackingController extends Controller
                     'Address' => 'Cihazdan veri bekleniyor...',
                     'DailyDistance' => 0,
                     'MaxSpeed' => 0,
+                    'FirstIgnitionTime' => null,
+                    'Voltage' => null,
                 ];
             }
         }

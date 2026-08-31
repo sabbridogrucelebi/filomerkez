@@ -2304,8 +2304,8 @@
             
             // Ekstra Sensör ve Veriler
             document.getElementById('advTabMaxHiz').innerText = (vehicle.MaxSpeed || vehicle.Speed || 0) + ' km/s';
-            document.getElementById('advTabVoltage').innerText = (vehicle.Voltage || '12.4') + 'V'; // API'de yoksa mock
-            document.getElementById('advTabFirstIgnition').innerText = vehicle.FirstIgnitionTime || '08:30'; // API'de yoksa mock
+            document.getElementById('advTabVoltage').innerText = vehicle.Voltage ? (vehicle.Voltage + 'V') : 'Veri Yok';
+            document.getElementById('advTabFirstIgnition').innerText = vehicle.FirstIgnitionTime || 'Veri Yok';
             
             // Altitude & Satellites (Eğer API'den geliyorsa)
             document.getElementById('advTabAltitude').innerText = (vehicle.Altitude || '0') + ' m';
