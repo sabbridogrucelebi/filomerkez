@@ -64,31 +64,28 @@ function parseConcox(buffer) {
                 //   Bit 7: Yağ/Elektrik Kesik (1) / Bağlı (0)
                 //   Bit 6: GPS İzleme Açık (1) / Kapalı (0)
                 //   Bit 5-3: Alarm türleri (000=Normal, 001=Sarsıntı, 010=Güç Kesildi, 011=Düşük Pil, 100=SOS)
-                //   Bit 2: Şarj AÇIK (1) / KAPALI (0) - İÇ BATARYA DÜĞMESİ!
-                //   Bit 1: ACC/Kontak (1=AÇIK, 0=KAPALI)
-                //   Bit 0: Savunma/Tahkimat durumu (1=Aktif, 0=Deaktif)
                 else if (protocolId === 0x13) {
                     if (packetInfoContent.length >= 1) {
                         const terminalInfo = packetInfoContent[0];
-                        const oilElecDisconnected = (terminalInfo & 0x80) >> 7;
-                        const gpsTracking = (terminalInfo & 0x40) >> 6;
-                        const alarmBits = (terminalInfo & 0x38) >> 3;
-                        const charging = (terminalInfo & 0x04) >> 2;
-                        const acc = (terminalInfo & 0x02) >> 1;
-                        const defense = terminalInfo & 0x01;
+                        
+                        // Klon cihazların kullandığı standart dışı bit dizilimi (Eski çalışan kod)
+                        const defense = (terminalInfo & 0x80) >> 7;       // Bit 7: Savunma
+                        const acc = (terminalInfo & 0x40) >> 6;           // Bit 6: ACC (Kontak)
+                        const charging = (terminalInfo & 0x20) >> 5;      // Bit 5: Şarj
+                        const alarmBits = (terminalInfo >> 2) & 0x07;     // Bit 2-4: Alarm
+                        const gpsTracking = (terminalInfo & 0x02) >> 1;   // Bit 1: GPS İzleme
+                        const oilElec = terminalInfo & 0x01;              // Bit 0: Yağ/Elektrik
 
                         const alarmTypes = {
                             0: 'Normal',
-                            1: 'Titreşim/Sarsıntı',
-                            2: 'Güç Kesildi',
-                            3: 'Düşük Pil',
-                            4: 'SOS'
+                            1: 'SOS',
+                            2: 'Düşük Pil',
+                            3: 'Güç Kesildi',
+                            4: 'Titreşim'
                         };
                         let alarm = alarmTypes[alarmBits] || 'Bilinmeyen';
 
                         // Müşteri Özel İsteği: Hırsız/Şoför gizlice cihaz içindeki yedeği kapatırsa
-                        // Batarya OFF konumundayken cihaz şarj almayı keser (charging=0 olur).
-                        // Ancak eğer ana güç henüz kesilmediyse (alarm != Güç Kesildi), bu "Batarya Düğmesi Kapatıldı" demektir!
                         if (charging === 0 && alarm === 'Normal') {
                             alarm = 'Batarya Kapatıldı';
                         }
@@ -130,16 +127,16 @@ function parseConcox(buffer) {
                         const gsmSignal = packetInfoContent[packetInfoContent.length - 3];
                         const alarmLang = packetInfoContent.readUInt16BE(packetInfoContent.length - 2);
 
-                        const acc = (terminalInfo & 0x02) >> 1;
-                        const charging = (terminalInfo & 0x04) >> 2;
-                        const alarmBits = (terminalInfo & 0x38) >> 3;
+                        const acc = (terminalInfo & 0x40) >> 6;
+                        const charging = (terminalInfo & 0x20) >> 5;
+                        const alarmBits = (terminalInfo >> 2) & 0x07;
 
                         const alarmTypes = {
                             0: 'Normal',
-                            1: 'Titreşim/Sarsıntı',
-                            2: 'Güç Kesildi',
-                            3: 'Düşük Pil',
-                            4: 'SOS'
+                            1: 'SOS',
+                            2: 'Düşük Pil',
+                            3: 'Güç Kesildi',
+                            4: 'Titreşim'
                         };
                         let alarm = alarmTypes[alarmBits] || 'Bilinmeyen';
                         
