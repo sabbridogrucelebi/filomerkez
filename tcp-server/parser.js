@@ -176,32 +176,25 @@ function parseLocation(buffer) {
     // Speed
     const speed = buffer[15];
 
-    // Course & Status (2 byte)
-    // GT06N Protokolü:
-    // Byte 16:
-    //   Bit 7 (Bit 15): Reserved
-    //   Bit 6 (Bit 14): Reserved
-    //   Bit 5 (Bit 13): Longitude (0=East, 1=West)
-    //   Bit 4 (Bit 12): Latitude (0=South, 1=North)
+    // GT06N Protokolü (PDF Sayfa 15'e göre BYTE_1 ve BYTE_2):
+    // courseStatus 16 bitlik bir sayıdır (BYTE_1 yüksek byte, BYTE_2 düşük byte)
+    // Bit 15 (BYTE_1 Bit 7): Reserved
+    // Bit 14 (BYTE_1 Bit 6): Reserved
+    // Bit 13 (BYTE_1 Bit 5): GPS real-time (0) / differential (1)
+    // Bit 12 (BYTE_1 Bit 4): GPS positioned (1) / not positioned (0)
+    // Bit 11 (BYTE_1 Bit 3): East Longitude (0) / West Longitude (1)
+    // Bit 10 (BYTE_1 Bit 2): South Latitude (0) / North Latitude (1)
+    // Bit 9-0              : Course (Açı)
+    
     const courseStatus = buffer.readUInt16BE(16);
     const course = courseStatus & 0x03FF;                      // Bit 0-9: Yön açısı
-    const gpsPositioned = (courseStatus & 0x0800) >> 11;       // Bit 11: GPS konumlanmış mı
-    const isWest = (courseStatus & 0x2000) >> 13;              // Bit 13: 1=West, 0=East
-    const isNorth = (courseStatus & 0x1000) >> 12;             // Bit 12: 1=North (Bazı cihazlarda 1=South)
+    const gpsPositioned = (courseStatus & 0x1000) >> 12;       // Bit 12: GPS konumlanmış mı (1=Evet)
+    const isWest = (courseStatus & 0x0800) >> 11;              // Bit 11: 1=Batı (West), 0=Doğu (East)
+    const isNorth = (courseStatus & 0x0400) >> 10;             // Bit 10: 1=Kuzey (North), 0=Güney (South)
 
-    // Çin malı cihazların (klonların) yarımküre bitleri genelde hatalı veya tutarsızdır.
-    // Profesyonel çözüm: Eğer lokasyon Türkiye/Avrasya (Enlem 30-50, Boylam 20-50) civarındaysa
-    // Cihazın gönderdiği bitleri görmezden gel ve daima pozitif (Kuzey/Doğu) olarak kabul et.
-    lat = Math.abs(lat);
-    lng = Math.abs(lng);
-
-    // Eğer gerçekten çok uzak bir ülkeye gidilirse (Amerika/Güney Afrika vs.) bitlere güvenebiliriz.
-    // Ancak klon cihazlarda bu bitler hep hatalı geldiği için varsayılan olarak Kuzey/Doğu'da tutmak en güvenlisidir.
-    if (lat > 50 || lat < 30 || lng > 55 || lng < 20) {
-        const isSouthFallback = isNorth === 0; // Veya cihaza göre değişebilir
-        if (isSouthFallback) lat = -lat;
-        if (isWest === 1) lng = -lng;
-    }
+    // Enlem/Boylam işaretlerini orjinal PDF'e göre kesin olarak uygula
+    if (isNorth === 0) lat = -lat; // Güney yarımküre ise eksi
+    if (isWest === 1) lng = -lng;  // Batı yarımküre ise eksi
 
     // NOT: ACC bilgisi bu pakette YOK! GT06N'de ACC sadece Heartbeat (0x13) paketinde bulunur.
     // Konum paketinde ACC durumu heartbeat'ten gelen son bilgiyle birleştirilecek.
