@@ -1578,9 +1578,27 @@
                 
                 // POWER CUT CHECK & NOTIFICATION
                 let isPowerCut = false;
-                if (vehicle.Charging === false || vehicle.Alarm === 'Güç Kesildi' || vehicle.Alarm === 'Düşük Pil') {
+                
+                if (vehicle.Alarm === 'Batarya Kapatıldı') {
+                    // Güç var ama hırsız/şoför cihazın içindeki ON/OFF tuşunu OFF yapmış!
+                    if (!localStorage.getItem('warned_battery_off_' + vehicle.Node)) {
+                        addNotification(
+                            'bat_off_' + vehicle.Node + '_' + Date.now(),
+                            'Yedek Batarya Kapatıldı!',
+                            `<b>${vehicle.LicensePlate}</b> plakalı aracın cihaz içi YEDEK BATARYASI tuşla kapatıldı! Cihaz aküden güç alıyor ancak ana güç kesilirse cihaz anında tamamen kapanacak.`,
+                            'fa-solid fa-battery-slash'
+                        );
+                        
+                        showCriticalAlert(
+                            'DİKKAT: YEDEK BATARYA KAPATILDI!',
+                            `${vehicle.LicensePlate} plakalı aracın gizli yedek batarya düğmesi OFF (Kapalı) konumuna alındı! Ana güç kesilirse cihaz uyanmamak üzere kapanacaktır.`
+                        );
+                        
+                        localStorage.setItem('warned_battery_off_' + vehicle.Node, 'true');
+                    }
+                } else if (vehicle.Charging === false || vehicle.Alarm === 'Güç Kesildi' || vehicle.Alarm === 'Düşük Pil') {
                     isPowerCut = true;
-                    if (!warnedVehicles[vehicle.Node + '_power']) {
+                    if (!localStorage.getItem('warned_power_' + vehicle.Node)) {
                         addNotification(
                             'power_' + vehicle.Node + '_' + Date.now(),
                             'Ana Güç Kesildi',
@@ -1593,13 +1611,13 @@
                             `${vehicle.LicensePlate} plakalı aracın elektrik bağlantısı (akü kablosu) kesildi veya söküldü! Cihaz kendi dahili piliyle çalışıyor.`
                         );
                         
-                        warnedVehicles[vehicle.Node + '_power'] = true;
+                        localStorage.setItem('warned_power_' + vehicle.Node, 'true');
                     }
                 } else {
-                    if (warnedVehicles[vehicle.Node + '_power']) delete warnedVehicles[vehicle.Node + '_power'];
-                }
-
-                // BATTERY VOLTAGE CHECK & NOTIFICATION
+                    // Her şey normalse (şarj oluyor, güç kesik değil), uyarıları sıfırla ki bir sonraki olayda tekrar çalısın
+                    localStorage.removeItem('warned_power_' + vehicle.Node);
+                    localStorage.removeItem('warned_battery_off_' + vehicle.Node);
+                }                // BATTERY VOLTAGE CHECK & NOTIFICATION
                 if (!isPowerCut && vehicle.Voltage && vehicle.Voltage < 11.5) {
                     if (!warnedVehicles[vehicle.Node]) {
                         addNotification(
@@ -1870,19 +1888,24 @@
             if (!list) return; // Null check
             
             if (notifications.length === 0) {
-                list.innerHTML = '<div class="p-4 text-center text-slate-500 text-sm italic">Henüz bildirim yok</div>';
+                list.innerHTML = '<div class="p-6 text-center text-slate-500 text-[13px] italic flex flex-col items-center gap-2"><i class="fa-regular fa-bell-slash text-2xl opacity-50"></i>Henüz bildirim yok</div>';
                 return;
             }
             
             list.innerHTML = notifications.map(n => `
-                <div onclick="markAsRead('${n.id}')" class="p-3 rounded-xl mb-2 cursor-pointer transition-colors ${n.read ? 'bg-slate-800/50 hover:bg-slate-700/50' : 'bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20'}">
-                    <div class="flex items-start gap-3">
-                        <div class="mt-1 ${n.read ? 'text-slate-500' : 'text-rose-400'}"><i class="${n.iconClass}"></i></div>
-                        <div>
-                            <h4 class="${n.read ? 'text-slate-300' : 'text-white'} font-bold text-sm">${n.title}</h4>
-                            <p class="text-slate-400 text-xs mt-0.5 line-clamp-2">${n.message}</p>
-                            <span class="text-[9px] text-slate-500 mt-1 block">${n.time.toLocaleTimeString()}</span>
+                <div onclick="markAsRead('${n.id}')" class="p-3.5 rounded-xl mb-2.5 cursor-pointer transition-all duration-300 ${n.read ? 'bg-slate-800/40 hover:bg-slate-700/60 border border-slate-700/50' : 'bg-gradient-to-r from-rose-950/80 to-slate-900/90 border border-rose-500/40 hover:border-rose-400/60 shadow-[0_4px_15px_rgba(0,0,0,0.3)]'}">
+                    <div class="flex items-start gap-3.5">
+                        <div class="mt-0.5 flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full ${n.read ? 'bg-slate-800 text-slate-500' : 'bg-rose-500/20 text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.3)]'}">
+                            <i class="${n.iconClass} text-[13px]"></i>
                         </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="${n.read ? 'text-slate-400 font-medium' : 'text-rose-50 font-bold'} text-[13px] leading-tight mb-1">${n.title}</h4>
+                            <p class="${n.read ? 'text-slate-500' : 'text-slate-300'} text-[12px] leading-[1.4] break-words">${n.message}</p>
+                            <span class="text-[10px] ${n.read ? 'text-slate-600' : 'text-rose-400/70 font-semibold'} mt-2 block flex items-center gap-1">
+                                <i class="fa-regular fa-clock"></i> ${n.time.toLocaleTimeString()}
+                            </span>
+                        </div>
+                        ${!n.read ? '<div class="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)] mt-2 flex-shrink-0"></div>' : ''}
                     </div>
                 </div>
             `).join('');
