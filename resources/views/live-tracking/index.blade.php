@@ -575,10 +575,34 @@
                 <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"></path></svg>
                 <span class="nav-tooltip">🏠 Ana Sayfaya Dön</span>
             </a>
+            
+            <!-- Notification Bell -->
+            <div class="relative group">
+                <button onclick="toggleNotificationDropdown(event)" title="Bildirimler"
+                   class="w-11 h-11 rounded-2xl flex items-center justify-center bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 hover:scale-105 hover:-translate-y-1 transition-all duration-300 shadow-[0_0_15px_rgba(244,63,94,0.2)] relative">
+                   <i class="fa-solid fa-bell text-lg drop-shadow-md"></i>
+                   <span id="notificationBadge" class="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-slate-900 hidden shadow-[0_0_10px_rgba(244,63,94,0.8)]">0</span>
+                </button>
+                
+                <!-- Notification Dropdown -->
+                <div id="notificationDropdown" class="hidden absolute right-0 mt-3 w-80 bg-slate-800/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.6)] overflow-hidden z-[1000] opacity-0 translate-y-2 transition-all duration-300">
+                    <div class="p-4 border-b border-white/5 flex justify-between items-center bg-slate-900/50">
+                        <h3 class="text-white font-bold tracking-wide">Bildirimler</h3>
+                        <button onclick="clearAllNotifications(event)" class="text-xs text-slate-400 hover:text-white transition-colors">Tümünü Sil</button>
+                    </div>
+                    <div id="notificationList" class="max-h-80 overflow-y-auto custom-scrollbar p-2">
+                        <!-- Notifications will be injected here -->
+                        <div class="p-4 text-center text-slate-500 text-sm italic">Henüz bildirim yok</div>
+                    </div>
+                </div>
+            </div>
 
         </div>
 
     </div>
+    
+    <!-- Bottom Right Toast Container -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
     <!-- End of topNavbar -->
     @endif
 
@@ -1471,6 +1495,25 @@
         function renderVehicles(liveData) {
             let bounds = [];
             liveData.forEach(vehicle => {
+                
+                // BATTERY VOLTAGE CHECK & NOTIFICATION
+                if (vehicle.Voltage && vehicle.Voltage < 11.5) {
+                    if (!warnedVehicles[vehicle.Node]) {
+                        addNotification(
+                            'batt_' + vehicle.Node + '_' + Date.now(),
+                            'Kritik Akü Voltajı',
+                            `<b>${vehicle.LicensePlate}</b> plakalı aracın akü voltajı tehlikeli seviyede düştü (${vehicle.Voltage}V). Yolda kalma riski var!`,
+                            'fa-solid fa-battery-empty'
+                        );
+                        warnedVehicles[vehicle.Node] = true;
+                    }
+                } else if (vehicle.Voltage && vehicle.Voltage >= 12.0) {
+                    // Voltaj düzelirse uyarıyı sıfırla (tekrar düşerse yine uyarsın)
+                    if (warnedVehicles[vehicle.Node]) {
+                        delete warnedVehicles[vehicle.Node];
+                    }
+                }
+
                 if (vehicle.Latitude && vehicle.Longitude) {
                     const lat = parseFloat(vehicle.Latitude);
                     const lng = parseFloat(vehicle.Longitude);
@@ -1566,35 +1609,113 @@
 
         window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeImeiModal(); });
         // ==========================================
-        // GEÇMİŞ İZLEME (HISTORY PLAYBACK) LOGIC
+        // PRO NOTIFICATION SYSTEM
         // ==========================================
-        // ==========================================
-        // GEÇMİŞ İZLEME (HISTORY PLAYBACK) LOGIC (ARVENTO STYLE)
-        // ==========================================
-        let isHistoryMode = false;
-        let historyData = [];
-        let tripData = [];
-        let historyPolyline = null;
-        let historyStopMarkers = L.layerGroup();
-        let historyMarker = null;
-        let playbackInterval = null;
-        let currentPlaybackIndex = 0;
-        let playbackSpeed = 1; // 1x, 5x, 10x
-        let isPlaying = false;
-        let activeTripIndex = null;
+        let notifications = [];
+        let warnedVehicles = {}; // Aynı araç için uyarı spamını engellemek için
 
-        function openHistoryPanel() {
-            document.getElementById('arventoTopBar').classList.remove('hidden');
+        function showToast(title, message, iconClass) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'bg-slate-900/90 backdrop-blur-xl border-l-4 border-rose-500 rounded-xl p-4 shadow-[0_10px_30px_rgba(244,63,94,0.3)] w-80 transform translate-x-full opacity-0 transition-all duration-500 flex items-start gap-3 pointer-events-auto';
+            toast.innerHTML = `
+                <div class="mt-0.5 text-rose-500"><i class="${iconClass} text-xl drop-shadow-md"></i></div>
+                <div class="flex-1">
+                    <h4 class="text-white font-bold text-sm mb-1">${title}</h4>
+                    <p class="text-slate-400 text-xs leading-relaxed">${message}</p>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-slate-500 hover:text-white transition-colors"><i class="fa-solid fa-xmark"></i></button>
+            `;
+            container.appendChild(toast);
+            
+            // Animasyonla içeri kay
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-x-full', 'opacity-0');
+            });
+            
+            // 15 saniye sonra otomatik kaybol
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 500);
+            }, 15000);
         }
 
-        function checkCustomDateFilter() {
-            const val = document.getElementById('arventoDateSelect').value;
-            if (val === 'custom') {
-                document.getElementById('customDatePanel').classList.remove('hidden');
+        function addNotification(id, title, message, iconClass) {
+            notifications.unshift({ id, title, message, iconClass, read: false, time: new Date() });
+            updateNotificationUI();
+            showToast(title, message, iconClass);
+        }
+
+        function updateNotificationUI() {
+            const unreadCount = notifications.filter(n => !n.read).length;
+            const badge = document.getElementById('notificationBadge');
+            
+            if (unreadCount > 0) {
+                badge.innerText = unreadCount;
+                badge.classList.remove('hidden');
             } else {
-                document.getElementById('customDatePanel').classList.add('hidden');
+                badge.classList.add('hidden');
+            }
+            
+            const list = document.getElementById('notificationList');
+            if (notifications.length === 0) {
+                list.innerHTML = '<div class="p-4 text-center text-slate-500 text-sm italic">Henüz bildirim yok</div>';
+                return;
+            }
+            
+            list.innerHTML = notifications.map(n => `
+                <div onclick="markAsRead('${n.id}')" class="p-3 rounded-xl mb-2 cursor-pointer transition-colors ${n.read ? 'bg-slate-800/50 hover:bg-slate-700/50' : 'bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20'}">
+                    <div class="flex items-start gap-3">
+                        <div class="mt-1 ${n.read ? 'text-slate-500' : 'text-rose-400'}"><i class="${n.iconClass}"></i></div>
+                        <div>
+                            <h4 class="${n.read ? 'text-slate-300' : 'text-white'} font-bold text-sm">${n.title}</h4>
+                            <p class="text-slate-400 text-xs mt-0.5 line-clamp-2">${n.message}</p>
+                            <span class="text-[9px] text-slate-500 mt-1 block">${n.time.toLocaleTimeString()}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function markAsRead(id) {
+            const notif = notifications.find(n => n.id === id);
+            if (notif) {
+                notif.read = true;
+                updateNotificationUI();
             }
         }
+
+        function clearAllNotifications(e) {
+            e.stopPropagation();
+            notifications = [];
+            updateNotificationUI();
+        }
+
+        function toggleNotificationDropdown(e) {
+            e.stopPropagation();
+            const dropdown = document.getElementById('notificationDropdown');
+            if (dropdown.classList.contains('hidden')) {
+                dropdown.classList.remove('hidden');
+                requestAnimationFrame(() => {
+                    dropdown.classList.remove('opacity-0', 'translate-y-2');
+                });
+            } else {
+                dropdown.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => dropdown.classList.add('hidden'), 300);
+            }
+        }
+
+        // Boşluğa tıklayınca bildirimi kapat
+        window.addEventListener('click', () => {
+            const dropdown = document.getElementById('notificationDropdown');
+            if (dropdown && !dropdown.classList.contains('hidden')) {
+                dropdown.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => dropdown.classList.add('hidden'), 300);
+            }
+        });
+
+        // ==========================================
+        // GEÇMİŞ İZLEME (HISTORY PLAYBACK) LOGIC
 
         // ==========================================
         // ARAÇ ARAMA DROPDOWN LOGIC
