@@ -124,6 +124,15 @@ const server = net.createServer((socket) => {
                             devices[deviceImei].lastLng = loc.lng;
                             devices[deviceImei].lastSpeed = loc.speed;
                             devices[deviceImei].lastCourse = loc.course;
+                            
+                            // 0x16 paketinden gelen heartbeat / alarm verisini de kaydet
+                            if (packet.protocolId === 0x16 && packet.heartbeat) {
+                                devices[deviceImei].lastAcc = packet.heartbeat.acc;
+                                devices[deviceImei].lastCharging = packet.heartbeat.charging;
+                                devices[deviceImei].lastAlarm = packet.heartbeat.alarm;
+                                devices[deviceImei].lastVoltage = packet.heartbeat.voltage;
+                                console.log(`[ALARM/0x16] IMEI: ${deviceImei} | Charging: ${packet.heartbeat.charging}, Alarm: ${packet.heartbeat.alarm}`);
+                            }
                         }
 
                         // Heartbeat'ten gelen son durumlari konum verisiyle birleştir

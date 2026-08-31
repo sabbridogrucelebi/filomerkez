@@ -110,6 +110,34 @@ function parseConcox(buffer) {
                 // 4. ALARM PAKETİ (0x16) - Konum + Alarm bilgisi içerir
                 else if (protocolId === 0x16) {
                     packet.location = parseLocation(packetInfoContent);
+                    
+                    // Alarm Paketinin son 5 byte'ı (LBS'den sonraki kısım) Terminal bilgisidir
+                    if (packetInfoContent.length >= 23) {
+                        const terminalInfo = packetInfoContent[packetInfoContent.length - 5];
+                        const voltageLevel = packetInfoContent[packetInfoContent.length - 4];
+                        const gsmSignal = packetInfoContent[packetInfoContent.length - 3];
+                        const alarmLang = packetInfoContent.readUInt16BE(packetInfoContent.length - 2);
+
+                        const acc = (terminalInfo & 0x02) >> 1;
+                        const charging = (terminalInfo & 0x20) >> 5;
+                        const alarmType = (alarmLang & 0x38) >> 3;
+
+                        let alarm = null;
+                        if (alarmType === 1) alarm = "SOS";
+                        else if (alarmType === 2) alarm = "Güç Kesildi";
+                        else if (alarmType === 3) alarm = "Titreşim/Sarsıntı";
+                        else if (alarmType === 4) alarm = "Düşük Pil";
+                        else if (alarmType === 6) alarm = "Hız İhlali";
+                        
+                        let voltage = (voltageLevel === 6) ? 12 : ((voltageLevel === 5) ? 4.2 : ((voltageLevel === 4) ? 4.0 : 3.8));
+
+                        packet.heartbeat = {
+                            acc: acc === 1,
+                            charging: charging === 1,
+                            alarm: alarm,
+                            voltage: voltage
+                        };
+                    }
                 }
             }
 
