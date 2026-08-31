@@ -120,6 +120,8 @@ class LiveTrackingController extends Controller
                     'MaxSpeed' => $stats['MaxSpeed'],
                     'FirstIgnitionTime' => $stats['FirstIgnitionTime'],
                     'Voltage' => isset($lastLocation->status['voltage']) ? (float)$lastLocation->status['voltage'] : null,
+                    'Charging' => isset($lastLocation->status['charging']) ? (bool)$lastLocation->status['charging'] : true,
+                    'Alarm' => isset($lastLocation->status['alarm']) ? $lastLocation->status['alarm'] : null,
                 ];
             } else {
                 $liveData[] = [
@@ -138,6 +140,8 @@ class LiveTrackingController extends Controller
                     'MaxSpeed' => 0,
                     'FirstIgnitionTime' => null,
                     'Voltage' => null,
+                    'Charging' => true,
+                    'Alarm' => null,
                 ];
             }
         }

@@ -1568,8 +1568,25 @@
             let bounds = [];
             liveData.forEach(vehicle => {
                 
+                // POWER CUT CHECK & NOTIFICATION
+                let isPowerCut = false;
+                if (vehicle.Charging === false || vehicle.Alarm === 'Güç Kesildi' || vehicle.Alarm === 'Düşük Pil') {
+                    isPowerCut = true;
+                    if (!warnedVehicles[vehicle.Node + '_power']) {
+                        addNotification(
+                            'power_' + vehicle.Node + '_' + Date.now(),
+                            'Ana Güç Kesildi',
+                            `<b>${vehicle.LicensePlate}</b> plakalı aracın elektrik bağlantısı (akü kablosu) kesildi! Cihaz şu anda kendi dahili bataryasıyla çalışıyor.`,
+                            'fa-solid fa-plug-circle-xmark'
+                        );
+                        warnedVehicles[vehicle.Node + '_power'] = true;
+                    }
+                } else {
+                    if (warnedVehicles[vehicle.Node + '_power']) delete warnedVehicles[vehicle.Node + '_power'];
+                }
+
                 // BATTERY VOLTAGE CHECK & NOTIFICATION
-                if (vehicle.Voltage && vehicle.Voltage < 11.5) {
+                if (!isPowerCut && vehicle.Voltage && vehicle.Voltage < 11.5) {
                     if (!warnedVehicles[vehicle.Node]) {
                         addNotification(
                             'batt_' + vehicle.Node + '_' + Date.now(),
@@ -1579,7 +1596,7 @@
                         );
                         warnedVehicles[vehicle.Node] = true;
                     }
-                } else if (vehicle.Voltage && vehicle.Voltage >= 12.0) {
+                } else if (!isPowerCut && vehicle.Voltage && vehicle.Voltage >= 12.0) {
                     // Voltaj düzelirse uyarıyı sıfırla (tekrar düşerse yine uyarsın)
                     if (warnedVehicles[vehicle.Node]) {
                         delete warnedVehicles[vehicle.Node];
@@ -2583,13 +2600,25 @@
             let voltageHtml = `<svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                                <span class="text-slate-400 text-base">Veri Yok</span>`;
             if (vehicle.Voltage) {
-                let vColor = 'text-red-500';
+                let vColor = 'text-rose-500';
                 if (vehicle.Voltage >= 13.0) vColor = 'text-emerald-400';
                 else if (vehicle.Voltage >= 12.0) vColor = 'text-yellow-400';
                 else if (vehicle.Voltage >= 11.0) vColor = 'text-orange-400';
                 
-                voltageHtml = `<svg class="w-5 h-5 ${vColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                               <span class="${vColor}">${vehicle.Voltage}V</span>`;
+                let powerStatusHTML = `<div class="flex items-center gap-2"><svg class="w-5 h-5 ${vColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                       <span class="${vColor}">${vehicle.Voltage}V</span></div>`;
+
+                if (vehicle.Charging === false || vehicle.Alarm === 'Güç Kesildi' || vehicle.Alarm === 'Düşük Pil') {
+                    powerStatusHTML = `<div class="flex flex-col">
+                                          <div class="flex items-center gap-2">
+                                            <svg class="w-5 h-5 text-rose-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M5.636 5.636a9 9 0 000 12.728m0 0l2.829-2.829m-2.829 2.829L3 21"></path></svg>
+                                            <span class="text-rose-500 font-bold animate-pulse">${vehicle.Voltage}V (Dahili)</span>
+                                          </div>
+                                          <span class="text-[9px] font-black text-rose-400 uppercase mt-1 tracking-wider bg-rose-500/10 px-1 py-0.5 rounded border border-rose-500/20 inline-block w-max">⚠️ ANA GÜÇ KESİLDİ</span>
+                                       </div>`;
+                }
+                
+                voltageHtml = powerStatusHTML;
             }
             document.getElementById('advTabVoltageContainer').innerHTML = voltageHtml;
             
