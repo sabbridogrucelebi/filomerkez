@@ -1614,9 +1614,23 @@
                         localStorage.setItem('warned_power_' + vehicle.Node, 'true');
                     }
                 } else {
-                    // Her şey normalse (şarj oluyor, güç kesik değil), uyarıları sıfırla ki bir sonraki olayda tekrar çalısın
-                    localStorage.removeItem('warned_power_' + vehicle.Node);
-                    localStorage.removeItem('warned_battery_off_' + vehicle.Node);
+                    // Güç kesintisi uyarısı daha önce verildiyse ve şu an her şey normalse (Elektrik Geri Geldi!)
+                    if (localStorage.getItem('warned_power_' + vehicle.Node)) {
+                        addNotification(
+                            'power_restored_' + vehicle.Node + '_' + Date.now(),
+                            'Ana Güç Geri Bağlandı',
+                            `<b>${vehicle.LicensePlate}</b> plakalı aracın elektrik bağlantısı (akü kablosu) tekrar yerine takıldı. Sistem normal çalışmaya döndü.`,
+                            'fa-solid fa-plug-circle-check text-emerald-400'
+                        );
+                        
+                        // Uyarıyı sıfırla
+                        localStorage.removeItem('warned_power_' + vehicle.Node);
+                    }
+                    
+                    // Batarya kapalı uyarısı varsa ve artık batarya kapalı değilse sıfırla
+                    if (localStorage.getItem('warned_battery_off_' + vehicle.Node)) {
+                        localStorage.removeItem('warned_battery_off_' + vehicle.Node);
+                    }
                 }                // BATTERY VOLTAGE CHECK & NOTIFICATION
                 if (!isPowerCut && vehicle.Voltage && vehicle.Voltage < 11.5) {
                     if (!warnedVehicles[vehicle.Node]) {
