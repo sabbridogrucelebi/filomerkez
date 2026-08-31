@@ -504,7 +504,7 @@
     <div id="map" class="absolute inset-0 w-full h-full z-0"></div>
     
     <!-- Sokak Görünümü Paneli (Floating) -->
-    <div id="streetViewPanel" class="hidden absolute bottom-20 right-4 w-80 bg-white rounded-2xl shadow-2xl z-[1000] overflow-hidden border border-slate-200 transition-all duration-300 transform scale-95 opacity-0">
+    <div id="streetViewPanel" class="hidden absolute bg-white rounded-2xl shadow-2xl z-[1000] overflow-hidden border border-slate-200 transition-all duration-300 transform scale-95 opacity-0" style="bottom: 20px; right: 20px; width: 420px;">
         <div class="h-10 bg-slate-900 px-4 flex items-center justify-between">
             <div class="flex items-center gap-2 text-white">
                 <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v10.764a1 1 0 01-1.447.894L15 18M5 18l-1.447.724A1 1 0 012 17.836V7.072a1 1 0 011.447-.894L8 8m-3 10V8m6 10V8m0 10l4.553 2.276A1 1 0 0015 19.382V8.618a1 1 0 00-.553-.894L10 6m0 12V6"></path></svg>
@@ -514,7 +514,7 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
-        <div class="p-0 bg-slate-100 relative h-48" id="streetViewContent">
+        <div class="p-0 bg-slate-100 relative" style="height: 280px;" id="streetViewContent">
             <!-- iframe will go here -->
         </div>
         <div class="p-3 bg-white border-t border-slate-100">
