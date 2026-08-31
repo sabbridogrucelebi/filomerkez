@@ -225,11 +225,15 @@
                                     <span class="block text-[10px] font-bold text-slate-400 uppercase">Cihaz IMEI</span>
                                     <span class="text-sm font-black text-indigo-600 font-mono">{{ $v->device_imei }}</span>
                                 </div>
+                                <div class="text-right mr-4">
+                                    <span class="block text-[10px] font-bold text-slate-400 uppercase">Şoför</span>
+                                    <span class="text-sm font-black text-slate-700">{{ $v->drivers->first() ? $v->drivers->first()->full_name : 'Atanmamış' }}</span>
+                                </div>
                                 <div class="flex gap-2">
                                     <button type="button" onclick="openAdminDeleteModal({{ $v->id }}, '{{ $v->plate }}')" class="h-8 w-8 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-200 flex items-center justify-center transition-colors shadow-sm" title="Eşleştirmeyi Sil">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                     </button>
-                                    <button type="button" onclick="openWizardEditMode({{ $v->id }}, '{{ $v->plate }}', '{{ $v->device_imei }}', '{{ $v->brand }}', '{{ $v->model }}', '{{ $v->model_year }}', '{{ $v->fuel_type }}')" class="h-8 w-8 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-200 flex items-center justify-center transition-colors shadow-sm" title="Düzenle">
+                                    <button type="button" onclick="openWizardEditMode({{ $v->id }}, '{{ $v->plate }}', '{{ $v->device_imei }}', '{{ $v->brand }}', '{{ $v->model }}', '{{ $v->model_year }}', '{{ $v->fuel_type }}', '{{ $v->drivers->first() ? $v->drivers->first()->full_name : '' }}', '{{ $v->drivers->first() ? $v->drivers->first()->phone : '' }}')" class="h-8 w-8 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-200 flex items-center justify-center transition-colors shadow-sm" title="Düzenle">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                     </button>
                                 </div>
@@ -614,8 +618,11 @@
             }, 10);
         }
 
-        function openWizardEditMode(id, plate, imei, brand, model, year, fuel) {
-            document.getElementById('wizardTitle').textContent = "Cihazı Düzenle";
+        function openWizardEditMode(id, plate, imei, brand, model, year, fuel, driverName = "", driverPhone = "") {
+            document.getElementById('wizardTitle').innerText = "Cihazı Düzenle";
+            // Assuming these hidden fields exist in the hidden modal form
+            if (document.getElementById('modalFormMethod')) document.getElementById('modalFormMethod').value = "PUT";
+            if (document.getElementById('wizardVehicleId')) document.getElementById('wizardVehicleId').value = id;
             
             document.getElementById('wizImei').value = imei || "";
             document.getElementById('wizPlate').value = plate || "";
@@ -623,8 +630,8 @@
             document.getElementById('wizModel').value = model || "";
             document.getElementById('wizYear').value = year || "";
             if (fuel) document.getElementById('wizFuel').value = fuel;
-            document.getElementById('wizDriverName').value = "";
-            document.getElementById('wizDriverPhone').value = "";
+            document.getElementById('wizDriverName').value = driverName || "";
+            document.getElementById('wizDriverPhone').value = driverPhone || "";
             
             // Skip directly to Step 3 for editing
             goToStep(3);
