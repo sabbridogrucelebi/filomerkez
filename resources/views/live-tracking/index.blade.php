@@ -2406,7 +2406,7 @@
             
             // Başlık Güncelleme
             document.getElementById('advPanelPlate').innerText = vehicle.LicensePlate;
-            document.getElementById('advPanelDriver').innerText = vehicle.DriverName || 'Şoför Seçilmedi';
+            document.getElementById('advPanelDriver').innerText = vehicle.Driver || 'Şoför Seçilmedi';
             
             // Renk Güncelleme
             const dot = document.getElementById('advPanelStatusDot');
