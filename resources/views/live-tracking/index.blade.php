@@ -1491,6 +1491,12 @@
                     updateMarkerAddressUI(marker, 'Adres alınamadı');
                 });
         }
+        
+        // ==========================================
+        // PRO NOTIFICATION SYSTEM
+        // ==========================================
+        let notifications = [];
+        let warnedVehicles = {}; // Aynı araç için uyarı spamını engellemek için
 
         function renderVehicles(liveData) {
             let bounds = [];
@@ -1609,10 +1615,7 @@
 
         window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeImeiModal(); });
         // ==========================================
-        // PRO NOTIFICATION SYSTEM
         // ==========================================
-        let notifications = [];
-        let warnedVehicles = {}; // Aynı araç için uyarı spamını engellemek için
 
         function showToast(title, message, iconClass) {
             const container = document.getElementById('toastContainer');
