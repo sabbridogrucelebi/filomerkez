@@ -60,26 +60,38 @@ function parseConcox(buffer) {
 
                 // 3. HEARTBEAT PAKETİ (0x13)
                 // GT06N Heartbeat: Terminal Bilgi Bayt'ı + Voltaj Seviyesi + GSM Sinyal Gücü
-                // Terminal Bilgi Bayt'ı (Byte 0):
-                //   Bit 0: Yağ/Elektrik Bağlı (1) / Bağlı Değil (0)
-                //   Bit 1: GPS İzleme Açık (1) / Kapalı (0)
-                //   Bit 2-4: Alarm türleri (000=Normal, 001=SOS, 010=Düşük Pil, 011=Güç Kesildi, 100=Titreşim)
-                //   Bit 5: Şarj Durumu (1=Şarjda, 0=Şarj Değil)
-                //   Bit 6: ACC/Kontak Durumu (1=AÇIK, 0=KAPALI) ← BU BİZİM İHTİYACIMIZ!
-                //   Bit 7: Savunma/Tahkimat durumu
+                // Terminal Bilgi Bayt'ı (PDF Sayfa 24):
+                //   Bit 7: Yağ/Elektrik Kesik (1) / Bağlı (0)
+                //   Bit 6: GPS İzleme Açık (1) / Kapalı (0)
+                //   Bit 5-3: Alarm türleri (000=Normal, 001=Sarsıntı, 010=Güç Kesildi, 011=Düşük Pil, 100=SOS)
+                //   Bit 2: Şarj AÇIK (1) / KAPALI (0) - İÇ BATARYA DÜĞMESİ!
+                //   Bit 1: ACC/Kontak (1=AÇIK, 0=KAPALI)
+                //   Bit 0: Savunma/Tahkimat durumu (1=Aktif, 0=Deaktif)
                 else if (protocolId === 0x13) {
                     if (packetInfoContent.length >= 1) {
                         const terminalInfo = packetInfoContent[0];
-                        const acc = (terminalInfo & 0x40) >> 6;           // Bit 6: ACC (Kontak)
-                        const charging = (terminalInfo & 0x20) >> 5;      // Bit 5: Şarj
-                        const gpsTracking = (terminalInfo & 0x02) >> 1;   // Bit 1: GPS İzleme
-                        const oilElec = terminalInfo & 0x01;              // Bit 0: Yağ/Elektrik
-                        const defense = (terminalInfo & 0x80) >> 7;       // Bit 7: Savunma
+                        const oilElecDisconnected = (terminalInfo & 0x80) >> 7;
+                        const gpsTracking = (terminalInfo & 0x40) >> 6;
+                        const alarmBits = (terminalInfo & 0x38) >> 3;
+                        const charging = (terminalInfo & 0x04) >> 2;
+                        const acc = (terminalInfo & 0x02) >> 1;
+                        const defense = terminalInfo & 0x01;
 
-                        // Alarm türü (Bit 2-4)
-                        const alarmBits = (terminalInfo >> 2) & 0x07;
-                        const alarmTypes = ['Normal', 'SOS', 'Düşük Pil', 'Güç Kesildi', 'Titreşim', 'Bilinmeyen', 'Bilinmeyen', 'Bilinmeyen'];
-                        const alarm = alarmTypes[alarmBits] || 'Bilinmeyen';
+                        const alarmTypes = {
+                            0: 'Normal',
+                            1: 'Titreşim/Sarsıntı',
+                            2: 'Güç Kesildi',
+                            3: 'Düşük Pil',
+                            4: 'SOS'
+                        };
+                        let alarm = alarmTypes[alarmBits] || 'Bilinmeyen';
+
+                        // Müşteri Özel İsteği: Hırsız/Şoför gizlice cihaz içindeki yedeği kapatırsa
+                        // Batarya OFF konumundayken cihaz şarj almayı keser (charging=0 olur).
+                        // Ancak eğer ana güç henüz kesilmediyse (alarm != Güç Kesildi), bu "Batarya Düğmesi Kapatıldı" demektir!
+                        if (charging === 0 && alarm === 'Normal') {
+                            alarm = 'Batarya Kapatıldı';
+                        }
 
                         // Voltaj seviyesi (Byte 1) ve GSM sinyal gücü (Byte 2)
                         const voltageLevel = packetInfoContent.length >= 2 ? packetInfoContent[1] : 0;
@@ -119,15 +131,21 @@ function parseConcox(buffer) {
                         const alarmLang = packetInfoContent.readUInt16BE(packetInfoContent.length - 2);
 
                         const acc = (terminalInfo & 0x02) >> 1;
-                        const charging = (terminalInfo & 0x20) >> 5;
-                        const alarmType = (alarmLang & 0x38) >> 3;
+                        const charging = (terminalInfo & 0x04) >> 2;
+                        const alarmBits = (terminalInfo & 0x38) >> 3;
 
-                        let alarm = null;
-                        if (alarmType === 1) alarm = "SOS";
-                        else if (alarmType === 2) alarm = "Güç Kesildi";
-                        else if (alarmType === 3) alarm = "Titreşim/Sarsıntı";
-                        else if (alarmType === 4) alarm = "Düşük Pil";
-                        else if (alarmType === 6) alarm = "Hız İhlali";
+                        const alarmTypes = {
+                            0: 'Normal',
+                            1: 'Titreşim/Sarsıntı',
+                            2: 'Güç Kesildi',
+                            3: 'Düşük Pil',
+                            4: 'SOS'
+                        };
+                        let alarm = alarmTypes[alarmBits] || 'Bilinmeyen';
+                        
+                        if (charging === 0 && alarm === 'Normal') {
+                            alarm = 'Batarya Kapatıldı';
+                        }
                         
                         let voltage = (voltageLevel === 6) ? 12 : ((voltageLevel === 5) ? 4.2 : ((voltageLevel === 4) ? 4.0 : 3.8));
 
