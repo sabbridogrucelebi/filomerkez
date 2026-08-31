@@ -434,6 +434,15 @@ Route::get('/vehicle-tracking/reports/idle-time', [\App\Http\Controllers\Api\V1\
     ->middleware(['auth', 'permission:vehicle_tracking.view'])
     ->name('vehicle-tracking.reports.idle-time');
 
+Route::get('/debug-idle', function() {
+    $loc = \App\Models\Fleet\VehicleLocation::whereNotNull('status')->orderBy('id', 'desc')->first();
+    return response()->json([
+        'raw_status' => $loc->getRawOriginal('status'),
+        'cast_status' => $loc->status,
+        'acc_isset' => isset($loc->status['acc']),
+        'acc_value' => $loc->status['acc'] ?? null,
+    ]);
+});
 // cPanel Terminal Alternatifi (Geçici)
 Route::get('/run-migrations', function() {
     \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);

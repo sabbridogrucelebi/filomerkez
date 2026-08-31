@@ -494,16 +494,17 @@ class ReportsApiController extends Controller
                 $prevLat = null;
                 $prevLng = null;
 
-                foreach ($locations as $loc) {
-                    $acc = isset($loc->status['acc']) ? (bool) $loc->status['acc'] : false;
+                foreach ($locations as $i => $loc) {
+                    $statusArr = is_string($loc->status) ? json_decode($loc->status, true) : (array) $loc->status;
+                    $acc = isset($statusArr['acc']) ? (bool) $statusArr['acc'] : false;
                     $isIdle = ($acc && $loc->speed < 3); // Motor çalışıyor ama hareket yok
 
                     if ($isIdle) {
                         $currentIdleGroup[] = $loc;
                     } else {
                         // Önceki rölanti grubunu işle
-                        if (count($currentIdleGroup) >= 2) {
-                            $event = $this->processIdleGroup($currentIdleGroup, $vehicle, $currentDate);
+                        if (count($currentIdleGroup) > 0) {
+                            $event = $this->processIdleGroup($currentIdleGroup, $vehicle, $currentDate, $loc);
                             if ($event && $event['duration_minutes'] >= $minIdleMinutes) {
                                 $idleEvents[] = $event;
                             }
@@ -519,9 +520,9 @@ class ReportsApiController extends Controller
                     $prevLng = $loc->longitude;
                 }
 
-                // Son grubu işle
-                if (count($currentIdleGroup) >= 2) {
-                    $event = $this->processIdleGroup($currentIdleGroup, $vehicle, $currentDate);
+                // Son grubu işle (gün sonu, sonraki nokta yok)
+                if (count($currentIdleGroup) > 0) {
+                    $event = $this->processIdleGroup($currentIdleGroup, $vehicle, $currentDate, null);
                     if ($event && $event['duration_minutes'] >= $minIdleMinutes) {
                         $idleEvents[] = $event;
                     }
@@ -594,15 +595,22 @@ class ReportsApiController extends Controller
     /**
      * Bir rölanti grubunu tek satıra çevirir (detay mod)
      */
-    private function processIdleGroup(array $group, $vehicle, $date): ?array
+    private function processIdleGroup(array $group, $vehicle, $date, $nextLoc = null): ?array
     {
-        if (count($group) < 2) return null;
+        if (empty($group)) return null;
 
         $first = $group[0];
         $last = end($group);
 
         $firstRaw = $first->getRawOriginal('recorded_at');
-        $lastRaw = $last->getRawOriginal('recorded_at');
+        
+        // Eğer grupta tek nokta varsa ve sonraki hareket noktası biliniyorsa, 
+        // rölanti süresi o noktaya kadar devam etmiştir.
+        if (count($group) === 1 && $nextLoc) {
+            $lastRaw = $nextLoc->getRawOriginal('recorded_at');
+        } else {
+            $lastRaw = $last->getRawOriginal('recorded_at');
+        }
 
         $startTime = Carbon::parse($firstRaw, 'UTC')->setTimezone('Europe/Istanbul');
         $endTime = Carbon::parse($lastRaw, 'UTC')->setTimezone('Europe/Istanbul');
