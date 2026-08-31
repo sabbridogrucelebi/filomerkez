@@ -1441,10 +1441,12 @@
                 speedColor = '#a855f7';
             }
             const timeStr = vehicle.Datetime ? vehicle.Datetime : '-';
+            const driverStr = vehicle.Driver || 'Şoför Seçilmedi';
 
             return `
                 <div style="font-family: sans-serif; min-width: 160px; padding: 2px;">
-                    <div style="font-weight: 900; font-size: 16px; margin-bottom: 4px; color: #0f172a;">${vehicle.LicensePlate}</div>
+                    <div style="font-weight: 900; font-size: 16px; color: #0f172a;">${vehicle.LicensePlate}</div>
+                    <div style="font-size: 11px; font-weight: 800; color: #4338ca; margin-bottom: 6px; text-transform: uppercase;">${driverStr}</div>
                     <div style="color: ${speedColor}; font-size: 14px; font-weight: 900; margin-bottom: 4px;">${vehicle.Speed} km/h</div>
                     <div style="color: #64748b; font-size: 10px; margin-bottom: 2px;">Son Sinyal: <span style="font-weight:700; color:#334155;">${timeStr}</span></div>
                     <div class="address-field" style="color: #475569; font-size: 11px; margin-top: 6px; line-height: 1.3; border-top: 1px solid #e2e8f0; padding-top: 4px;">${addressHtml}</div>
