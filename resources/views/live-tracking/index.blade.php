@@ -1319,12 +1319,8 @@
             L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
             L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-            // Kümeleme (Clustering) Grubunu Başlat
-            markerClusterGroup = L.markerClusterGroup({
-                disableClusteringAtZoom: 16, // Yaklaşınca kümeleri dağıt
-                spiderfyOnMaxZoom: true,
-                maxClusterRadius: 50
-            });
+            // Araçların gruplanmasını (cluster) iptal ediyoruz. Her araç ayrı ayrı görünecek.
+            markerClusterGroup = L.featureGroup();
             map.addLayer(markerClusterGroup);
 
             // Arayüz elemanları üzerindeki tıklamaların haritaya geçmesini engelle
