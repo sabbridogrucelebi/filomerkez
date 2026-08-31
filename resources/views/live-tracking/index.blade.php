@@ -1707,6 +1707,50 @@
             }
         }
 
+        // ==========================================
+        // SİM KART SÖKÜLDÜ / SİNYAL KOPTU KONTROLÜ
+        // ==========================================
+        setInterval(() => {
+            if (!window.vehiclesData) return;
+            const nowSeconds = Math.floor(Date.now() / 1000);
+            
+            window.vehiclesData.forEach(vehicle => {
+                if (!vehicle.Timestamp) return;
+                
+                const diffSeconds = nowSeconds - vehicle.Timestamp;
+                
+                // 5 Dakika (300 saniye) boyunca sinyal yoksa
+                if (diffSeconds > 300) {
+                    if (!localStorage.getItem('warned_offline_' + vehicle.Node)) {
+                        addNotification(
+                            'offline_' + vehicle.Node + '_' + Date.now(),
+                            'Sinyal Bağlantısı Koptu!',
+                            `<b>${vehicle.LicensePlate}</b> plakalı araçtan 5 dakikadır sinyal alınamıyor! (SİM KART SÖKÜLMÜŞ VEYA ŞEBEKE YOK)`,
+                            'fa-solid fa-signal-slash text-slate-400'
+                        );
+                        
+                        showCriticalAlert(
+                            'DİKKAT: SİNYAL KESİLDİ (SİM KART / ŞEBEKE)',
+                            `${vehicle.LicensePlate} plakalı araçtan 5 dakikadan uzun süredir sinyal alınamıyor! Cihazın SİM kartı sökülmüş, jammer (sinyal kesici) açılmış veya araç şebeke çekmeyen bir bölgede olabilir.`
+                        );
+                        
+                        localStorage.setItem('warned_offline_' + vehicle.Node, 'true');
+                    }
+                } else {
+                    // Cihaz tekrar sinyal göndermeye başladıysa (Offline süresi 5 dakikanın altındaysa)
+                    if (localStorage.getItem('warned_offline_' + vehicle.Node)) {
+                        addNotification(
+                            'online_' + vehicle.Node + '_' + Date.now(),
+                            'Sinyal Tekrar Geldi',
+                            `<b>${vehicle.LicensePlate}</b> plakalı araç tekrar çevrimiçi oldu (Sim kart takıldı veya şebeke geri geldi).`,
+                            'fa-solid fa-signal text-emerald-400'
+                        );
+                        localStorage.removeItem('warned_offline_' + vehicle.Node);
+                    }
+                }
+            });
+        }, 10000); // Her 10 saniyede bir kontrol et
+
         function updateSidebarList(liveData) {
             // Şimdilik listeyi gizlediğimiz için bu fonksiyon boş bırakıldı.
             // Tanımlamalar sekmesinin içi daha sonra tasarlanacak.
