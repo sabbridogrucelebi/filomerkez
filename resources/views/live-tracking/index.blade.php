@@ -1619,6 +1619,8 @@
 
         function showToast(title, message, iconClass) {
             const container = document.getElementById('toastContainer');
+            if (!container) return; // Null check
+            
             const toast = document.createElement('div');
             toast.className = 'bg-slate-900/90 backdrop-blur-xl border-l-4 border-rose-500 rounded-xl p-4 shadow-[0_10px_30px_rgba(244,63,94,0.3)] w-80 transform translate-x-full opacity-0 transition-all duration-500 flex items-start gap-3 pointer-events-auto';
             toast.innerHTML = `
@@ -1653,14 +1655,18 @@
             const unreadCount = notifications.filter(n => !n.read).length;
             const badge = document.getElementById('notificationBadge');
             
-            if (unreadCount > 0) {
-                badge.innerText = unreadCount;
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
+            if (badge) {
+                if (unreadCount > 0) {
+                    badge.innerText = unreadCount;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
             }
             
             const list = document.getElementById('notificationList');
+            if (!list) return; // Null check
+            
             if (notifications.length === 0) {
                 list.innerHTML = '<div class="p-4 text-center text-slate-500 text-sm italic">Henüz bildirim yok</div>';
                 return;
