@@ -1587,6 +1587,12 @@
                             `<b>${vehicle.LicensePlate}</b> plakalı aracın elektrik bağlantısı (akü kablosu) kesildi! Cihaz şu anda kendi dahili bataryasıyla çalışıyor.`,
                             'fa-solid fa-plug-circle-xmark'
                         );
+                        
+                        showCriticalAlert(
+                            'DİKKAT: ELEKTRİK KESİNTİSİ!',
+                            `${vehicle.LicensePlate} plakalı aracın elektrik bağlantısı (akü kablosu) kesildi veya söküldü! Cihaz kendi dahili piliyle çalışıyor.`
+                        );
+                        
                         warnedVehicles[vehicle.Node + '_power'] = true;
                     }
                 } else {
@@ -1785,10 +1791,59 @@
                 toast.classList.remove('translate-x-full', 'opacity-0');
             });
             
-            // 15 saniye sonra otomatik kaybol
             setTimeout(() => {
                 toast.classList.add('translate-x-full', 'opacity-0');
                 setTimeout(() => toast.remove(), 500);
+            }, 15000);
+        }
+
+        function showCriticalAlert(title, message) {
+            const overlay = document.createElement('div');
+            overlay.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-500 opacity-0';
+            
+            const alertBox = document.createElement('div');
+            alertBox.className = 'bg-rose-600 rounded-3xl shadow-[0_0_100px_rgba(225,29,72,0.8)] p-10 max-w-2xl w-full mx-4 text-center transform scale-90 transition-transform duration-500 flex flex-col items-center border-4 border-rose-400';
+            
+            alertBox.innerHTML = `
+                <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 animate-pulse shadow-[0_0_50px_rgba(255,255,255,0.5)]">
+                    <i class="fa-solid fa-plug-circle-xmark text-6xl text-rose-600"></i>
+                </div>
+                <h2 class="text-4xl font-black text-white mb-4 tracking-tight uppercase">${title}</h2>
+                <p class="text-rose-100 text-xl font-medium leading-relaxed mb-8">${message}</p>
+                <div class="w-full bg-rose-900/50 rounded-full h-2 mb-2 overflow-hidden">
+                    <div class="bg-white h-full" id="criticalProgress" style="width: 100%; transition: width 15s linear;"></div>
+                </div>
+                <p class="text-rose-200 text-sm font-bold uppercase tracking-wider animate-pulse">15 Saniye içinde kapanacak...</p>
+            `;
+            
+            overlay.appendChild(alertBox);
+            document.body.appendChild(overlay);
+            
+            // Animasyonla gir
+            requestAnimationFrame(() => {
+                overlay.classList.remove('opacity-0');
+                alertBox.classList.remove('scale-90');
+                alertBox.classList.add('scale-100');
+                
+                // ProgressBar
+                setTimeout(() => {
+                    const pb = alertBox.querySelector('#criticalProgress');
+                    if(pb) pb.style.width = '0%';
+                }, 100);
+            });
+            
+            // Sesi çal (Eğer eklendiyse opsiyonel)
+            try {
+                const audio = new Audio('/sounds/critical-alarm.mp3'); // Sadece deneme, yoksa hata vermez
+                audio.play().catch(e => {}); 
+            } catch(e) {}
+            
+            // 15 saniye sonra kapat
+            setTimeout(() => {
+                overlay.classList.add('opacity-0');
+                alertBox.classList.remove('scale-100');
+                alertBox.classList.add('scale-90');
+                setTimeout(() => overlay.remove(), 500);
             }, 15000);
         }
 
