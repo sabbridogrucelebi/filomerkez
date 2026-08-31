@@ -1435,21 +1435,59 @@
 
         function getPopupHTML(vehicle, addressHtml = 'Adres yükleniyor...') {
             let speedColor = '#ef4444';
+            let speedBg = '#fef2f2';
+            let statusText = 'DURUYOR';
             if (vehicle.Speed > 0) {
-                speedColor = '#06b6d4';
+                speedColor = '#0ea5e9';
+                speedBg = '#f0f9ff';
+                statusText = 'HAREKET HALİNDE';
             } else if (vehicle.ACC) {
-                speedColor = '#a855f7';
+                speedColor = '#8b5cf6';
+                speedBg = '#f5f3ff';
+                statusText = 'RÖLANTİ';
             }
             const timeStr = vehicle.Datetime ? vehicle.Datetime : '-';
-            const driverStr = vehicle.Driver || 'Şoför Seçilmedi';
+            const driverStr = vehicle.Driver || 'Şoför Atanmamış';
 
             return `
-                <div style="font-family: sans-serif; min-width: 160px; padding: 2px;">
-                    <div style="font-weight: 900; font-size: 16px; color: #0f172a;">${vehicle.LicensePlate}</div>
-                    <div style="font-size: 11px; font-weight: 800; color: #4338ca; margin-bottom: 6px; text-transform: uppercase;">${driverStr}</div>
-                    <div style="color: ${speedColor}; font-size: 14px; font-weight: 900; margin-bottom: 4px;">${vehicle.Speed} km/h</div>
-                    <div style="color: #64748b; font-size: 10px; margin-bottom: 2px;">Son Sinyal: <span style="font-weight:700; color:#334155;">${timeStr}</span></div>
-                    <div class="address-field" style="color: #475569; font-size: 11px; margin-top: 6px; line-height: 1.3; border-top: 1px solid #e2e8f0; padding-top: 4px;">${addressHtml}</div>
+                <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; min-width: 200px; padding: 4px;">
+                    
+                    <!-- Başlık ve Plaka -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <div style="font-weight: 900; font-size: 18px; color: #0f172a; letter-spacing: -0.5px;">${vehicle.LicensePlate}</div>
+                        <div style="background-color: ${speedBg}; color: ${speedColor}; padding: 3px 8px; border-radius: 6px; font-size: 9px; font-weight: 800; letter-spacing: 0.5px; border: 1px solid ${speedColor}30;">
+                            ${statusText}
+                        </div>
+                    </div>
+                    
+                    <!-- Şoför -->
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 12px; background: #f8fafc; padding: 6px 8px; border-radius: 8px; border: 1px solid #f1f5f9;">
+                        <div style="width: 20px; height: 20px; border-radius: 50%; background: #4338ca15; display: flex; align-items: center; justify-content: center; color: #4338ca;">
+                            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                        </div>
+                        <div style="font-size: 11px; font-weight: 800; color: #4338ca; text-transform: uppercase; letter-spacing: 0.3px;">${driverStr}</div>
+                    </div>
+                    
+                    <!-- Hız ve Sinyal -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed #e2e8f0;">
+                        <div>
+                            <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 2px;">Anlık Hız</div>
+                            <div style="color: ${speedColor}; font-size: 18px; font-weight: 900; line-height: 1;">${vehicle.Speed} <span style="font-size: 11px; font-weight: 700;">km/h</span></div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 2px;">Son Sinyal</div>
+                            <div style="font-size: 11px; font-weight: 700; color: #334155;">${timeStr}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Adres -->
+                    <div style="display: flex; align-items: flex-start; gap: 6px;">
+                        <div style="color: #94a3b8; margin-top: 2px;">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        </div>
+                        <div class="address-field" style="color: #64748b; font-size: 11px; line-height: 1.4; font-weight: 500;">${addressHtml}</div>
+                    </div>
+                    
                 </div>
             `;
         }
