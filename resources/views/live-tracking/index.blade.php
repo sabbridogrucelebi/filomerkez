@@ -605,8 +605,8 @@
                 </button>
                 
                 <!-- Notification Dropdown -->
-                <div id="notificationDropdown" class="hidden absolute right-0 mt-3 w-80 bg-slate-800/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.6)] overflow-hidden z-[1000] opacity-0 translate-y-2 transition-all duration-300">
-                    <div class="p-4 border-b border-white/5 flex justify-between items-center bg-slate-900/50">
+                <div id="notificationDropdown" style="background-color: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 40px rgba(0,0,0,0.6); backdrop-filter: blur(16px);" class="hidden absolute right-0 mt-3 w-80 rounded-2xl overflow-hidden z-[1000] opacity-0 translate-y-2 transition-all duration-300">
+                    <div style="background-color: rgba(15, 23, 42, 1); border-bottom: 1px solid rgba(255,255,255,0.05);" class="p-4 flex justify-between items-center">
                         <h3 class="text-white font-bold tracking-wide">Bildirimler</h3>
                         <button onclick="clearAllNotifications(event)" class="text-xs text-slate-400 hover:text-white transition-colors">Tümünü Sil</button>
                     </div>
@@ -1893,15 +1893,15 @@
             }
             
             list.innerHTML = notifications.map(n => `
-                <div onclick="markAsRead('${n.id}')" class="p-3.5 rounded-xl mb-2.5 cursor-pointer transition-all duration-300 ${n.read ? 'bg-slate-800/40 hover:bg-slate-700/60 border border-slate-700/50' : 'bg-gradient-to-r from-rose-950/80 to-slate-900/90 border border-rose-500/40 hover:border-rose-400/60 shadow-[0_4px_15px_rgba(0,0,0,0.3)]'}">
+                <div onclick="markAsRead('${n.id}')" style="background-color: ${n.read ? 'rgba(30, 41, 59, 0.4)' : 'rgba(225, 29, 72, 0.15)'}; border: 1px solid ${n.read ? 'rgba(51, 65, 85, 0.5)' : 'rgba(244, 63, 94, 0.3)'};" class="p-3.5 rounded-xl mb-2.5 cursor-pointer transition-all duration-300 hover:brightness-110 shadow-[0_4px_15px_rgba(0,0,0,0.2)]">
                     <div class="flex items-start gap-3.5">
-                        <div class="mt-0.5 flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full ${n.read ? 'bg-slate-800 text-slate-500' : 'bg-rose-500/20 text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.3)]'}">
+                        <div style="background-color: ${n.read ? 'rgba(30, 41, 59, 0.8)' : 'rgba(244, 63, 94, 0.2)'}; color: ${n.read ? '#64748b' : '#fb7185'};" class="mt-0.5 flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full shadow-[0_0_10px_rgba(244,63,94,0.2)]">
                             <i class="${n.iconClass} text-[13px]"></i>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <h4 class="${n.read ? 'text-slate-400 font-medium' : 'text-rose-50 font-bold'} text-[13px] leading-tight mb-1">${n.title}</h4>
-                            <p class="${n.read ? 'text-slate-500' : 'text-slate-300'} text-[12px] leading-[1.4] break-words">${n.message}</p>
-                            <span class="text-[10px] ${n.read ? 'text-slate-600' : 'text-rose-400/70 font-semibold'} mt-2 block flex items-center gap-1">
+                            <h4 style="color: ${n.read ? '#94a3b8' : '#fff1f2'};" class="font-bold text-[13px] leading-tight mb-1">${n.title}</h4>
+                            <p style="color: ${n.read ? '#64748b' : '#cbd5e1'};" class="text-[12px] leading-[1.4] break-words">${n.message}</p>
+                            <span style="color: ${n.read ? '#475569' : 'rgba(251, 113, 133, 0.8)'};" class="text-[10px] font-semibold mt-2 block flex items-center gap-1">
                                 <i class="fa-regular fa-clock"></i> ${n.time.toLocaleTimeString()}
                             </span>
                         </div>
