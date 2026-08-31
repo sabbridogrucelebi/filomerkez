@@ -28,7 +28,7 @@ class VehicleTrackingApiController extends Controller
                 ->get()
                 ->keyBy(function($item) {
                     // Eşleştirme için plakadaki boşlukları silip büyük harf yapıyoruz
-                    return strtoupper(str_replace(' ', '', $item->license_plate));
+                    return strtoupper(str_replace(' ', '', $item->plate));
                 });
 
             foreach ($vehicles as &$v) {
