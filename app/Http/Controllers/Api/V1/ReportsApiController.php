@@ -250,4 +250,184 @@ class ReportsApiController extends Controller
 
         return response()->json(['rows' => $rows]);
     }
+
+    /**
+     * Hız Alarmı Raporu
+     * vehicle_locations tablosundaki speed verisini vehicle_alarms tablosundaki hız eşik değeriyle kıyaslar.
+     * Ardışık ihlalleri tek bir olay olarak gruplar ve süresini hesaplar.
+     */
+    public function speedAlarmReportData(Request $request)
+    {
+        abort_unless(auth()->user()->hasPermission('vehicle_tracking.view'), 403);
+        $companyId = auth()->user()->company_id;
+
+        $startDate = $request->input('start_date', Carbon::today()->toDateString());
+        $endDate = $request->input('end_date', Carbon::today()->toDateString());
+        $vehicleId = $request->input('vehicle_id', 'all');
+
+        $start = Carbon::parse($startDate, 'Europe/Istanbul');
+        $end = Carbon::parse($endDate, 'Europe/Istanbul');
+
+        if ($end->isFuture()) {
+            $end = Carbon::today('Europe/Istanbul');
+        }
+        if ($start->isAfter($end)) {
+            $start = $end->copy();
+        }
+        // Maksimum 30 gün
+        if ($start->diffInDays($end) > 30) {
+            $start = $end->copy()->subDays(30);
+        }
+
+        // Araçları getir
+        $vehicleQuery = \App\Models\Fleet\Vehicle::whereNotNull('device_imei')
+            ->where('device_imei', '!=', '')
+            ->where('company_id', $companyId);
+
+        if ($vehicleId !== 'all') {
+            $vehicleQuery->where('id', $vehicleId);
+        }
+        $vehicles = $vehicleQuery->get();
+
+        $rows = [];
+        $totalViolations = 0;
+        $maxSpeedRecorded = 0;
+
+        $startUtc = $start->copy()->startOfDay()->setTimezone('UTC');
+        $endUtc = $end->copy()->endOfDay()->setTimezone('UTC');
+
+        foreach ($vehicles as $vehicle) {
+            // Araca tanımlı hız alarm eşiğini bul
+            $speedAlarm = \App\Models\VehicleAlarm::where('vehicle_id', $vehicle->id)
+                ->where('alarm_type', 'speed')
+                ->where('is_active', true)
+                ->first();
+
+            // Eğer araca hız alarmı tanımlanmamışsa varsayılan 120 km/h kullan
+            $speedLimit = $speedAlarm ? (float) $speedAlarm->threshold_value : 120;
+
+            // Seçilen tarih aralığındaki tüm konum kayıtlarını getir (hız > limit olanları)
+            $locations = \App\Models\Fleet\VehicleLocation::where('vehicle_id', $vehicle->id)
+                ->whereBetween('recorded_at', [$startUtc, $endUtc])
+                ->where('speed', '>', $speedLimit)
+                ->orderBy('recorded_at', 'asc')
+                ->get(['id', 'latitude', 'longitude', 'speed', 'recorded_at', 'status']);
+
+            if ($locations->isEmpty()) continue;
+
+            // Ardışık ihlalleri grupla (2 dakika içindeki kayıtlar aynı ihlal olarak sayılır)
+            $violationGroup = [];
+            $prevTime = null;
+
+            foreach ($locations as $loc) {
+                $rawDate = $loc->getRawOriginal('recorded_at');
+                $locTime = Carbon::parse($rawDate, 'UTC');
+
+                if ($prevTime && $locTime->diffInMinutes($prevTime) <= 2) {
+                    // Aynı ihlal grubuna ekle
+                    $violationGroup[] = $loc;
+                } else {
+                    // Önceki grubu işle
+                    if (!empty($violationGroup)) {
+                        $row = $this->processViolationGroup($violationGroup, $vehicle, $speedLimit);
+                        if ($row) {
+                            $rows[] = $row;
+                            $totalViolations++;
+                            if ($row['speed'] > $maxSpeedRecorded) $maxSpeedRecorded = $row['speed'];
+                        }
+                    }
+                    // Yeni grup başlat
+                    $violationGroup = [$loc];
+                }
+                $prevTime = $locTime;
+            }
+
+            // Son grubu işle
+            if (!empty($violationGroup)) {
+                $row = $this->processViolationGroup($violationGroup, $vehicle, $speedLimit);
+                if ($row) {
+                    $rows[] = $row;
+                    $totalViolations++;
+                    if ($row['speed'] > $maxSpeedRecorded) $maxSpeedRecorded = $row['speed'];
+                }
+            }
+        }
+
+        // Tarihe göre ters sırala (en yeni en üstte)
+        usort($rows, function ($a, $b) {
+            return strtotime($b['sort_date']) - strtotime($a['sort_date']);
+        });
+
+        return response()->json([
+            'rows' => $rows,
+            'summary' => [
+                'total_violations' => $totalViolations,
+                'max_speed' => $maxSpeedRecorded,
+            ]
+        ]);
+    }
+
+    /**
+     * Bir ihlal grubunu tek satıra çevirir
+     */
+    private function processViolationGroup(array $group, $vehicle, float $speedLimit): ?array
+    {
+        if (empty($group)) return null;
+
+        $first = $group[0];
+        $last = end($group);
+
+        $firstRaw = $first->getRawOriginal('recorded_at');
+        $lastRaw = $last->getRawOriginal('recorded_at');
+
+        $startTime = Carbon::parse($firstRaw, 'UTC')->setTimezone('Europe/Istanbul');
+        $endTime = Carbon::parse($lastRaw, 'UTC')->setTimezone('Europe/Istanbul');
+
+        // İhlal süresi (en az 1 dk göster, tek nokta ise)
+        $durationMinutes = max(1, $startTime->diffInMinutes($endTime));
+
+        // Gruptaki maksimum hız
+        $maxSpeed = collect($group)->max('speed');
+
+        // Alarm türünü hıza göre belirle
+        $alarmType = 'Şehir İçi'; // Varsayılan
+        if ($maxSpeed > 120) {
+            $alarmType = 'Otoyol';
+        } elseif ($maxSpeed > 90) {
+            $alarmType = 'Şehir Dışı';
+        }
+
+        // Harita hız limiti (genel yasal sınır tahmini)
+        $mapSpeedLimit = 50; // Şehir içi varsayılan
+        if ($maxSpeed > 120) {
+            $mapSpeedLimit = 120; // Otoyol
+        } elseif ($maxSpeed > 90) {
+            $mapSpeedLimit = 90;  // Şehir dışı
+        }
+
+        // Süreyi okunaklı formata çevir
+        if ($durationMinutes >= 60) {
+            $hours = floor($durationMinutes / 60);
+            $mins = $durationMinutes % 60;
+            $durationStr = $hours . ' sa ' . $mins . ' dk';
+        } else {
+            $durationStr = $durationMinutes . ' dk';
+        }
+
+        return [
+            'id' => $vehicle->id . '_' . $startTime->format('YmdHis'),
+            'date' => $startTime->format('d.m.Y'),
+            'time' => $startTime->format('H:i:s'),
+            'sort_date' => $startTime->format('Y-m-d H:i:s'),
+            'plate' => $vehicle->plate,
+            'speed' => round($maxSpeed, 1),
+            'speed_limit' => $speedLimit,
+            'map_speed_limit' => $mapSpeedLimit,
+            'duration' => $durationStr,
+            'duration_minutes' => $durationMinutes,
+            'alarm_type' => $alarmType,
+            'latitude' => round($first->latitude, 5),
+            'longitude' => round($first->longitude, 5),
+        ];
+    }
 }

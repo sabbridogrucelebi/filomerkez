@@ -234,7 +234,28 @@
                     </div>
                 </div>
 
-                <!-- 3. Kontak Alarmı Raporu -->
+                <!-- 4. Hız Alarmı Raporu -->
+                <div class="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col report-card">
+                    <div class="flex items-start gap-4 mb-4">
+                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-rose-100 to-red-50 flex items-center justify-center shrink-0 report-icon-wrapper shadow-inner border border-rose-100">
+                            <svg class="w-8 h-8 text-rose-600 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black text-slate-800">Hız Alarmı Raporu</h3>
+                            <p class="text-xs font-semibold text-slate-500 mt-1 leading-relaxed">
+                                Araçların tanımlı hız limitini aştığı anları listeler. İhlal hızı, araç hız limiti, harita hız limiti ve ihlal süresini ayrı ayrı gösterir.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                        <button class="px-4 py-2 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors">Önizle</button>
+                        <button @click="openAssistant('speed_alarm')" class="open-btn px-6 py-2 bg-rose-500 text-white text-sm font-black rounded-xl hover:bg-rose-600 transition-all shadow-sm">
+                            Raporu Aç
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 5. Kontak Alarmı Raporu (Yakında) -->
                 <div class="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col report-card opacity-70">
                     <div class="flex items-start gap-4 mb-4">
                         <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-rose-100 to-orange-50 flex items-center justify-center shrink-0 report-icon-wrapper shadow-inner border border-rose-100">
@@ -359,6 +380,18 @@
                         </div>
                     </div>
 
+                    <!-- Hız Alarmı Özet Kartları -->
+                    <div x-show="assistantType === 'speed_alarm'" class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="bg-white p-4 rounded-2xl border border-rose-200 shadow-sm flex flex-col items-center justify-center py-6">
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">Toplam İhlal Sayısı</p>
+                            <h4 class="text-3xl font-black text-rose-600" x-text="totalSummary.total_violations"></h4>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl border border-amber-200 shadow-sm flex flex-col items-center justify-center py-6">
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">En Yüksek Hız</p>
+                            <h4 class="text-3xl font-black text-amber-600" x-text="totalSummary.max_speed + ' km/h'"></h4>
+                        </div>
+                    </div>
+
                     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                         <table class="w-full text-left text-sm">
                             <thead class="bg-slate-100/50 border-b border-slate-200">
@@ -381,6 +414,25 @@
                                     </template>
                                     <template x-if="assistantType === 'first_ignition'">
                                         <th class="py-3 px-6 font-black text-slate-500 uppercase tracking-wider text-xs">İlk Kontak Saati</th>
+                                    </template>
+
+                                    <template x-if="assistantType === 'speed_alarm'">
+                                        <th class="py-3 px-6 font-black text-slate-500 uppercase tracking-wider text-xs text-center">Saat</th>
+                                    </template>
+                                    <template x-if="assistantType === 'speed_alarm'">
+                                        <th class="py-3 px-6 font-black text-slate-500 uppercase tracking-wider text-xs text-center">Hız (km/h)</th>
+                                    </template>
+                                    <template x-if="assistantType === 'speed_alarm'">
+                                        <th class="py-3 px-6 font-black text-slate-500 uppercase tracking-wider text-xs text-center">Hız Limiti</th>
+                                    </template>
+                                    <template x-if="assistantType === 'speed_alarm'">
+                                        <th class="py-3 px-6 font-black text-slate-500 uppercase tracking-wider text-xs text-center">Harita Hız Limiti</th>
+                                    </template>
+                                    <template x-if="assistantType === 'speed_alarm'">
+                                        <th class="py-3 px-6 font-black text-slate-500 uppercase tracking-wider text-xs text-center">Aşım Süresi</th>
+                                    </template>
+                                    <template x-if="assistantType === 'speed_alarm'">
+                                        <th class="py-3 px-6 font-black text-slate-500 uppercase tracking-wider text-xs text-center">Alarm Türü</th>
                                     </template>
                                 </tr>
                             </thead>
@@ -411,6 +463,37 @@
                                         </template>
                                         <template x-if="assistantType === 'first_ignition'">
                                             <td class="py-3 px-6 font-black text-slate-700" x-text="row.first_ignition_time"></td>
+                                        </template>
+
+                                        <template x-if="assistantType === 'speed_alarm'">
+                                            <td class="py-3 px-6 text-center font-bold text-slate-600" x-text="row.time"></td>
+                                        </template>
+                                        <template x-if="assistantType === 'speed_alarm'">
+                                            <td class="py-3 px-6 text-center">
+                                                <span class="inline-block px-3 py-1 rounded-lg bg-rose-50 text-rose-700 font-black text-sm" x-text="row.speed + ' km/h'"></span>
+                                            </td>
+                                        </template>
+                                        <template x-if="assistantType === 'speed_alarm'">
+                                            <td class="py-3 px-6 text-center">
+                                                <span class="inline-block px-3 py-1 rounded-lg bg-amber-50 text-amber-700 font-bold text-xs" x-text="row.speed_limit + ' km/h'"></span>
+                                            </td>
+                                        </template>
+                                        <template x-if="assistantType === 'speed_alarm'">
+                                            <td class="py-3 px-6 text-center">
+                                                <span class="inline-block px-3 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-xs" x-text="row.map_speed_limit + ' km/h'"></span>
+                                            </td>
+                                        </template>
+                                        <template x-if="assistantType === 'speed_alarm'">
+                                            <td class="py-3 px-6 text-center">
+                                                <span class="inline-block px-3 py-1 rounded-lg bg-purple-50 text-purple-700 font-bold text-xs" x-text="row.duration"></span>
+                                            </td>
+                                        </template>
+                                        <template x-if="assistantType === 'speed_alarm'">
+                                            <td class="py-3 px-6 text-center">
+                                                <span class="inline-block px-3 py-1 rounded-lg font-bold text-xs"
+                                                    :class="row.alarm_type === 'Otoyol' ? 'bg-red-100 text-red-700' : row.alarm_type === 'Şehir Dışı' ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700'"
+                                                    x-text="row.alarm_type"></span>
+                                            </td>
                                         </template>
                                     </tr>
                                 </template>
@@ -484,12 +567,13 @@
                     this.assistantType = type;
                     if(type === 'working_report') this.assistantTitle = 'Araç Çalışma Raporu';
                     else if(type === 'first_ignition') this.assistantTitle = 'İlk Kontak Açılma Raporu';
+                    else if(type === 'speed_alarm') this.assistantTitle = 'Hız Alarmı Raporu';
                     else this.assistantTitle = 'Rapor Asistanı';
                     
                     // Verileri temizle
                     this.hasSearched = false;
                     this.reportData = [];
-                    this.totalSummary = { distance: 0, idle: 0, loss: 0 };
+                    this.totalSummary = { distance: 0, idle: 0, loss: 0, total_violations: 0, max_speed: 0 };
                     
                     // Modalı tam ekran aç
                     this.view = 'assistant';
@@ -538,6 +622,8 @@
                             endpoint = `{{ route('vehicle-tracking.reports.working') }}?start_date=${start}&end_date=${end}&vehicle_id=${this.selectedVehicle}`;
                         } else if (this.assistantType === 'first_ignition') {
                             endpoint = `{{ route('vehicle-tracking.reports.first-ignition') }}?start_date=${start}&end_date=${end}&vehicle_id=${this.selectedVehicle}`;
+                        } else if (this.assistantType === 'speed_alarm') {
+                            endpoint = `{{ route('vehicle-tracking.reports.speed-alarm') }}?start_date=${start}&end_date=${end}&vehicle_id=${this.selectedVehicle}`;
                         }
 
                         const res = await fetch(endpoint);
@@ -550,6 +636,10 @@
                                 this.totalSummary.distance = this.reportData.reduce((acc, val) => acc + val.distance, 0);
                                 this.totalSummary.idle = this.reportData.reduce((acc, val) => acc + val.idle_mins, 0);
                                 this.totalSummary.loss = this.reportData.reduce((acc, val) => acc + val.idle_loss_tl, 0);
+                            }
+                            if (this.assistantType === 'speed_alarm' && data.summary) {
+                                this.totalSummary.total_violations = data.summary.total_violations;
+                                this.totalSummary.max_speed = data.summary.max_speed;
                             }
                         } else {
                             throw new Error("API Hatası");
@@ -582,6 +672,14 @@
                             wsData.push([row.date, row.plate, row.driver, row.first_ignition_time]);
                         });
                         fileName = "FiloTakip_Ilk_Kontak_Raporu.xlsx";
+                    } else if (this.assistantType === 'speed_alarm') {
+                        wsData.push(["Tarih", "Saat", "Plaka", "Hiz (km/h)", "Hiz Limiti", "Harita Hiz Limiti", "Asim Suresi", "Alarm Turu"]);
+                        this.reportData.forEach(row => {
+                            wsData.push([row.date, row.time, row.plate, row.speed, row.speed_limit, row.map_speed_limit, row.duration, row.alarm_type]);
+                        });
+                        wsData.push([]);
+                        wsData.push(["TOPLAM IHLAL", this.totalSummary.total_violations, "", "EN YUKSEK HIZ", this.totalSummary.max_speed + " km/h"]);
+                        fileName = "FiloTakip_Hiz_Alarmi_Raporu.xlsx";
                     }
                     
                     const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -622,6 +720,13 @@
                             row.date, row.plate, row.driver, row.first_ignition_time
                         ]);
                         fileName = "FiloTakip_Ilk_Kontak_Raporu.pdf";
+                    } else if (this.assistantType === 'speed_alarm') {
+                        headParams = [["Tarih", "Saat", "Plaka", "Hiz", "Limit", "Harita Limit", "Sure", "Tur"]];
+                        tableBody = this.reportData.map(row => [
+                            row.date, row.time, row.plate, row.speed + " km/h", row.speed_limit + " km/h", row.map_speed_limit + " km/h", row.duration, row.alarm_type
+                        ]);
+                        footParams = [["TOPLAM IHLAL", this.totalSummary.total_violations, "", "", "", "", "", "MAX: " + this.totalSummary.max_speed + " km/h"]];
+                        fileName = "FiloTakip_Hiz_Alarmi_Raporu.pdf";
                     }
                     
                     doc.autoTable({
