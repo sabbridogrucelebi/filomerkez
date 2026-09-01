@@ -54,6 +54,9 @@ class VehicleController extends Controller
                 'documents' => fn ($q) => $q->whereNull('archived_at')->latest(),
             ])
             ->withCount(['maintenances', 'fuels', 'trafficPenalties'])
+            ->where(function($q) {
+                $q->whereNull('vehicle_type')->orWhere('vehicle_type', '!=', 'TRACKING_ONLY');
+            })
             ->when($search !== '', function ($q) use ($search) {
                 // like için % ve _ kaçırma
                 $needle = '%' . str_replace(['%', '_'], ['\%', '\_'], $search) . '%';

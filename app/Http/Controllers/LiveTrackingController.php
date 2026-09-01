@@ -586,8 +586,20 @@ class LiveTrackingController extends Controller
             return response()->json(['success' => false, 'message' => "Bu IMEI zaten başka bir araca ('{$imeiCheck->plate}') kayıtlı."]);
         }
         
-        // 2. Aracı Bul veya Oluştur
-        $vehicle = Vehicle::firstOrNew(['plate' => $request->plate, 'company_id' => $companyId]);
+        // 2. Plaka Normalizasyonu (Boşlukları sil, Büyült)
+        $normalizedInputPlate = str_replace(' ', '', mb_strtoupper($request->plate));
+        
+        // Şirketteki tüm araçları çek ve normalize plaka ile eşleştir (Araçlar tablosunda 42 C 0493 vs 42C0493 yazılmış olabilir)
+        $vehicle = Vehicle::where('company_id', $companyId)->get()->first(function($v) use ($normalizedInputPlate) {
+            return str_replace(' ', '', mb_strtoupper($v->plate)) === $normalizedInputPlate;
+        });
+
+        // Araç bulunamadıysa YENİ ARAÇ oluştur (SADECE TAKİP İÇİN, FiloMerkez'de görünmez)
+        if (!$vehicle) {
+            $vehicle = new Vehicle(['plate' => $request->plate, 'company_id' => $companyId]);
+            $vehicle->vehicle_type = 'TRACKING_ONLY'; // FiloMerkez "Araçlar" panelinde gizlemek için
+        }
+        
         $vehicle->brand = $request->brand;
         $vehicle->model = $request->model;
         $vehicle->model_year = $request->model_year;
