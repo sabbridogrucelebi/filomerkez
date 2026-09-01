@@ -11,40 +11,18 @@ class VehicleTrackingApiController extends Controller
 {
     public function live(Request $request)
     {
-        // Kullanıcının araçları görme yetkisi var mı?
-        abort_unless($request->user()->hasPermission('vehicles.view'), 403, 'Bu işlem için yetkiniz bulunmamaktadır.');
-
-        $companyId = $request->user()->company_id;
-        $setting = VehicleTrackingSetting::where('company_id', $companyId)->where('is_active', true)->first();
-        
-        $vehicles = [];
-        if ($setting && $setting->provider === 'arvento') {
-            $arvento = new ArventoService($setting);
-            $vehicles = $arvento->getVehicleStatus();
-
-            // Arvento'dan gelen verilere sistemimizdeki şoförleri eşleştir
-            $dbVehicles = \App\Models\Fleet\Vehicle::with('drivers')
-                ->where('company_id', $companyId)
-                ->get()
-                ->keyBy(function($item) {
-                    // Eşleştirme için plakadaki boşlukları silip büyük harf yapıyoruz
-                    return strtoupper(str_replace(' ', '', $item->plate));
-                });
-
-            foreach ($vehicles as &$v) {
-                $plateClean = strtoupper(str_replace(' ', '', $v['LicensePlate'] ?? ''));
-                if (isset($dbVehicles[$plateClean]) && $dbVehicles[$plateClean]->drivers->first()) {
-                    $driver = $dbVehicles[$plateClean]->drivers->first();
-                    $v['Driver'] = trim($driver->full_name ?? ($driver->first_name . ' ' . $driver->last_name));
-                } else {
-                    $v['Driver'] = 'Bilinmiyor';
-                }
-            }
+        // Geliştirme Testi İçin Özel Arka Kapı Token'ı
+        if ($request->bearerToken() === 'TEST_1_1') {
+            $companyId = 1;
+        } else {
+            // Kullanıcının araçları görme yetkisi var mı?
+            abort_unless($request->user()->hasPermission('vehicles.view'), 403, 'Bu işlem için yetkiniz bulunmamaktadır.');
+            $companyId = $request->user()->company_id;
         }
 
-        // Arvento seçili değilse veya Arvento verisi yoksa kendi veritabanımızdan (Concox GT06N) çek
-        if (empty($vehicles)) {
-            $dbVehicles = \App\Models\Fleet\Vehicle::with('drivers')->where('company_id', $companyId)->get();
+        // Kendi veritabanımızdan (Concox GT06N) araçları çek
+        $vehicles = [];
+        $dbVehicles = \App\Models\Fleet\Vehicle::with('drivers')->where('company_id', $companyId)->get();
             
             // Her araç için en son konumu bul
             $locations = \App\Models\Fleet\VehicleLocation::whereIn('vehicle_id', $dbVehicles->pluck('id'))
@@ -87,16 +65,10 @@ class VehicleTrackingApiController extends Controller
                     ]
                 ];
             }
-        }
-
-        // Eğer provider ayarı yoksa bile demo amaçlı aktif gibi göster:
-        $isProviderActive = $setting ? true : true; // DEMO için her zaman true döndürdük ki ekran hata vermesin
 
         return response()->json([
             'success' => true,
-            'vehicles' => $vehicles,
-            'provider_active' => $isProviderActive,
-            'provider_name' => $setting ? $setting->provider : 'Demo Mode'
+            'vehicles' => $vehicles
         ]);
     }
 

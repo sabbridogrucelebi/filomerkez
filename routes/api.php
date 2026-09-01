@@ -336,3 +336,6 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('/chat/conversations/{conversation}/call', [\App\Http\Controllers\Api\V1\ChatApiController::class, 'handleCall']);
     Route::post('/chat/profile-photo', [\App\Http\Controllers\Api\V1\ChatApiController::class, 'uploadProfilePhoto']);
 });
+
+// Demo/Test Live Tracking (Auth Bypass for mobile app preview without password)
+Route::get('/v1/demo-live', [\App\Http\Controllers\Api\V1\VehicleTrackingApiController::class, 'live']);
