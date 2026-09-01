@@ -1700,9 +1700,9 @@
                 }
             });
 
-            // İlk yüklemede haritayı araçların olduğu bölgeye otomatik yakınlaştır
-            if (isFirstLoad && bounds.length > 0) {
-                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+            // İlk yüklemede haritayı otomatik tüm araçları sığdıracak şekilde uzaklaştırmayı (fitBounds) 
+            // kapattık. Harita daima sabit (Konya) merkezde açılacak.
+            if (isFirstLoad) {
                 isFirstLoad = false;
             }
         }
