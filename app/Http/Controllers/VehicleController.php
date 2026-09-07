@@ -72,7 +72,7 @@ class VehicleController extends Controller
             ->when($status === 'active', fn ($q) => $q->where('is_active', true))
             ->when($status === 'passive', fn ($q) => $q->where('is_active', false))
             ->when($specialFilter === 'upcoming_inspection', function ($q) {
-                $q->where(function ($sub) {
+                $q->where('is_active', true)->where(function ($sub) {
                     $sub->whereNotNull('inspection_date')->where('inspection_date', '<=', now()->addDays(15))
                         ->orWhereHas('documents', function ($doc) {
                             $doc->whereIn('document_type', ['Muayene', 'Muayene Raporu'])
@@ -83,7 +83,7 @@ class VehicleController extends Controller
                 });
             })
             ->when($specialFilter === 'upcoming_insurance', function ($q) {
-                $q->where(function ($sub) {
+                $q->where('is_active', true)->where(function ($sub) {
                     $sub->whereNotNull('insurance_end_date')->where('insurance_end_date', '<=', now()->addDays(10))
                         ->orWhereHas('documents', function ($doc) {
                             $doc->whereIn('document_type', ['Sigorta', 'Sigorta Poliçesi'])
@@ -93,7 +93,7 @@ class VehicleController extends Controller
                         });
                 });
             })
-            ->when($specialFilter === 'no_driver', fn ($q) => $q->whereDoesntHave('drivers', fn($d) => $d->where('is_active', true)))
+            ->when($specialFilter === 'no_driver', fn ($q) => $q->where('is_active', true)->whereDoesntHave('drivers', fn($d) => $d->where('is_active', true)))
             ->orderByRaw("CASE WHEN plate REGEXP '^[0-9]{2} *C *[0-9]+.*$' THEN 0 ELSE 1 END")
             ->orderBy('plate', 'asc')
             ->paginate(100)
@@ -102,7 +102,7 @@ class VehicleController extends Controller
         // KPI İstatistikleri
         $kpi = [
             'total' => Vehicle::count(),
-            'upcoming_inspection' => Vehicle::where(function ($q) {
+            'upcoming_inspection' => Vehicle::where('is_active', true)->where(function ($q) {
                 $q->whereNotNull('inspection_date')->where('inspection_date', '<=', now()->addDays(15))
                   ->orWhereHas('documents', function ($doc) {
                       $doc->whereIn('document_type', ['Muayene', 'Muayene Raporu'])
@@ -111,7 +111,7 @@ class VehicleController extends Controller
                           ->whereNull('archived_at');
                   });
             })->count(),
-            'upcoming_insurance' => Vehicle::where(function ($q) {
+            'upcoming_insurance' => Vehicle::where('is_active', true)->where(function ($q) {
                 $q->whereNotNull('insurance_end_date')->where('insurance_end_date', '<=', now()->addDays(10))
                   ->orWhereHas('documents', function ($doc) {
                       $doc->whereIn('document_type', ['Sigorta', 'Sigorta Poliçesi'])
@@ -120,7 +120,7 @@ class VehicleController extends Controller
                           ->whereNull('archived_at');
                   });
             })->count(),
-            'no_driver' => Vehicle::whereDoesntHave('drivers', fn($d) => $d->where('is_active', true))->count(),
+            'no_driver' => Vehicle::where('is_active', true)->whereDoesntHave('drivers', fn($d) => $d->where('is_active', true))->count(),
             'types' => Vehicle::selectRaw('vehicle_type, count(*) as count')->groupBy('vehicle_type')->pluck('count', 'vehicle_type')->toArray(),
         ];
 

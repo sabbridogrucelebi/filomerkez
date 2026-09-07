@@ -21,7 +21,7 @@ class VehicleController extends Controller
         $query = Vehicle::where('company_id', $companyId)->with(['drivers', 'documents' => fn($q) => $q->whereNull('archived_at')]);
 
         if ($request->filter === 'upcoming_inspection') {
-            $query->where(function ($q) {
+            $query->where('is_active', true)->where(function ($q) {
                 $q->whereNotNull('inspection_date')
                   ->where('inspection_date', '<=', now()->addDays(10))
                   ->orWhereHas('documents', function ($doc) {
@@ -32,7 +32,7 @@ class VehicleController extends Controller
                   });
             });
         } elseif ($request->filter === 'upcoming_insurance') {
-            $query->where(function ($q) {
+            $query->where('is_active', true)->where(function ($q) {
                 $q->whereNotNull('insurance_end_date')
                   ->where('insurance_end_date', '<=', now()->addDays(10))
                   ->orWhereHas('documents', function ($doc) {
@@ -92,6 +92,7 @@ class VehicleController extends Controller
         $kpi = [
             'total' => Vehicle::where('company_id', $companyId)->count(),
             'upcoming_inspection' => Vehicle::where('company_id', $companyId)
+                ->where('is_active', true)
                 ->where(function ($q) {
                     $q->whereNotNull('inspection_date')
                       ->where('inspection_date', '<=', now()->addDays(10))
@@ -103,6 +104,7 @@ class VehicleController extends Controller
                       });
                 })->count(),
             'upcoming_insurance' => Vehicle::where('company_id', $companyId)
+                ->where('is_active', true)
                 ->where(function ($q) {
                     $q->whereNotNull('insurance_end_date')
                       ->where('insurance_end_date', '<=', now()->addDays(10))
