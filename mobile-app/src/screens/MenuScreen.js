@@ -9,7 +9,6 @@ const getEmojiUrl = (name) => `https://raw.githubusercontent.com/Tarikul-Islam-A
 const menuItems = [
     { id: 1, emoji: 'Travel%20and%20places/House', label: 'Ana Sayfa', sub: 'GENEL BAKIŞ', route: 'HomeTab' },
     { id: 2, emoji: 'Travel%20and%20places/Oncoming%20Automobile', label: 'Araçlar', sub: 'FİLO YÖNETİMİ', route: 'VehiclesTab', permission: 'vehicles.view' },
-    { id: 3, emoji: 'Travel%20and%20places/Satellite', label: 'Araç Takip', sub: 'CANLI İZLEME', route: 'Tracking', permission: 'vehicles.view' },
     { id: 4, emoji: 'People/Construction%20Worker', label: 'Personeller', sub: 'PERSONEL YÖNETİMİ', route: 'Personnel', permission: 'drivers.view' },
     { id: 5, emoji: 'Objects/Hammer%20and%20Wrench', label: 'Bakım / Tamir', sub: 'SERVİS VE BAKIM', route: 'Maintenances', permission: 'maintenances.view' },
     { id: 6, emoji: 'Travel%20and%20places/Fuel%20Pump', label: 'Yakıt', sub: 'YAKIT TAKİBİ', route: 'VehiclesTab', screen: 'Fuels', permission: 'fuels.view' },

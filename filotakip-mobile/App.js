@@ -110,11 +110,26 @@ function LoginScreen(props) {
     var isLoading = loadState[0];
     var setIsLoading = loadState[1];
 
+    var remState = useState(false);
+    var rememberMe = remState[0];
+    var setRememberMe = remState[1];
+
     useEffect(function() {
         Animated.parallel([
             Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
             Animated.spring(slideAnim, { toValue: 0, tension: 30, friction: 8, useNativeDriver: true })
         ]).start();
+
+        AsyncStorage.getItem('savedCredentials').then(data => {
+            if (data) {
+                var creds = JSON.parse(data);
+                if (creds.email && creds.password) {
+                    setEmail(creds.email);
+                    setPassword(creds.password);
+                    setRememberMe(true);
+                }
+            }
+        });
     }, []);
 
     function handleLogin() {
@@ -136,6 +151,11 @@ function LoginScreen(props) {
         .then(data => {
             setIsLoading(false);
             if (data.token) {
+                if (rememberMe) {
+                    AsyncStorage.setItem('savedCredentials', JSON.stringify({ email: email, password: password }));
+                } else {
+                    AsyncStorage.removeItem('savedCredentials');
+                }
                 props.onLoginSuccess(data.token);
             } else {
                 alert(data.message || 'Giriş başarısız. Lütfen bilgilerinizi kontrol edin.');
@@ -197,6 +217,13 @@ function LoginScreen(props) {
                                 </TouchableOpacity>
                             </View>
                         </View>
+
+                        <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }} onPress={function() { setRememberMe(!rememberMe); }}>
+                            <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 1, borderColor: '#FF7300', marginRight: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: rememberMe ? '#FF7300' : 'transparent' }}>
+                                {rememberMe && <FontAwesome5 name="check" size={12} color="#FFF" />}
+                            </View>
+                            <Text style={{ color: '#94A3B8', fontSize: 13, fontWeight: '600' }}>Beni Hatırla</Text>
+                        </TouchableOpacity>
 
                         {/* Neon Login Butonu */}
                         <TouchableOpacity style={styles.neonBtn} onPress={handleLogin} activeOpacity={0.8} disabled={isLoading}>
@@ -276,7 +303,16 @@ function MapScreen({ token }) {
                 'Accept': 'application/json'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            var contentType = response.headers.get('content-type') || '';
+            if (!response.ok) {
+                throw new Error('Sunucu Hatası: HTTP ' + response.status);
+            }
+            if (!contentType.includes('application/json')) {
+                throw new Error('Sunucu JSON döndürmedi (HTTP ' + response.status + ')');
+            }
+            return response.json();
+        })
         .then(data => {
             setIsFetching(false);
             if (data.success && data.vehicles) {
@@ -285,7 +321,8 @@ function MapScreen({ token }) {
         })
         .catch(error => {
             setIsFetching(false);
-            console.error("Araç verisi çekilemedi", error);
+            console.log("Araç verisi çekilemedi:", error.message);
+            alert("Araç verisi çekilemedi: " + error.message);
         });
     };
 
@@ -672,7 +709,7 @@ function MapScreen({ token }) {
                 <View style={{ flex: 1, position: 'relative' }}>
                     <MapView 
                         ref={mapRef}
-                        provider={PROVIDER_GOOGLE}
+                        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
                         style={styles.mapView} 
                         initialRegion={initialRegion}
                         showsUserLocation={true}
