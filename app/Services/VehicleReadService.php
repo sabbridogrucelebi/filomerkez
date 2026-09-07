@@ -27,7 +27,7 @@ class VehicleReadService
 
         if (isset($filters['filter'])) {
             if ($filters['filter'] === 'upcoming_inspection') {
-                $query->where(function ($q) {
+                $query->where('is_active', true)->where(function ($q) {
                     $q->whereNotNull('inspection_date')->where('inspection_date', '<=', now()->addDays(15))
                       ->orWhereHas('documents', function ($doc) {
                           $doc->whereIn('document_type', ['Muayene', 'Muayene Raporu'])
@@ -37,7 +37,7 @@ class VehicleReadService
                       });
                 });
             } elseif ($filters['filter'] === 'upcoming_insurance') {
-                $query->where(function ($q) {
+                $query->where('is_active', true)->where(function ($q) {
                     $q->whereNotNull('insurance_end_date')->where('insurance_end_date', '<=', now()->addDays(10))
                       ->orWhereHas('documents', function ($doc) {
                           $doc->whereIn('document_type', ['Sigorta', 'Sigorta Poliçesi'])
@@ -112,6 +112,7 @@ class VehicleReadService
         $kpi = [
             'total' => Vehicle::where('company_id', $companyId)->count(),
             'upcoming_inspection' => Vehicle::where('company_id', $companyId)
+                ->where('is_active', true)
                 ->where(function ($q) {
                     $q->whereNotNull('inspection_date')->where('inspection_date', '<=', now()->addDays(15))
                       ->orWhereHas('documents', function ($doc) {
@@ -122,6 +123,7 @@ class VehicleReadService
                       });
                 })->count(),
             'upcoming_insurance' => Vehicle::where('company_id', $companyId)
+                ->where('is_active', true)
                 ->where(function ($q) {
                     $q->whereNotNull('insurance_end_date')->where('insurance_end_date', '<=', now()->addDays(10))
                       ->orWhereHas('documents', function ($doc) {
