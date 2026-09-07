@@ -372,7 +372,7 @@ function AppNavigation() {
 }
 
 export default function App() {
-    const [splashFinished, setSplashFinished] = React.useState(false);
+    const [splashFinished, setSplashFinished] = React.useState(true); // Intro videosu iptal edildi, direkt uygulamaya girecek
     const [fontsLoaded, setFontsLoaded] = React.useState(false);
 
     React.useEffect(() => {

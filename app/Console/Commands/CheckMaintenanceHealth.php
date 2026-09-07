@@ -34,7 +34,7 @@ class CheckMaintenanceHealth extends Command
         $this->info('Checking maintenance health...');
 
         // Tüm araçları ve ayarlarını al
-        $vehicles = Vehicle::with(['maintenanceSetting', 'company'])->get();
+        $vehicles = Vehicle::with(['maintenanceSetting', 'company'])->where('is_active', true)->get();
 
         foreach ($vehicles as $vehicle) {
             $status = $vehicle->maintenance_status;
@@ -138,11 +138,12 @@ class CheckMaintenanceHealth extends Command
 
         foreach ($admins as $admin) {
             SendFcmpushNotification::dispatch(
-                $admin,
+                $admin->id,
                 $title,
                 $message,
                 ['type' => 'maintenance_alert']
             );
+            Log::info("Push notification dispatched: {$title} -> User#{$admin->id}");
         }
     }
 }
