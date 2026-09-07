@@ -69,7 +69,9 @@ class VehicleReadService
             });
         }
 
-        $paginator = $query->latest()->paginate($perPage);
+        $paginator = $query->orderByRaw("CASE WHEN plate REGEXP '^[0-9]{2} *C *[0-9]+.*$' THEN 0 ELSE 1 END")
+            ->orderBy('plate', 'asc')
+            ->paginate($perPage);
 
         $formattedVehicles = collect($paginator->items())->map(function ($vehicle) {
             $currentKm = max((int)$vehicle->current_km, (int)$vehicle->max_fuel_km, (int)$vehicle->max_maintenance_km);
