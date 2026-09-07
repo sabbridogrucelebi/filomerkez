@@ -38,8 +38,9 @@ class VehicleTrackingApiController extends Controller
                 if ($loc) {
                     $statusArr = is_string($loc->status) ? json_decode($loc->status, true) : $loc->status;
                     $vehicles[] = [
+                        'Id' => $v->id,
                         'LicensePlate' => $v->plate ?? $v->license_plate,
-                        'Driver' => $v->drivers->first() ? trim($v->drivers->first()->full_name ?? ($v->drivers->first()->first_name . ' ' . $v->drivers->first()->last_name)) : 'Atanmamış',
+                        'Driver' => $v->drivers->first() ? ($v->drivers->first()->full_name ?? 'Atanmamış') : 'Atanmamış',
                         'Latitude' => $loc->latitude,
                         'Longitude' => $loc->longitude,
                         'Speed' => $loc->speed,
@@ -54,6 +55,7 @@ class VehicleTrackingApiController extends Controller
             if (empty($vehicles)) {
                 $vehicles = [
                     [
+                        'Id' => 0,
                         'LicensePlate' => 'TEST 123 (CİHAZ BEKLENİYOR)',
                         'Driver' => 'Test Sürücü',
                         'Latitude' => 41.0122,
