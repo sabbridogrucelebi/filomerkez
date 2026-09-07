@@ -306,7 +306,9 @@ function MapScreen({ token }) {
         .then(response => {
             var contentType = response.headers.get('content-type') || '';
             if (!response.ok) {
-                throw new Error('Sunucu Hatası: HTTP ' + response.status);
+                return response.text().then(text => {
+                    throw new Error('Sunucu Hatası (HTTP ' + response.status + '): ' + text.substring(0, 1000));
+                });
             }
             if (!contentType.includes('application/json')) {
                 throw new Error('Sunucu JSON döndürmedi (HTTP ' + response.status + ')');

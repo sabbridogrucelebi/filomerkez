@@ -11,19 +11,20 @@ class VehicleTrackingApiController extends Controller
 {
     public function live(Request $request)
     {
-        // Geliştirme Testi İçin Özel Arka Kapı Token'ı
-        if ($request->bearerToken() === 'TEST_1_1') {
-            $companyId = 1;
-        } else {
-            // Kullanıcının araçları görme yetkisi var mı?
-            abort_unless($request->user()->hasPermission('vehicles.view'), 403, 'Bu işlem için yetkiniz bulunmamaktadır.');
-            $companyId = $request->user()->company_id;
-        }
+        try {
+            // Geliştirme Testi İçin Özel Arka Kapı Token'ı
+            if ($request->bearerToken() === 'TEST_1_1') {
+                $companyId = 1;
+            } else {
+                // Kullanıcının araçları görme yetkisi var mı?
+                abort_unless($request->user()->hasPermission('vehicles.view'), 403, 'Bu işlem için yetkiniz bulunmamaktadır.');
+                $companyId = $request->user()->company_id;
+            }
 
-        // Kendi veritabanımızdan (Concox GT06N) araçları çek
-        $vehicles = [];
-        $dbVehicles = \App\Models\Fleet\Vehicle::with('drivers')->where('company_id', $companyId)->get();
-            
+            // Kendi veritabanımızdan (Concox GT06N) araçları çek
+            $vehicles = [];
+            $dbVehicles = \App\Models\Fleet\Vehicle::with('drivers')->where('company_id', $companyId)->get();
+                
             // Her araç için en son konumu bul
             $locations = \App\Models\Fleet\VehicleLocation::whereIn('vehicle_id', $dbVehicles->pluck('id'))
                 ->orderBy('recorded_at', 'desc')
@@ -46,7 +47,7 @@ class VehicleTrackingApiController extends Controller
                         'Speed' => $loc->speed,
                         'EngineStatus' => (isset($statusArr['acc']) && $statusArr['acc']) ? 'Açık' : 'Kapalı',
                         'DeviceImei' => $v->device_imei,
-                        'RecordedAt' => $loc->recorded_at ? $loc->recorded_at->format('Y-m-d H:i:s') : null,
+                        'RecordedAt' => $loc->recorded_at ? \Carbon\Carbon::parse($loc->recorded_at)->format('Y-m-d H:i:s') : null,
                     ];
                 }
             }
@@ -68,10 +69,18 @@ class VehicleTrackingApiController extends Controller
                 ];
             }
 
-        return response()->json([
-            'success' => true,
-            'vehicles' => $vehicles
-        ]);
+            return response()->json([
+                'success' => true,
+                'vehicles' => $vehicles
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ], 500);
+        }
     }
 
     public function history(Request $request)
