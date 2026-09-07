@@ -1,0 +1,1 @@
+<?php require 'vendor/autoload.php'; require 'bootstrap/app.php';  = require_once 'bootstrap/app.php';  = ->make(Illuminate\Contracts\Http\Kernel::class);  = ->handle(Illuminate\Http\Request::create('/api/v1/vehicle-tracking/live', 'GET', [], [], [], ['HTTP_AUTHORIZATION' => 'Bearer TEST_1_1'])); echo ->getContent();  

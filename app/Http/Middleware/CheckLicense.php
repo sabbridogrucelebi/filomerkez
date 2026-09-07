@@ -29,13 +29,29 @@ class CheckLicense
         $company = $user->company;
 
         if (!$company) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Firma kaydınız bulunamadı.',
+                    'error' => 'company_not_found',
+                ], 403);
+            }
             abort(403, 'Firma kaydınız bulunamadı. Lütfen yöneticinizle iletişime geçin.');
         }
 
         if (!$company->is_active) {
+            // API istekleri session kullanmaz — sadece JSON yanıt dön
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Firmanız devre dışı bırakılmıştır.',
+                    'error' => 'company_inactive',
+                ], 403);
+            }
+
             auth()->logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
+            if ($request->hasSession()) {
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+            }
 
             return redirect()->route('login')->withErrors([
                 'email' => 'Firmanız devre dışı bırakılmıştır. Lütfen platform yöneticisiyle iletişime geçin.',
