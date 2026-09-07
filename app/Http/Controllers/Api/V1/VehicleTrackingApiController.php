@@ -73,7 +73,7 @@ class VehicleTrackingApiController extends Controller
                 'success' => true,
                 'vehicles' => $vehicles
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
                 'error' => $e->getMessage(),
