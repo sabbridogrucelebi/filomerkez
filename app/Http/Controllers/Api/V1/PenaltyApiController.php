@@ -137,8 +137,8 @@ class PenaltyApiController extends BaseApiController
             'driver_name' => 'required|string|max:255',
             'payment_date' => 'nullable|date',
             'notes' => 'nullable|string',
-            'traffic_penalty_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp,heic,heif,doc,docx|max:10240',
-            'payment_receipt' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp,heic,heif,doc,docx|max:10240',
+            'traffic_penalty_document' => 'nullable|file|max:10240',
+            'payment_receipt' => 'nullable|file|max:10240',
         ]);
 
         $validated['company_id'] = $this->getCompanyId();
@@ -198,8 +198,8 @@ class PenaltyApiController extends BaseApiController
             'driver_name' => 'required|string|max:255',
             'payment_date' => 'nullable|date',
             'notes' => 'nullable|string',
-            'traffic_penalty_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp,heic,heif,doc,docx|max:10240',
-            'payment_receipt' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp,heic,heif,doc,docx|max:10240',
+            'traffic_penalty_document' => 'nullable|file|max:10240',
+            'payment_receipt' => 'nullable|file|max:10240',
         ]);
 
         $validated['discounted_amount'] = round($validated['penalty_amount'] * 0.75, 2);

@@ -147,8 +147,8 @@ class TrafficPenaltyController extends Controller
             'driver_name' => ['required', 'string', 'max:255'],
             'payment_date' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
-            'traffic_penalty_document' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp,heic,heif,doc,docx', 'max:10240'],
-            'payment_receipt' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp,heic,heif,doc,docx', 'max:10240'],
+            'traffic_penalty_document' => ['nullable', 'file', 'max:10240'],
+            'payment_receipt' => ['nullable', 'file', 'max:10240'],
         ]);
 
         $companyId = auth()->user()->company_id;
@@ -235,8 +235,8 @@ class TrafficPenaltyController extends Controller
             'driver_name' => ['required', 'string', 'max:255'],
             'payment_date' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
-            'traffic_penalty_document' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp,heic,heif,doc,docx', 'max:10240'],
-            'payment_receipt' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp,heic,heif,doc,docx', 'max:10240'],
+            'traffic_penalty_document' => ['nullable', 'file', 'max:10240'],
+            'payment_receipt' => ['nullable', 'file', 'max:10240'],
         ]);
 
         $penaltyAmount = (float) $data['penalty_amount'];
@@ -327,7 +327,7 @@ class TrafficPenaltyController extends Controller
 
         $data = $request->validate([
             'payment_date' => ['required', 'date'],
-            'payment_receipt' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp,heic,heif,doc,docx', 'max:10240'],
+            'payment_receipt' => ['nullable', 'file', 'max:10240'],
         ]);
 
         $paymentDate = Carbon::parse($data['payment_date']);
