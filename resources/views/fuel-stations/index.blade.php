@@ -21,6 +21,16 @@
     class="space-y-6"
     x-data="{
         openCreate: false,
+        openEdit: false,
+        editStation: null,
+        editForm: {
+            name: '',
+            legal_name: '',
+            address: '',
+            discount_type: '',
+            discount_value: 0,
+            vat_rate: 0
+        },
         openPayment: false,
         openBulkPayment: false,
         activeDetail: null,
@@ -144,6 +154,19 @@
             };
 
             this.openPayment = true;
+        },
+
+        openEditModal(station) {
+            this.editStation = station;
+            this.editForm = {
+                name: station.name || '',
+                legal_name: station.legal_name || '',
+                address: station.address || '',
+                discount_type: station.discount_type || '',
+                discount_value: station.discount_value || 0,
+                vat_rate: station.vat_rate || 0
+            };
+            this.openEdit = true;
         }
     }"
 >
@@ -297,6 +320,13 @@
                                                class="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-200">
                                                 Ekstre
                                             </a>
+                                            <button
+                                                type="button"
+                                                @click="openEditModal({{ $station->toJson() }})"
+                                                class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 hover:border-blue-200"
+                                            >
+                                                Düzenle
+                                            </button>
 
                                             <button
                                                 type="button"

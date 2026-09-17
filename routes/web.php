@@ -687,6 +687,10 @@ Route::middleware('auth')->group(function () {
         ->middleware('permission:fuels.view')
         ->name('fuel-stations.store');
 
+    Route::put('/fuel-stations/{station}', [FuelStationController::class, 'update'])
+        ->middleware('permission:fuels.view')
+        ->name('fuel-stations.update');
+
     /*
     |--------------------------------------------------------------------------
     | PAYMENTS

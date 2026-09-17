@@ -81,9 +81,33 @@ class FuelStationController extends Controller
             newValues: $station->toArray()
         );
 
-        return redirect()
-            ->route('fuel-stations.index')
-            ->with('success', 'Petrol istasyonu cari kaydı oluşturuldu.');
+        return redirect()->route('fuel-stations.index')->with('success', 'Petrol istasyonu/Cari başarıyla oluşturuldu.');
+    }
+
+    public function update(Request $request, FuelStation $station)
+    {
+        abort_unless(auth()->user()->hasPermission('fuels.view'), 403);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'legal_name' => 'nullable|string|max:255',
+            'address' => 'nullable|string',
+            'discount_type' => 'nullable|in:percentage,fixed',
+            'discount_value' => 'nullable|numeric|min:0',
+            'vat_rate' => 'nullable|numeric|min:0|max:100',
+        ]);
+
+        if (empty($validated['discount_type'])) {
+            $validated['discount_value'] = 0;
+        }
+
+        if (empty($validated['vat_rate'])) {
+            $validated['vat_rate'] = 0;
+        }
+
+        $station->update($validated);
+
+        return redirect()->route('fuel-stations.index')->with('success', 'Petrol istasyonu/Cari başarıyla güncellendi.');
     }
 
     private function recalculateStationFuels(FuelStation $station)
