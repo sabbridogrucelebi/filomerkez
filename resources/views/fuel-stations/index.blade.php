@@ -322,7 +322,8 @@
                                             </a>
                                             <button
                                                 type="button"
-                                                @click='openEditModal(@json($station))'
+                                                data-station="{{ $station->toJson() }}"
+                                                @click="openEditModal(JSON.parse($el.dataset.station))"
                                                 class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 hover:border-blue-200"
                                             >
                                                 Düzenle
