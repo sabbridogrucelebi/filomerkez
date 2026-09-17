@@ -596,6 +596,101 @@
         </div>
     </template>
 
+    <!-- Cari Düzenle Modal -->
+    <template x-teleport="body">
+        <div x-cloak x-show="openEdit" x-transition.opacity class="fixed inset-0 z-[9999]" style="display:none;">
+            <div class="absolute inset-0 bg-slate-900/55 backdrop-blur-[3px]" @click="openEdit = false"></div>
+
+            <div class="absolute inset-0 flex items-center justify-center p-4 sm:p-6">
+                <div
+                    x-show="openEdit"
+                    x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="opacity-0 scale-95 translate-y-2"
+                    x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                    x-transition:leave="transition ease-in duration-150"
+                    x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                    x-transition:leave-end="opacity-0 scale-95 translate-y-2"
+                    class="w-full max-w-2xl overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_40px_120px_rgba(15,23,42,0.28)]"
+                    @click.stop
+                >
+                    <div class="border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-blue-50/40 px-6 py-5 sm:px-7">
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="flex items-start gap-4">
+                                <div class="flex h-12 w-12 items-center justify-center rounded-[18px] bg-gradient-to-br from-blue-600 to-indigo-600 text-xl text-white shadow-lg shadow-blue-200/70">
+                                    ✏️
+                                </div>
+
+                                <div>
+                                    <h3 class="text-xl font-bold text-slate-900">Cari Düzenle</h3>
+                                    <p class="mt-1 text-sm text-slate-500">Petrol istasyonu bilgilerini güncelle</p>
+                                </div>
+                            </div>
+
+                            <button type="button" @click="openEdit = false" class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-700">
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+
+                    <form x-bind:action="`/fuel-stations/${editStation?.id}`" method="POST">
+                        @csrf
+                        @method('PUT')
+
+                        <div class="max-h-[70vh] overflow-y-auto px-6 py-6 sm:px-7">
+                            <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                                <div>
+                                    <label class="mb-2 block text-sm font-semibold text-slate-700">Petrol Adı</label>
+                                    <input type="text" name="name" x-model="editForm.name" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 shadow-sm outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100">
+                                </div>
+
+                                <div>
+                                    <label class="mb-2 block text-sm font-semibold text-slate-700">Ünvan</label>
+                                    <input type="text" name="legal_name" x-model="editForm.legal_name" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 shadow-sm outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100">
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="mb-2 block text-sm font-semibold text-slate-700">Adres</label>
+                                    <textarea name="address" x-model="editForm.address" rows="4" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 shadow-sm outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"></textarea>
+                                </div>
+
+                                <div>
+                                    <label class="mb-2 block text-sm font-semibold text-slate-700">İskonto Türü</label>
+                                    <select name="discount_type" x-model="editForm.discount_type" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 shadow-sm outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100">
+                                        <option value="">Yok</option>
+                                        <option value="percentage">Yüzde (%)</option>
+                                        <option value="fixed">Sabit Tutar (₺)</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="mb-2 block text-sm font-semibold text-slate-700">İskonto Tutarı / Oranı</label>
+                                    <input type="number" step="0.01" min="0" name="discount_value" x-model="editForm.discount_value" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 shadow-sm outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100">
+                                </div>
+
+                                <div>
+                                    <label class="mb-2 block text-sm font-semibold text-slate-700">KDV Oranı (%)</label>
+                                    <input type="number" step="0.01" min="0" max="100" name="vat_rate" x-model="editForm.vat_rate" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 shadow-sm outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border-t border-slate-100 bg-slate-50/70 px-6 py-4 sm:px-7">
+                            <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                                <button type="button" @click="openEdit = false" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                                    Vazgeç
+                                </button>
+
+                                <button type="submit" class="rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200/60 transition hover:scale-[1.01]">
+                                    Değişiklikleri Kaydet
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </template>
+
     <template x-teleport="body">
         <div x-cloak x-show="openPayment" x-transition.opacity class="fixed inset-0 z-[9999]" style="display:none;">
             <div class="absolute inset-0 bg-slate-900/55 backdrop-blur-[3px]" @click="openPayment = false"></div>
