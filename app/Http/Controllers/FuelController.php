@@ -247,15 +247,17 @@ class FuelController extends Controller
             $discountAmount = $grossTotal;
         }
 
-        $netCost = $grossTotal; // KDV Hariç Ana Tutar
+        $netCost = $grossTotal; // İskontosuz Brüt Tutar (KDV Hariç)
+        $discountedAmount = $grossTotal - $discountAmount; // İskontolu Tutar (KDV Matrahı)
+        
         $vatAmount = 0;
-
         if ($vatRate > 0) {
-            $vatAmount = round($grossTotal * ($vatRate / 100), 2);
+            // KDV, İskonto düşüldükten sonra kalan tutar üzerinden (%20) eklenir
+            $vatAmount = round($discountedAmount * ($vatRate / 100), 2);
         }
 
-        // Toplam Borç = (Ana Tutar - İskonto) + KDV
-        $totalCost = round($grossTotal - $discountAmount + $vatAmount, 2);
+        // Toplam Borç = (İskontosuz Tutar - İskonto) + KDV
+        $totalCost = round($discountedAmount + $vatAmount, 2);
 
         return [
             'gross_total_cost' => $grossTotal,

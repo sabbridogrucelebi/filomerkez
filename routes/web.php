@@ -155,11 +155,6 @@ Route::get('/run-migrations', function () {
             $discountValue = (float) $station->discount_value;
             $discountType = $station->discount_type;
             
-            $vatAmount = 0;
-            if ($vatRate > 0) {
-                $vatAmount = round($grossTotal * ($vatRate / 100), 2);
-            }
-            
             $discountAmount = 0;
             if ($discountValue > 0) {
                 if ($discountType === 'percentage') {
@@ -169,8 +164,15 @@ Route::get('/run-migrations', function () {
                 }
             }
             if ($discountAmount > $grossTotal) $discountAmount = $grossTotal;
+
+            $discountedAmount = $grossTotal - $discountAmount;
             
-            $totalCost = round($grossTotal - $discountAmount + $vatAmount, 2);
+            $vatAmount = 0;
+            if ($vatRate > 0) {
+                $vatAmount = round($discountedAmount * ($vatRate / 100), 2);
+            }
+            
+            $totalCost = round($discountedAmount + $vatAmount, 2);
             
             $fuel->update([
                 'vat_rate' => $vatRate,
