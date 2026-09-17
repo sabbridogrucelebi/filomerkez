@@ -46,6 +46,7 @@
             totalLiters: 0,
             grossTotal: 0,
             discountTotal: 0,
+            vatTotal: 0,
             netTotal: 0,
             paidTotal: 0,
             netPayable: 0
@@ -80,6 +81,7 @@
                 this.calculatedDebt.totalLiters = data.total_liters;
                 this.calculatedDebt.grossTotal = data.gross_total;
                 this.calculatedDebt.discountTotal = data.discount_total;
+                this.calculatedDebt.vatTotal = data.vat_total;
                 this.calculatedDebt.netTotal = data.net_total;
                 this.calculatedDebt.paidTotal = data.paid_total;
                 this.calculatedDebt.netPayable = data.net_payable;
@@ -226,6 +228,7 @@
                                 <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Toplam Litre</th>
                                 <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Brüt Tutar</th>
                                 <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">İskonto Toplamı</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">KDV Toplamı</th>
                                 <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Net Borç</th>
                                 <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Toplam Ödeme</th>
                                 <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Anlık Cari Borç</th>
@@ -268,6 +271,10 @@
 
                                     <td class="px-6 py-4 text-sm text-slate-600">
                                         {{ number_format((float) $station->summary->discount_total, 2, ',', '.') }} ₺
+                                    </td>
+
+                                    <td class="px-6 py-4 text-sm text-slate-600">
+                                        {{ number_format((float) $station->summary->vat_total, 2, ',', '.') }} ₺
                                     </td>
 
                                     <td class="px-6 py-4 text-sm font-semibold text-slate-700">
@@ -326,6 +333,11 @@
                                                         <div class="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
                                                             <span class="text-sm text-slate-500">İskonto Toplamı</span>
                                                             <span class="font-bold text-slate-800">{{ number_format((float) $station->summary->discount_total, 2, ',', '.') }} ₺</span>
+                                                        </div>
+
+                                                        <div class="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+                                                            <span class="text-sm text-slate-500">KDV Toplamı</span>
+                                                            <span class="font-bold text-slate-800">{{ number_format((float) $station->summary->vat_total, 2, ',', '.') }} ₺</span>
                                                         </div>
 
                                                         <div class="flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
@@ -528,6 +540,11 @@
                                     <label class="mb-2 block text-sm font-semibold text-slate-700">İskonto Tutarı / Oranı</label>
                                     <input type="number" step="0.01" min="0" name="discount_value" value="{{ old('discount_value', 0) }}" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 shadow-sm outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100">
                                 </div>
+
+                                <div>
+                                    <label class="mb-2 block text-sm font-semibold text-slate-700">KDV Oranı (%)</label>
+                                    <input type="number" step="0.01" min="0" max="100" name="vat_rate" value="{{ old('vat_rate', 0) }}" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 shadow-sm outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100">
+                                </div>
                             </div>
                         </div>
 
@@ -636,6 +653,7 @@
                                                         <th class="px-4 py-2 font-medium">Toplam Alınan (Litre)</th>
                                                         <th class="px-4 py-2 font-medium">İskontosuz Brüt Tutar</th>
                                                         <th class="px-4 py-2 font-medium">İskonto</th>
+                                                        <th class="px-4 py-2 font-medium">KDV Tutarı</th>
                                                         <th class="px-4 py-2 font-medium text-emerald-600">Ödenen Toplam</th>
                                                         <th class="px-4 py-2 font-bold text-blue-600">Net Kalan Borç</th>
                                                     </tr>
@@ -645,6 +663,7 @@
                                                         <td class="px-4 py-3 font-semibold text-slate-700" x-text="`${calculatedDebt.totalLiters.toLocaleString('tr-TR', {minimumFractionDigits: 2})} LT`"></td>
                                                         <td class="px-4 py-3 font-semibold text-slate-700" x-text="`${calculatedDebt.grossTotal.toLocaleString('tr-TR', {minimumFractionDigits: 2})} ₺`"></td>
                                                         <td class="px-4 py-3 font-semibold text-slate-700" x-text="`${calculatedDebt.discountTotal.toLocaleString('tr-TR', {minimumFractionDigits: 2})} ₺`"></td>
+                                                        <td class="px-4 py-3 font-semibold text-slate-700" x-text="`${calculatedDebt.vatTotal.toLocaleString('tr-TR', {minimumFractionDigits: 2})} ₺`"></td>
                                                         <td class="px-4 py-3 font-bold text-emerald-700" x-text="`${calculatedDebt.paidTotal.toLocaleString('tr-TR', {minimumFractionDigits: 2})} ₺`"></td>
                                                         <td class="px-4 py-3 font-bold text-blue-700 text-base" x-text="`${calculatedDebt.netPayable.toLocaleString('tr-TR', {minimumFractionDigits: 2})} ₺`"></td>
                                                     </tr>

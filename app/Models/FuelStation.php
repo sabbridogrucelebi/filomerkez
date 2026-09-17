@@ -19,11 +19,13 @@ class FuelStation extends Model
         'address',
         'discount_type',
         'discount_value',
+        'vat_rate',
         'is_active',
     ];
 
     protected $casts = [
         'discount_value' => 'decimal:2',
+        'vat_rate' => 'decimal:2',
         'is_active' => 'boolean',
     ];
 

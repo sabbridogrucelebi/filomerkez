@@ -77,6 +77,9 @@ class FuelController extends Controller
         );
 
         $validated['gross_total_cost'] = $pricing['gross_total_cost'];
+        $validated['vat_rate'] = $pricing['vat_rate'];
+        $validated['vat_amount'] = $pricing['vat_amount'];
+        $validated['net_cost'] = $pricing['net_cost'];
         $validated['discount_amount'] = $pricing['discount_amount'];
         $validated['total_cost'] = $pricing['total_cost'];
         
@@ -135,6 +138,9 @@ class FuelController extends Controller
         );
 
         $validated['gross_total_cost'] = $pricing['gross_total_cost'];
+        $validated['vat_rate'] = $pricing['vat_rate'];
+        $validated['vat_amount'] = $pricing['vat_amount'];
+        $validated['net_cost'] = $pricing['net_cost'];
         $validated['discount_amount'] = $pricing['discount_amount'];
         $validated['total_cost'] = $pricing['total_cost'];
 
@@ -217,17 +223,22 @@ class FuelController extends Controller
     {
         $grossTotal = round($liters * $pricePerLiter, 2);
         $discountAmount = 0;
+        $vatRate = 0;
 
         if ($stationId) {
             $station = FuelStation::find($stationId);
 
-            if ($station && (float) $station->discount_value > 0) {
-                if ($station->discount_type === 'percentage') {
-                    $discountAmount = round($grossTotal * ((float) $station->discount_value / 100), 2);
-                }
+            if ($station) {
+                $vatRate = (float) $station->vat_rate;
+                
+                if ((float) $station->discount_value > 0) {
+                    if ($station->discount_type === 'percentage') {
+                        $discountAmount = round($grossTotal * ((float) $station->discount_value / 100), 2);
+                    }
 
-                if ($station->discount_type === 'fixed') {
-                    $discountAmount = round((float) $station->discount_value, 2);
+                    if ($station->discount_type === 'fixed') {
+                        $discountAmount = round((float) $station->discount_value, 2);
+                    }
                 }
             }
         }
@@ -236,8 +247,19 @@ class FuelController extends Controller
             $discountAmount = $grossTotal;
         }
 
+        $netCost = $grossTotal;
+        $vatAmount = 0;
+
+        if ($vatRate > 0) {
+            $netCost = round($grossTotal / (1 + ($vatRate / 100)), 2);
+            $vatAmount = round($grossTotal - $netCost, 2);
+        }
+
         return [
             'gross_total_cost' => $grossTotal,
+            'vat_rate' => $vatRate,
+            'vat_amount' => $vatAmount,
+            'net_cost' => $netCost,
             'discount_amount' => $discountAmount,
             'total_cost' => round($grossTotal - $discountAmount, 2),
         ];

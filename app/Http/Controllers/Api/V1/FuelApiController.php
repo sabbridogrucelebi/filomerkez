@@ -137,6 +137,23 @@ class FuelApiController extends BaseApiController
         $validated['company_id'] = $this->getCompanyId();
         $validated['total_cost'] = $validated['liters'] * $validated['price_per_liter'];
         $validated['gross_total_cost'] = $validated['total_cost'];
+        
+        $vatRate = 0;
+        if (!empty($validated['fuel_station_id'])) {
+            $station = FuelStation::find($validated['fuel_station_id']);
+            if ($station) {
+                $vatRate = (float) $station->vat_rate;
+            }
+        }
+        
+        $validated['vat_rate'] = $vatRate;
+        if ($vatRate > 0) {
+            $validated['net_cost'] = round($validated['gross_total_cost'] / (1 + ($vatRate / 100)), 2);
+            $validated['vat_amount'] = round($validated['gross_total_cost'] - $validated['net_cost'], 2);
+        } else {
+            $validated['net_cost'] = $validated['gross_total_cost'];
+            $validated['vat_amount'] = 0;
+        }
 
         $fuel = Fuel::create($validated);
 
@@ -172,6 +189,23 @@ class FuelApiController extends BaseApiController
 
         $validated['total_cost'] = $validated['liters'] * $validated['price_per_liter'];
         $validated['gross_total_cost'] = $validated['total_cost'];
+
+        $vatRate = 0;
+        if (!empty($validated['fuel_station_id'])) {
+            $station = FuelStation::find($validated['fuel_station_id']);
+            if ($station) {
+                $vatRate = (float) $station->vat_rate;
+            }
+        }
+        
+        $validated['vat_rate'] = $vatRate;
+        if ($vatRate > 0) {
+            $validated['net_cost'] = round($validated['gross_total_cost'] / (1 + ($vatRate / 100)), 2);
+            $validated['vat_amount'] = round($validated['gross_total_cost'] - $validated['net_cost'], 2);
+        } else {
+            $validated['net_cost'] = $validated['gross_total_cost'];
+            $validated['vat_amount'] = 0;
+        }
 
         $fuel->update($validated);
 

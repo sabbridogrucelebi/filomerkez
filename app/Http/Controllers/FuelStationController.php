@@ -25,6 +25,7 @@ class FuelStationController extends Controller
                 $totalLiters = (float) $station->fuels->sum('liters');
                 $grossTotal = (float) $station->fuels->sum('gross_total_cost');
                 $discountTotal = (float) $station->fuels->sum('discount_amount');
+                $vatTotal = (float) $station->fuels->sum('vat_amount');
                 $netTotal = (float) $station->fuels->sum('total_cost');
                 $totalPaid = (float) $station->payments->sum('amount');
                 $currentDebt = $netTotal - $totalPaid;
@@ -33,6 +34,7 @@ class FuelStationController extends Controller
                     'total_liters' => $totalLiters,
                     'gross_total' => $grossTotal,
                     'discount_total' => $discountTotal,
+                    'vat_total' => $vatTotal,
                     'net_total' => $netTotal,
                     'total_paid' => $totalPaid,
                     'current_debt' => $currentDebt,
@@ -55,10 +57,15 @@ class FuelStationController extends Controller
             'address' => 'nullable|string',
             'discount_type' => 'nullable|in:percentage,fixed',
             'discount_value' => 'nullable|numeric|min:0',
+            'vat_rate' => 'nullable|numeric|min:0|max:100',
         ]);
 
         if (empty($validated['discount_type'])) {
             $validated['discount_value'] = 0;
+        }
+
+        if (empty($validated['vat_rate'])) {
+            $validated['vat_rate'] = 0;
         }
 
         $validated['is_active'] = true;
@@ -368,6 +375,7 @@ class FuelStationController extends Controller
 
         $grossTotal = (float) $fuels->sum('gross_total_cost');
         $discountTotal = (float) $fuels->sum('discount_amount');
+        $vatTotal = (float) $fuels->sum('vat_amount');
         $netTotal = (float) $fuels->sum('total_cost');
         $totalLiters = (float) $fuels->sum('liters');
 
@@ -377,6 +385,7 @@ class FuelStationController extends Controller
         return response()->json([
             'gross_total' => $grossTotal,
             'discount_total' => $discountTotal,
+            'vat_total' => $vatTotal,
             'net_total' => $netTotal,
             'paid_total' => $paidTotal,
             'net_payable' => $netPayable,
