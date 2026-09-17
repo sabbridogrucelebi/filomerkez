@@ -154,7 +154,7 @@ export default function FuelsScreen({ navigation }) {
         setDisplayedFuels(filtered);
         
         // Update KPIs based on filtered data
-        const cost = filtered.reduce((sum, item) => sum + parseFloat(item.total_cost || 0), 0);
+        const cost = filtered.reduce((sum, item) => sum + parseFloat(item.gross_total_cost || item.total_cost || 0), 0);
         const liters = filtered.reduce((sum, item) => sum + parseFloat(item.liters || 0), 0);
         
         setKpi(prev => ({ 
@@ -222,7 +222,7 @@ export default function FuelsScreen({ navigation }) {
                         <Text style={s.colDate}>{dayjs(item.date).format('DD.MM.YY')}</Text>
                         <Text style={s.colPlate} numberOfLines={1}>{item.vehicle?.plate || '-'}</Text>
                         <Text style={s.colStation} numberOfLines={1}>{stationName}</Text>
-                        <Text style={[s.colTotal, { color: item.is_paid ? '#10B981' : '#EF4444' }]}>₺{formatCurrency(item.total_cost)}</Text>
+                        <Text style={[s.colTotal, { color: item.is_paid ? '#10B981' : '#EF4444' }]}>₺{formatCurrency(item.gross_total_cost || item.total_cost)}</Text>
                     </View>
                     <View style={s.rowDivider} />
                     <View style={s.rowMid}>

@@ -129,7 +129,7 @@ export default function VehicleFuelsScreen({ route, navigation }) {
                         <Text style={st.fuelTypeText}>{item.fuel_type || 'Dizel'}</Text>
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={st.amountText}>{fmtMoney(item.total_cost || item.total_amount)}</Text>
+                        <Text style={st.amountText}>{fmtMoney(item.gross_total_cost || item.total_cost || item.total_amount)}</Text>
                         <View style={[st.paidBadge, isPaid ? {backgroundColor: '#D1FAE5'} : {backgroundColor: '#FEE2E2'}]}>
                             <Text style={[st.paidText, isPaid ? {color: '#065F46'} : {color: '#991B1B'}]}>
                                 {isPaid ? 'Ödendi' : 'Bekliyor'}

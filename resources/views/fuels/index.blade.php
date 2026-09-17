@@ -73,7 +73,7 @@
         ->values();
 
     $totalLiters = (float) $displayRows->sum(fn ($row) => (float) ($row->liters ?? 0));
-    $totalAmount = (float) $displayRows->sum(fn ($row) => (float) ($row->total_cost ?? 0));
+    $totalAmount = (float) $displayRows->sum(fn ($row) => (float) ($row->gross_total_cost ?? $row->total_cost ?? 0));
     $totalReceiptCount = (int) $displayRows->count();
 
     $stationCards = $stationSummaries->values()->map(function ($station) {
@@ -479,7 +479,7 @@
                                     </td>
 
                                     <td class="px-4 py-4 font-semibold {{ $fuel->is_paid ? 'text-emerald-600' : 'text-rose-600' }}">
-                                        {{ number_format((float) ($fuel->total_cost ?? 0), 2, ',', '.') }} ₺
+                                        {{ number_format((float) ($fuel->gross_total_cost ?? $fuel->total_cost ?? 0), 2, ',', '.') }} ₺
                                     </td>
 
                                     <td class="px-4 py-4 text-slate-700">
