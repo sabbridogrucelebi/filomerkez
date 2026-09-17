@@ -247,13 +247,15 @@ class FuelController extends Controller
             $discountAmount = $grossTotal;
         }
 
-        $netCost = $grossTotal;
+        $netCost = $grossTotal; // KDV Hariç Ana Tutar
         $vatAmount = 0;
 
         if ($vatRate > 0) {
-            $netCost = round($grossTotal / (1 + ($vatRate / 100)), 2);
-            $vatAmount = round($grossTotal - $netCost, 2);
+            $vatAmount = round($grossTotal * ($vatRate / 100), 2);
         }
+
+        // Toplam Borç = (Ana Tutar - İskonto) + KDV
+        $totalCost = round($grossTotal - $discountAmount + $vatAmount, 2);
 
         return [
             'gross_total_cost' => $grossTotal,
@@ -261,7 +263,7 @@ class FuelController extends Controller
             'vat_amount' => $vatAmount,
             'net_cost' => $netCost,
             'discount_amount' => $discountAmount,
-            'total_cost' => round($grossTotal - $discountAmount, 2),
+            'total_cost' => $totalCost,
         ];
     }
 }
