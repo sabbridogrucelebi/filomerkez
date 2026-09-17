@@ -143,7 +143,45 @@ Route::prefix('portal/jv/{token}')->name('portal.jv.')->group(function () {
 Route::get('/run-migrations', function () {
     try {
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-        return 'Veritabanı güncellemeleri (migrations) başarıyla tamamlandı! <br><br> Çıktı: <br><pre>' . \Illuminate\Support\Facades\Artisan::output() . '</pre>';
+
+        // Fix existing fuels
+        $fuels = \App\Models\Fuel::with('fuelStation')->get();
+        foreach($fuels as $fuel) {
+            $station = $fuel->fuelStation;
+            if (!$station) continue;
+
+            $grossTotal = $fuel->gross_total_cost;
+            $vatRate = (float) $station->vat_rate;
+            $discountValue = (float) $station->discount_value;
+            $discountType = $station->discount_type;
+            
+            $vatAmount = 0;
+            if ($vatRate > 0) {
+                $vatAmount = round($grossTotal * ($vatRate / 100), 2);
+            }
+            
+            $discountAmount = 0;
+            if ($discountValue > 0) {
+                if ($discountType === 'percentage') {
+                    $discountAmount = round($grossTotal * ($discountValue / 100), 2);
+                } elseif ($discountType === 'fixed') {
+                    $discountAmount = round($discountValue, 2);
+                }
+            }
+            if ($discountAmount > $grossTotal) $discountAmount = $grossTotal;
+            
+            $totalCost = round($grossTotal - $discountAmount + $vatAmount, 2);
+            
+            $fuel->update([
+                'vat_rate' => $vatRate,
+                'vat_amount' => $vatAmount,
+                'net_cost' => $grossTotal, // This is KDV haric ana tutar based on new logic
+                'discount_amount' => $discountAmount,
+                'total_cost' => $totalCost
+            ]);
+        }
+
+        return 'Veritabanı güncellemeleri (migrations) ve eski yakıt fişlerinin yeni kurala göre hesaplanması başarıyla tamamlandı! <br><br> Çıktı: <br><pre>' . \Illuminate\Support\Facades\Artisan::output() . '</pre>';
     } catch (\Exception $e) {
         return 'Hata oluştu: ' . $e->getMessage();
     }
