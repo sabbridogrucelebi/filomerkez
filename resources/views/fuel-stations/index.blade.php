@@ -632,7 +632,7 @@
                         </div>
                     </div>
 
-                    <form x-bind:action="`/fuel-stations/${editStation?.id}`" method="POST">
+                    <form x-bind:action="`{{ url('/fuel-stations') }}/${editStation?.id}`" method="POST">
                         @csrf
                         @method('PUT')
 
