@@ -173,7 +173,8 @@
 
                                     @foreach($navItems as $item)
                                         @php
-                                            $isActive = request()->routeIs(explode('.', $item['route'])[0].'.*') || request()->routeIs($item['route']);
+                                            $routeStr = $item['route'] ?? '';
+                                            $isActive = $routeStr ? (request()->routeIs(explode('.', $routeStr)[0].'.*') || request()->routeIs($routeStr)) : false;
 
                                             // Modül bazlı kontrol
                                             $moduleAccess = !$item['module'] || $user->canAccessModule($item['module']);
@@ -182,10 +183,13 @@
                                             $permissionAccess = !($item['permission'] ?? null) || $user->hasPermission($item['permission']);
 
                                             $canAccess = $moduleAccess && $permissionAccess;
+                                            
+                                            $href = isset($item['url']) ? $item['url'] : ($routeStr ? route($routeStr) : '#');
+                                            $target = isset($item['target']) ? 'target="'.$item['target'].'"' : '';
                                         @endphp
 
                                         @if($canAccess)
-                                            <a href="{{ route($item['route']) }}"
+                                            <a href="{{ $href }}" {!! $target !!}
                                                class="group relative flex items-center gap-4 rounded-2xl px-4 py-2.5 transition-all duration-500
                                                {{ $isActive
                                                   ? 'bg-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] text-white'
