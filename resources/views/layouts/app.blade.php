@@ -205,7 +205,7 @@
                                                     <div class="ml-auto flex items-center">
                                                         <div class="h-2 w-2 rounded-full bg-indigo-400 shadow-[0_0_10px_rgba(129,140,248,0.8)] animate-pulse"></div>
                                                     </div>
-                                                @elseif($item['route'] === 'chat.index')
+                                                @elseif(($item['route'] ?? '') === 'chat.index')
                                                     <div class="ml-auto flex items-center">
                                                         <span id="sidebar-chat-badge" style="display: none;" class="flex items-center justify-center w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-bold shadow-[0_0_10px_rgba(244,63,94,0.5)]">0</span>
                                                     </div>
