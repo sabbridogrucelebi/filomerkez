@@ -9,15 +9,12 @@
     "userInterfaceStyle": "light",
     "primaryColor": "#3B82F6",
     "assetBundlePatterns": [
-      "**/*"
+      "assets/**/*"
     ],
-    "locales": {
-      "tr": "./locales/tr.json"
-    },
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
       "bundleIdentifier": "com.celebiturizm.filomerkez",
-      "buildNumber": "14",
+      "buildNumber": "15",
       "privacyManifests": {
         "NSPrivacyTracking": false,
         "NSPrivacyTrackingDomains": [],

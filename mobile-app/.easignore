@@ -1,5 +1,6 @@
 node_modules/
 .expo/
+.expo-verify/
 dist/
 npm-debug.*
 *.jks
@@ -8,5 +9,12 @@ npm-debug.*
 *.key
 *.mobileprovision
 *.orig.*
+*.log
 /android
 /ios
+.kotlin/
+bs.json
+android-*.bin
+android-*.txt
+eas-*-status.json
+eas-*-prev.json
