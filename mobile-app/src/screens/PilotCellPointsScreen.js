@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, ActivityIndicator, Platform, Modal, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, ActivityIndicator, Platform, Modal } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import api from '../api/axios';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { MapView, Marker } from '../components/MapProxy';
 import SpaceWaves from '../components/SpaceWaves';
 
 import { AuthContext } from '../context/AuthContext';
 
 export default function PilotCellPointsScreen({ navigation }) {
+    const insets = useSafeAreaInsets();
     const { userInfo } = useContext(AuthContext);
     const [isLoading, setIsLoading] = useState(true);
     // ... rest of the state ...
@@ -206,7 +208,7 @@ export default function PilotCellPointsScreen({ navigation }) {
             {/* Map Modal for Setting Point */}
             <Modal visible={mapModalVisible} animationType="slide" transparent={false}>
                 <View style={styles.modalContainer}>
-                    <View style={styles.modalHeader}>
+                    <View style={[styles.modalHeader, { paddingTop: insets.top + 15 }]}>
                         <TouchableOpacity onPress={() => setMapModalVisible(false)} style={styles.backBtn}>
                             <MaterialCommunityIcons name="close" size={26} color="#FFF" />
                         </TouchableOpacity>
@@ -233,7 +235,7 @@ export default function PilotCellPointsScreen({ navigation }) {
                         </View>
                     )}
 
-                    <View style={styles.modalFooter}>
+                    <View style={[styles.modalFooter, { paddingBottom: insets.bottom + 20 }]}>
                         <View style={styles.accuracyBox}>
                             <MaterialCommunityIcons name="crosshairs-gps" size={16} color="#34D399" />
                             <Text style={styles.accuracyText}>GPS Hassasiyeti: {Math.round(gpsAccuracy)}m</Text>
@@ -257,7 +259,7 @@ export default function PilotCellPointsScreen({ navigation }) {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#020617' },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 10 : 30, paddingBottom: 15, zIndex: 10 },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 15, zIndex: 10 },
     backBtn: { padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12 },
     headerTitle: { fontSize: 20, fontWeight: '900', color: '#FFF', letterSpacing: 0.5 },
     loaderWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -286,11 +288,11 @@ const styles = StyleSheet.create({
     emptyText: { color: '#94A3B8', marginTop: 16, textAlign: 'center', fontSize: 14, fontWeight: '500', lineHeight: 22 },
 
     modalContainer: { flex: 1, backgroundColor: '#020617' },
-    modalHeader: { backgroundColor: '#0F172A', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 50 : 20, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
+    modalHeader: { backgroundColor: '#0F172A', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
     modalTitle: { fontSize: 18, fontWeight: '800', color: '#FFF' },
     map: { flex: 1 },
     mapLoader: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#020617' },
-    modalFooter: { backgroundColor: '#0F172A', padding: 20, paddingBottom: Platform.OS === 'ios' ? 40 : 20, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
+    modalFooter: { backgroundColor: '#0F172A', padding: 20, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
     accuracyBox: { flexDirection: 'row', alignItems: 'center', alignSelf: 'center', backgroundColor: 'rgba(16, 185, 129, 0.15)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.3)' },
     accuracyText: { color: '#34D399', fontWeight: '800', marginLeft: 6, fontSize: 13 },
     studentLabel: { fontSize: 18, fontWeight: '900', textAlign: 'center', color: '#FFF', marginBottom: 20 },

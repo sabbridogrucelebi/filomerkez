@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import { Header, EmptyState } from '../components';
 import DatePickerInput from '../components/DatePickerInput';
+import useStatusBarStyle from '../hooks/useStatusBarStyle';
 
 export default function TrackingReportsScreen({ navigation }) {
+    useStatusBarStyle('dark-content');
     const { hasPermission } = useContext(AuthContext);
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -109,7 +111,7 @@ const st = StyleSheet.create({
     headerSubtitle: { fontSize: 12, fontWeight: '600', color: '#64748B' },
     
     label: { fontSize: 11, fontWeight: '800', color: '#64748B', marginBottom: 8, marginLeft: 4, letterSpacing: 0.5 },
-    listContent: { padding: 16, paddingBottom: 40 },
+    listContent: { padding: 16, paddingBottom: 120 },
     
     card: { backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 12, shadowColor: '#94A3B8', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3 },
     cardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },

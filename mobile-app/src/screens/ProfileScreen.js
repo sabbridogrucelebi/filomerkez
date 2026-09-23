@@ -1,12 +1,14 @@
 import React, { useContext } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../context/AuthContext';
 import SpaceWaves from '../components/SpaceWaves';
+import useStatusBarStyle from '../hooks/useStatusBarStyle';
 
 export default function ProfileScreen({ navigation }) {
+    useStatusBarStyle('dark-content');
     const { userInfo, logout } = useContext(AuthContext);
 
     // İsimden baş harfleri al

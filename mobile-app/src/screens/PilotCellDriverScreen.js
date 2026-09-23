@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, Switch, Platform, Modal, ScrollView, BackHandler, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, Switch, Platform, Modal, ScrollView, BackHandler } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { CONFIG } from '../config';
 import SpaceWaves from '../components/SpaceWaves';
 
 const PilotCellDriverScreen = ({ navigation }) => {
+    const insets = useSafeAreaInsets();
     const { userInfo: user, hasPermission, logout } = useContext(AuthContext);
     const [isTracking, setIsTracking] = useState(false);
     const [myRoutes, setMyRoutes] = useState([]);
@@ -200,7 +202,7 @@ const PilotCellDriverScreen = ({ navigation }) => {
             <Modal visible={menuVisible} animationType="fade" transparent={true}>
                  <TouchableOpacity style={styles.drawerOverlay} activeOpacity={1} onPress={() => setMenuVisible(false)}>
                       <View style={styles.drawerContent} onStartShouldSetResponder={() => true}>
-                            <View style={styles.drawerHeader}>
+                            <View style={[styles.drawerHeader, { paddingTop: insets.top + 25 }]}>
                                 <View style={styles.drawerAvatar}>
                                     <MaterialCommunityIcons name="account" size={36} color="#FFF" />
                                 </View>
@@ -229,7 +231,7 @@ const PilotCellDriverScreen = ({ navigation }) => {
                                 </TouchableOpacity>
                             </ScrollView>
 
-                            <TouchableOpacity style={styles.drawerLogout} onPress={() => {setMenuVisible(false); logout();}}>
+                            <TouchableOpacity style={[styles.drawerLogout, { paddingBottom: insets.bottom + 25 }]} onPress={() => {setMenuVisible(false); logout();}}>
                                 <MaterialCommunityIcons name="logout" size={24} color="#EF4444" />
                                 <Text style={styles.drawerLogoutText}>Çıkış Yap</Text>
                             </TouchableOpacity>
@@ -317,15 +319,15 @@ const PilotCellDriverScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#020617' },
-    header: { paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 10 : 30, paddingBottom: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 },
+    header: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 },
     menuIconWrap: { padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12 },
     headerTitle: { color: 'white', fontSize: 20, fontWeight: '900', letterSpacing: 0.5 },
     
     // DRAWER STYLES
     drawerOverlay: { flex: 1, backgroundColor: 'rgba(2, 6, 23, 0.8)', justifyContent: 'flex-start' },
     drawerContent: { width: '75%', height: '100%', backgroundColor: '#0F172A', borderTopRightRadius: 30, borderBottomRightRadius: 30, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-    drawerHeader: { backgroundColor: 'rgba(139, 92, 246, 0.1)', padding: 25, paddingTop: Platform.OS === 'ios' ? 60 : 40, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
-    drawerAvatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center', marginBottom: 12, shadowColor: '#8B5CF6', shadowOffset: { width: 0, height: 4 }, shadowopacity: 1, shadowRadius: 10, elevation: 5 },
+    drawerHeader: { backgroundColor: 'rgba(139, 92, 246, 0.1)', padding: 25, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
+    drawerAvatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center', marginBottom: 12, shadowColor: '#8B5CF6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 10, elevation: 5 },
     drawerName: { color: 'white', fontSize: 18, fontWeight: '900', letterSpacing: 0.5 },
     drawerRole: { color: '#94A3B8', fontSize: 13, marginTop: 4, fontWeight: '600' },
     drawerBody: { flex: 1, paddingTop: 20 },

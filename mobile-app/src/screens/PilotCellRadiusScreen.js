@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, ActivityIndicator, Platform, SafeAreaView, Modal, TextInput, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, ActivityIndicator, Platform, Modal, TextInput, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import SpaceWaves from '../components/SpaceWaves';
 
 export default function PilotCellRadiusScreen({ navigation }) {
+    const insets = useSafeAreaInsets();
     const { userInfo } = useContext(AuthContext);
     const [isLoading, setIsLoading] = useState(true);
     const [students, setStudents] = useState([]);
@@ -171,7 +173,7 @@ export default function PilotCellRadiusScreen({ navigation }) {
                     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                         <View style={styles.modalOverlay}>
                             <TouchableWithoutFeedback onPress={() => {}}>
-                                <View style={styles.modalContent}>
+                                <View style={[styles.modalContent, { paddingBottom: insets.bottom + 24 }]}>
                                     <View style={styles.modalHeader}>
                                         <Text style={styles.modalTitle}>Toplu Çap Belirle</Text>
                                         <TouchableOpacity onPress={() => setBulkModalVisible(false)} style={styles.closeBtn}>
@@ -249,7 +251,7 @@ export default function PilotCellRadiusScreen({ navigation }) {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#020617' },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 10 : 30, paddingBottom: 15, zIndex: 10 },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 15, zIndex: 10 },
     backBtn: { padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12 },
     headerTitle: { fontSize: 20, fontWeight: '900', color: '#FFF', letterSpacing: 0.5 },
     loaderWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -279,7 +281,7 @@ const styles = StyleSheet.create({
     bulkBtnText: { color: '#FBBF24', fontSize: 14, fontWeight: '800' },
 
     modalOverlay: { flex: 1, backgroundColor: 'rgba(2, 6, 23, 0.8)', justifyContent: 'flex-end' },
-    modalContent: { backgroundColor: '#0F172A', borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    modalContent: { backgroundColor: '#0F172A', borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
     modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
     modalTitle: { fontSize: 20, fontWeight: '900', color: '#FFF' },
     closeBtn: { padding: 4 },

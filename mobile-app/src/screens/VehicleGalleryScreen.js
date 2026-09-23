@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Platform, Image, Modal, TextInput, ScrollView, Linking, Share } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { KeyboardAvoidingView, View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Platform, Modal, TextInput, ScrollView, Linking, Share, Animated } from 'react-native';
+import { Image } from 'expo-image';
+import { BlurView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Picker } from '@react-native-picker/picker';
@@ -134,56 +136,72 @@ export default function VehicleGalleryScreen() {
         }
     };
 
-    const renderImageCard = ({ item }) => (
-        <View style={s.card}>
-            <View style={s.imageBox}>
-                <Image source={{ uri: item.url }} style={s.image} resizeMode="cover" />
-                
-                <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.8)']} style={StyleSheet.absoluteFillObject} />
-                
-                <View style={s.cardOverlayContent}>
-                    <View style={s.overlayTop}>
-                        {item.is_featured ? (
-                            <View style={s.featuredBadge}>
-                                <Icon name="star" size={12} color="#fff" />
-                                <Text style={s.featuredTxt}>VİTRİN</Text>
+    const AnimatedGalleryCard = ({ item, index }) => {
+        const slideAnim = useRef(new Animated.Value(50)).current;
+        const opacityAnim = useRef(new Animated.Value(0)).current;
+
+        useEffect(() => {
+            Animated.parallel([
+                Animated.timing(opacityAnim, { toValue: 1, duration: 400, delay: index * 100, useNativeDriver: true }),
+                Animated.spring(slideAnim, { toValue: 0, friction: 6, tension: 40, delay: index * 100, useNativeDriver: true })
+            ]).start();
+        }, []);
+
+        return (
+            <Animated.View style={{ opacity: opacityAnim, transform: [{ translateY: slideAnim }], marginBottom: 16 }}>
+                <View style={s.card}>
+                    <View style={s.imageBox}>
+                        <Image source={{ uri: item.url }} style={s.image} contentFit="cover" transition={500} cachePolicy="disk" />
+                        
+                        <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.9)']} style={StyleSheet.absoluteFillObject} />
+                        
+                        <View style={s.cardOverlayContent}>
+                            <View style={s.overlayTop}>
+                                {item.is_featured ? (
+                                    <View style={s.featuredBadge}>
+                                        <Icon name="star" size={12} color="#F59E0B" />
+                                        <Text style={s.featuredTxt}>VİTRİN</Text>
+                                    </View>
+                                ) : <View/>}
+                                <BlurView intensity={40} tint="dark" style={[s.sourceBadge, { overflow: 'hidden' }]}>
+                                    <Icon name={item.source === 'driver' ? 'steering' : 'account-cog'} size={10} color={item.source === 'driver' ? '#60A5FA' : '#94A3B8'} />
+                                    <Text style={[s.sourceTxt, { color: item.source === 'driver' ? '#60A5FA' : '#94A3B8' }]}>{item.source === 'driver' ? 'Şoför Linki' : 'Manuel'}</Text>
+                                </BlurView>
                             </View>
-                        ) : <View/>}
-                        <View style={[s.sourceBadge, item.source === 'driver' ? {backgroundColor: '#3B82F6'} : {backgroundColor: '#64748B'}]}>
-                            <Icon name={item.source === 'driver' ? 'steering' : 'account-cog'} size={10} color="#fff" />
-                            <Text style={s.sourceTxt}>{item.source === 'driver' ? 'Şoför Linki' : 'Manuel'}</Text>
+                            
+                            <View style={s.overlayBottom}>
+                                <Text style={s.imgTitleOverlay} numberOfLines={1}>{item.title || item.type}</Text>
+                                <Text style={s.imgSubOverlay}>{new Date(item.created_at).toLocaleDateString('tr-TR')}</Text>
+                            </View>
                         </View>
                     </View>
                     
-                    <View style={s.overlayBottom}>
-                        <Text style={s.imgTitleOverlay} numberOfLines={1}>{item.title || item.type}</Text>
-                        <Text style={s.imgSubOverlay}>{new Date(item.created_at).toLocaleDateString('tr-TR')}</Text>
-                    </View>
+                    <BlurView intensity={30} tint="dark" style={s.actionRow}>
+                        {!item.is_featured && (
+                            <TouchableOpacity style={s.actionBtn} onPress={() => setAsFeatured(item.id)}>
+                                <Icon name="star-outline" size={16} color="#FBBF24" />
+                                <Text style={[s.actionBtnText, { color: '#FCD34D' }]}>Vitrin Yap</Text>
+                            </TouchableOpacity>
+                        )}
+                        <TouchableOpacity style={[s.actionBtn, item.is_featured && {marginLeft: 'auto'}]} onPress={() => Linking.openURL(item.url)}>
+                            <Icon name="cloud-download-outline" size={16} color="#34D399" />
+                            <Text style={[s.actionBtnText, {color: '#34D399'}]}>İndir</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={s.actionBtn} onPress={() => Share.share({ message: `Araç Görseli: ${item.url}` })}>
+                            <Icon name="share-variant-outline" size={16} color="#38BDF8" />
+                            <Text style={[s.actionBtnText, {color: '#38BDF8'}]}>Paylaş</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[s.actionBtn, !item.is_featured && {marginLeft: 'auto'}]} onPress={() => deleteImage(item.id)}>
+                            <Icon name="trash-can-outline" size={16} color="#F87171" />
+                            <Text style={[s.actionBtnText, {color: '#F87171'}]}>Sil</Text>
+                        </TouchableOpacity>
+                    </BlurView>
                 </View>
-            </View>
-            
-            <View style={s.actionRow}>
-                {!item.is_featured && (
-                    <TouchableOpacity style={s.actionBtn} onPress={() => setAsFeatured(item.id)}>
-                        <Icon name="star-outline" size={16} color="#3B82F6" />
-                        <Text style={s.actionBtnText}>Vitrin Yap</Text>
-                    </TouchableOpacity>
-                )}
-                <TouchableOpacity style={[s.actionBtn, item.is_featured && {marginLeft: 'auto'}]} onPress={() => Linking.openURL(item.url)}>
-                    <Icon name="cloud-download-outline" size={16} color="#10B981" />
-                    <Text style={[s.actionBtnText, {color: '#10B981'}]}>İndir</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={s.actionBtn} onPress={() => Share.share({ message: `Araç Görseli: ${item.url}` })}>
-                    <Icon name="share-variant-outline" size={16} color="#06B6D4" />
-                    <Text style={[s.actionBtnText, {color: '#06B6D4'}]}>Paylaş</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[s.actionBtn, !item.is_featured && {marginLeft: 'auto'}]} onPress={() => deleteImage(item.id)}>
-                    <Icon name="trash-can-outline" size={16} color="#EF4444" />
-                    <Text style={[s.actionBtnText, {color: '#EF4444'}]}>Sil</Text>
-                </TouchableOpacity>
-            </View>
-        </View>
-    );
+            </Animated.View>
+        );
+    };
+
+    const renderImageCard = ({ item, index }) => <AnimatedGalleryCard item={item} index={index} />;
 
     const renderHeader = () => (
         <View style={s.listHeader}>
@@ -215,17 +233,17 @@ export default function VehicleGalleryScreen() {
 
     return (
         <SafeAreaView style={s.container} edges={['top']}>
-            <View style={{ backgroundColor: '#fff', zIndex: 10, paddingBottom: 12 }}>
+            <View style={{ backgroundColor: 'transparent', zIndex: 10, paddingBottom: 12 }}>
                 <View style={s.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-                        <Icon name="chevron-left" size={26} color="#0F172A" />
+                        <Icon name="chevron-left" size={26} color="#F8FAFC" />
                     </TouchableOpacity>
                     <View style={s.headerCenter}>
                         <Text style={s.headerTitle}>Araç Galerisi</Text>
                         <Text style={s.headerSubtitle}>{vehicle?.plate || 'Görseller'}</Text>
                     </View>
                     <TouchableOpacity style={s.addHeaderBtn} onPress={() => setUploadModalVisible(true)}>
-                        <Icon name="plus" size={24} color="#fff" />
+                        <Icon name="plus" size={24} color="#fff" style={{ textShadowColor: 'rgba(255,255,255,0.5)', textShadowRadius: 8 }} />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -245,7 +263,7 @@ export default function VehicleGalleryScreen() {
 
             {/* Upload Modal */}
             <Modal visible={uploadModalVisible} animationType="slide" transparent={true} onRequestClose={() => setUploadModalVisible(false)}>
-                <View style={s.modalOverlay}>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={s.modalOverlay}>
                     <View style={s.modalContent}>
                         <View style={s.modalHeader}>
                             <Text style={s.modalTitle}>Yeni Resim Yükle</Text>
@@ -281,7 +299,7 @@ export default function VehicleGalleryScreen() {
                             <Text style={[s.inputLabel, { marginTop: 16 }]}>RESİM DOSYASI *</Text>
                             <TouchableOpacity style={s.uploadArea} onPress={pickImage}>
                                 {selectedImage ? (
-                                    <Image source={{ uri: selectedImage.uri }} style={s.previewImage} />
+                                    <Image source={{ uri: selectedImage.uri }} style={s.previewImage} contentFit="cover" />
                                 ) : (
                                     <View style={s.uploadAreaPlaceholder}>
                                         <Icon name="image-plus" size={40} color="#94A3B8" />
@@ -307,57 +325,57 @@ export default function VehicleGalleryScreen() {
                             <View style={{ height: 40 }} />
                         </ScrollView>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </SafeAreaView>
     );
 }
 
 const s = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F8FAFC' },
+    container: { flex: 1, backgroundColor: '#020617' },
     loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 44 : 24 },
-    backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
+    backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
     headerCenter: { flex: 1, alignItems: 'center' },
-    headerTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
-    headerSubtitle: { fontSize: 13, color: '#64748B', marginTop: 2, fontWeight: '500' },
-    addHeaderBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center', shadowColor: '#8B5CF6', shadowOffset: { width: 0, height: 4 }, shadowopacity: 1, shadowRadius: 8, elevation: 4 },
+    headerTitle: { fontSize: 18, fontWeight: '800', color: '#F8FAFC', textShadowColor: 'rgba(255,255,255,0.2)', textShadowRadius: 10 },
+    headerSubtitle: { fontSize: 13, color: '#94A3B8', marginTop: 2, fontWeight: '500' },
+    addHeaderBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(139, 92, 246, 0.2)', borderWidth: 1, borderColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center', shadowColor: '#8B5CF6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.8, shadowRadius: 10, elevation: 8 },
 
     listContent: { padding: 16, paddingBottom: 100 },
     listHeader: { marginBottom: 20 },
 
-    driverLinkCard: { borderRadius: 20, overflow: 'hidden', marginBottom: 24, shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 6 },
+    driverLinkCard: { borderRadius: 24, overflow: 'hidden', marginBottom: 24, borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.3)', shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 6 },
     driverLinkGradient: { padding: 20 },
     driverLinkContent: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 16 },
-    driverLinkIconBox: { width: 48, height: 48, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+    driverLinkIconBox: { width: 48, height: 48, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
     driverLinkTitle: { fontSize: 16, fontWeight: '800', color: '#fff', marginBottom: 4 },
-    driverLinkDesc: { fontSize: 12, color: 'rgba(255,255,255,0.8)', lineHeight: 18 },
-    copyBtn: { backgroundColor: '#fff', borderRadius: 12, paddingVertical: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
-    copyBtnText: { color: '#4F46E5', fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
+    driverLinkDesc: { fontSize: 12, color: 'rgba(255,255,255,0.7)', lineHeight: 18 },
+    copyBtn: { backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', borderRadius: 12, paddingVertical: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
+    copyBtnText: { color: '#fff', fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
 
     sectionHeader: { marginBottom: 12 },
-    sectionTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
-    sectionSubtitle: { fontSize: 13, color: '#64748B', marginTop: 2 },
+    sectionTitle: { fontSize: 18, fontWeight: '800', color: '#F8FAFC' },
+    sectionSubtitle: { fontSize: 13, color: '#94A3B8', marginTop: 2 },
 
-    card: { backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#94A3B8', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+    card: { borderRadius: 24, overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 15, elevation: 5 },
     imageBox: { height: 200, width: '100%', position: 'relative' },
     image: { width: '100%', height: '100%' },
     cardOverlayContent: { position: 'absolute', inset: 0, padding: 16, justifyContent: 'space-between' },
     overlayTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-    featuredBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F59E0B', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, gap: 4 },
-    featuredTxt: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
-    sourceBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, gap: 4 },
-    sourceTxt: { color: '#fff', fontSize: 10, fontWeight: '700' },
+    featuredBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(245, 158, 11, 0.2)', borderWidth: 1, borderColor: '#F59E0B', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, gap: 4 },
+    featuredTxt: { color: '#FCD34D', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+    sourceBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, gap: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    sourceTxt: { fontSize: 10, fontWeight: '700' },
     overlayBottom: { marginTop: 'auto' },
-    imgTitleOverlay: { color: '#fff', fontSize: 18, fontWeight: '800', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: {width: 0, height: 1}, textShadowRadius: 4 },
-    imgSubOverlay: { color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '500', marginTop: 4 },
+    imgTitleOverlay: { color: '#fff', fontSize: 18, fontWeight: '800', textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: {width: 0, height: 2}, textShadowRadius: 6 },
+    imgSubOverlay: { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '500', marginTop: 4 },
     
-    actionRow: { flexDirection: 'row', padding: 12, backgroundColor: '#F8FAFC', borderTopWidth: 1, borderColor: '#F1F5F9' },
-    actionBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#E2E8F0', gap: 6 },
-    actionBtnText: { fontSize: 12, fontWeight: '700', color: '#475569' },
+    actionRow: { flexDirection: 'row', padding: 12, borderTopWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+    actionBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', gap: 6, marginRight: 6 },
+    actionBtnText: { fontSize: 12, fontWeight: '700' },
 
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(15,23,42,0.6)', justifyContent: 'flex-end' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(15,23,42,0.8)', justifyContent: 'flex-end' },
     modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 32, borderTopRightRadius: 32, height: '85%' },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, borderBottomWidth: 1, borderColor: '#F1F5F9' },
     modalTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A' },

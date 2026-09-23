@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator, Dimensions, Platform, Animated, Vibration } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, ActivityIndicator, Dimensions, Platform, Animated, Vibration } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import MapView, { Marker, AnimatedRegion } from '../components/MapProxy';
 import api from '../api/axios';
 import SpaceWaves from '../components/SpaceWaves';
@@ -9,6 +10,9 @@ const { width, height } = Dimensions.get('window');
 const ASPECT_RATIO = width / height;
 const LATITUDE_DELTA = 0.01;
 const LONGITUDE_DELTA = LATITUDE_DELTA * ASPECT_RATIO;
+
+// App.js'teki yüzen tab bar'ın safe-area inset'i hariç yüksekliği.
+const TAB_BAR_CLEARANCE = 86;
 
 const TripTimeline = ({ step = 1 }) => {
     const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -65,6 +69,7 @@ const TripTimeline = ({ step = 1 }) => {
 };
 
 export default function ParentHomeScreen() {
+    const insets = useSafeAreaInsets();
     const [isLoading, setIsLoading] = useState(true);
     const [activeTrip, setActiveTrip] = useState(null);
     const [vehicleLocation, setVehicleLocation] = useState(null);
@@ -226,7 +231,7 @@ export default function ParentHomeScreen() {
 
     if (isLoading && !activeTrip) {
         return (
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={styles.container} edges={['top']}>
                 <SpaceWaves />
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#8B5CF6" />
@@ -237,7 +242,7 @@ export default function ParentHomeScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['top']}>
             <SpaceWaves />
 
             {/* Header */}
@@ -312,8 +317,8 @@ export default function ParentHomeScreen() {
                         )}
                     </MapView>
 
-                    {/* Bottom Info Card */}
-                    <View style={styles.infoCard}>
+                    {/* Bottom Info Card — yüzen tab bar'ın altında kalmaması için inset kadar yukarıda */}
+                    <View style={[styles.infoCard, { bottom: Math.max(insets.bottom, 12) + TAB_BAR_CLEARANCE }]}>
                         <View style={styles.infoRow}>
                             <View style={styles.iconWrap}>
                                 <MaterialCommunityIcons name="bus-school" size={28} color="#A78BFA" />
@@ -375,7 +380,7 @@ const styles = StyleSheet.create({
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     loadingText: { color: '#94A3B8', marginTop: 12, fontSize: 14, fontWeight: '600' },
     
-    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 10 : 30, paddingBottom: 15, zIndex: 10 },
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 15, zIndex: 10 },
     headerTitle: { fontSize: 24, fontWeight: '900', color: '#FFF', letterSpacing: 0.5 },
     liveBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(239, 68, 68, 0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.5)' },
     liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444', marginRight: 6 },
@@ -401,7 +406,7 @@ const styles = StyleSheet.create({
     studentMarkerHalo: { position: 'absolute', width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(59, 130, 246, 0.3)', borderWidth: 1, borderColor: 'rgba(59, 130, 246, 0.8)' },
     studentMarkerIcon: { backgroundColor: '#3B82F6', width: 24, height: 24, borderRadius: 12, overflow: 'hidden' },
 
-    infoCard: { position: 'absolute', bottom: 30, left: 20, right: 20, backgroundColor: 'rgba(15, 23, 42, 0.95)', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowopacity: 1, shadowRadius: 20, elevation: 10 },
+    infoCard: { position: 'absolute', left: 20, right: 20, backgroundColor: 'rgba(15, 23, 42, 0.95)', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 1, shadowRadius: 20, elevation: 10 },
     infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
     iconWrap: { backgroundColor: 'rgba(167, 139, 250, 0.2)', padding: 12, borderRadius: 16, marginRight: 16 },
     plateText: { color: '#FFF', fontSize: 20, fontWeight: '900' },

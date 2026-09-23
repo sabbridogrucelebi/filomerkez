@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { View, StyleSheet, FlatList, ActivityIndicator, Alert, Text, Platform, TouchableOpacity, RefreshControl, Modal, ScrollView } from 'react-native';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import React, { useState, useEffect, useContext, useRef } from 'react';
+import { KeyboardAvoidingView, View, StyleSheet, FlatList, ActivityIndicator, Alert, Text, Platform, TouchableOpacity, RefreshControl, Modal, ScrollView, Animated } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import { EmptyState, FormField } from '../components';
@@ -138,99 +140,113 @@ export default function VehicleMaintenancesScreen({ route, navigation }) {
         }).join(' ');
     };
 
-    const renderItem = ({ item }) => {
+    const AnimatedMaintenanceRow = ({ item, index }) => {
+        const slideAnim = useRef(new Animated.Value(50)).current;
+        const opacityAnim = useRef(new Animated.Value(0)).current;
+
+        useEffect(() => {
+            Animated.parallel([
+                Animated.timing(opacityAnim, { toValue: 1, duration: 400, delay: index * 100, useNativeDriver: true }),
+                Animated.spring(slideAnim, { toValue: 0, friction: 6, tension: 40, delay: index * 100, useNativeDriver: true })
+            ]).start();
+        }, []);
+
         const ts = getTypeStyle(item.type);
         const hasDesc = item.description && item.description.trim() !== '';
 
         return (
-            <View style={[st.card, { borderLeftColor: ts.color }]}>
-                <View style={st.cardHeader}>
-                    <View style={[st.iconBox, { backgroundColor: ts.bg }]}>
-                        <Icon name={ts.icon} size={24} color={ts.color} />
+            <Animated.View style={{ opacity: opacityAnim, transform: [{ translateY: slideAnim }], marginBottom: 16 }}>
+                <BlurView intensity={30} tint="dark" style={[st.card, { borderLeftColor: ts.color }]}>
+                    <View style={st.cardHeader}>
+                        <View style={[st.iconBox, { backgroundColor: ts.bg }]}>
+                            <Icon name={ts.icon} size={24} color={ts.color} />
+                        </View>
+                        <View style={{ flex: 1, paddingLeft: 12, paddingRight: 8 }}>
+                            <Text style={st.cardTitle}>{toTitleCase(item.title)}</Text>
+                            <Text style={[st.cardDesc, hasDesc && { color: '#F87171' }]}>
+                                {hasDesc ? toTitleCase(item.description) : 'Açıklama yok'}
+                            </Text>
+                        </View>
+                        <Text style={st.amountText}>{fmtMoney(item.amount)}</Text>
                     </View>
-                    <View style={{ flex: 1, paddingLeft: 12, paddingRight: 8 }}>
-                        <Text style={st.cardTitle}>{toTitleCase(item.title)}</Text>
-                        <Text style={[st.cardDesc, hasDesc && { color: '#EF4444' }]}>
-                            {hasDesc ? toTitleCase(item.description) : 'Açıklama yok'}
-                        </Text>
-                    </View>
-                    <Text style={st.amountText}>{fmtMoney(item.amount)}</Text>
-                </View>
 
-                {/* 2x2 Grid for much better readability */}
-                <View style={st.cardGrid}>
-                    <View style={st.gridRow}>
-                        <View style={st.gridCol}>
-                            <View style={st.gridLabelRow}>
-                                <Icon name="tag-outline" size={14} color="#64748B" />
-                                <Text style={st.gridLabel}>TÜR</Text>
+                    {/* 2x2 Grid for much better readability */}
+                    <View style={st.cardGrid}>
+                        <View style={st.gridRow}>
+                            <View style={st.gridCol}>
+                                <View style={st.gridLabelRow}>
+                                    <Icon name="tag-outline" size={14} color="#64748B" />
+                                    <Text style={st.gridLabel}>TÜR</Text>
+                                </View>
+                                <Text style={st.gridValue}>{toTitleCase(item.type) || '-'}</Text>
                             </View>
-                            <Text style={st.gridValue}>{toTitleCase(item.type) || '-'}</Text>
+                            <View style={st.gridDivider} />
+                            <View style={st.gridCol}>
+                                <View style={st.gridLabelRow}>
+                                    <Icon name="calendar-blank-outline" size={14} color="#FBBF24" />
+                                    <Text style={[st.gridLabel, { color: '#FBBF24' }]}>TARİH</Text>
+                                </View>
+                                <Text style={[st.gridValue, { color: '#FCD34D' }]}>{item.date ? new Date(item.date).toLocaleDateString('tr-TR') : '-'}</Text>
+                                <Text style={[st.gridSubValue, { color: '#FDE68A' }]}>{item.next_date ? `Sonraki: ${new Date(item.next_date).toLocaleDateString('tr-TR')}` : 'Sonraki tarih yok'}</Text>
+                            </View>
                         </View>
-                        <View style={st.gridDivider} />
-                        <View style={st.gridCol}>
-                            <View style={st.gridLabelRow}>
-                                <Icon name="calendar-blank-outline" size={14} color="#F59E0B" />
-                                <Text style={[st.gridLabel, { color: '#F59E0B' }]}>TARİH</Text>
+                        
+                        <View style={st.gridHorizontalDivider} />
+                        
+                        <View style={st.gridRow}>
+                            <View style={st.gridCol}>
+                                <View style={st.gridLabelRow}>
+                                    <Icon name="store-outline" size={14} color="#64748B" />
+                                    <Text style={st.gridLabel}>SERVİS</Text>
+                                </View>
+                                <Text style={st.gridValue}>{toTitleCase(item.service_name) || '-'}</Text>
                             </View>
-                            <Text style={[st.gridValue, { color: '#D97706' }]}>{item.date ? new Date(item.date).toLocaleDateString('tr-TR') : '-'}</Text>
-                            <Text style={[st.gridSubValue, { color: '#FBBF24' }]}>{item.next_date ? `Sonraki: ${new Date(item.next_date).toLocaleDateString('tr-TR')}` : 'Sonraki tarih yok'}</Text>
+                            <View style={st.gridDivider} />
+                            <View style={st.gridCol}>
+                                <View style={st.gridLabelRow}>
+                                    <Icon name="speedometer" size={14} color="#34D399" />
+                                    <Text style={[st.gridLabel, { color: '#34D399' }]}>KİLOMETRE</Text>
+                                </View>
+                                <Text style={[st.gridValue, { color: '#10B981' }]}>{item.km ? `${fmtKm(item.km)} KM` : '-'}</Text>
+                                <Text style={[st.gridSubValue, { color: '#6EE7B7' }]}>{item.next_km ? `Sonraki: ${fmtKm(item.next_km)} KM` : 'Sonraki KM yok'}</Text>
+                            </View>
                         </View>
                     </View>
-                    
-                    <View style={st.gridHorizontalDivider} />
-                    
-                    <View style={st.gridRow}>
-                        <View style={st.gridCol}>
-                            <View style={st.gridLabelRow}>
-                                <Icon name="store-outline" size={14} color="#64748B" />
-                                <Text style={st.gridLabel}>SERVİS</Text>
-                            </View>
-                            <Text style={st.gridValue}>{toTitleCase(item.service_name) || '-'}</Text>
-                        </View>
-                        <View style={st.gridDivider} />
-                        <View style={st.gridCol}>
-                            <View style={st.gridLabelRow}>
-                                <Icon name="speedometer" size={14} color="#10B981" />
-                                <Text style={[st.gridLabel, { color: '#10B981' }]}>KİLOMETRE</Text>
-                            </View>
-                            <Text style={[st.gridValue, { color: '#059669' }]}>{item.km ? `${fmtKm(item.km)} KM` : '-'}</Text>
-                            <Text style={[st.gridSubValue, { color: '#34D399' }]}>{item.next_km ? `Sonraki: ${fmtKm(item.next_km)} KM` : 'Sonraki KM yok'}</Text>
-                        </View>
-                    </View>
-                </View>
 
-                {/* ── ACTION BUTTONS ── */}
-                <View style={st.actionRow}>
-                    <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#EFF6FF', flex: 1, marginRight: 8 }]} onPress={() => openEdit(item)}>
-                        <Icon name="pencil-outline" size={16} color="#3B82F6" />
-                        <Text style={[st.actionText, { color: '#3B82F6' }]}>Düzenle</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#FEF2F2', flex: 1 }]} onPress={() => confirmDelete(item.id)}>
-                        <Icon name="trash-can-outline" size={16} color="#EF4444" />
-                        <Text style={[st.actionText, { color: '#EF4444' }]}>Sil</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
+                    {/* ── ACTION BUTTONS ── */}
+                    <View style={st.actionRow}>
+                        <TouchableOpacity style={[st.actionBtn, { backgroundColor: 'rgba(59, 130, 246, 0.15)', flex: 1, marginRight: 8 }]} onPress={() => openEdit(item)}>
+                            <Icon name="pencil-outline" size={16} color="#60A5FA" />
+                            <Text style={[st.actionText, { color: '#60A5FA' }]}>Düzenle</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[st.actionBtn, { backgroundColor: 'rgba(239, 68, 68, 0.15)', flex: 1 }]} onPress={() => confirmDelete(item.id)}>
+                            <Icon name="trash-can-outline" size={16} color="#F87171" />
+                            <Text style={[st.actionText, { color: '#F87171' }]}>Sil</Text>
+                        </TouchableOpacity>
+                    </View>
+                </BlurView>
+            </Animated.View>
         );
     };
 
+    const renderItem = ({ item, index }) => <AnimatedMaintenanceRow item={item} index={index} />;
+
     return (
         <View style={st.container}>
-            <View style={{ backgroundColor: '#fff', zIndex: 10, paddingTop: Platform.OS === 'android' ? 44 : 54, paddingBottom: 12 }}>
+            <SafeAreaView style={{ backgroundColor: 'transparent', zIndex: 10, paddingBottom: 12 }} edges={['top']}>
                 <View style={st.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-                        <Icon name="chevron-left" size={26} color="#0F172A" />
+                        <Icon name="chevron-left" size={26} color="#F8FAFC" />
                     </TouchableOpacity>
                     <View style={st.headerCenter}>
                         <Text style={st.headerTitle}>Araç Bakımları</Text>
                         <Text style={st.headerSubtitle}>{vehicle?.plate || 'Servis Geçmişi'}</Text>
                     </View>
                     <TouchableOpacity style={st.addHeaderBtn} onPress={openAdd}>
-                        <Icon name="plus" size={24} color="#fff" />
+                        <Icon name="plus" size={24} color="#fff" style={{ textShadowColor: 'rgba(255,255,255,0.5)', textShadowRadius: 8 }} />
                     </TouchableOpacity>
                 </View>
-            </View>
+            </SafeAreaView>
 
             {loading ? (
                 <View style={st.loader}><ActivityIndicator size="large" color="#3B82F6" /></View>
@@ -248,7 +264,7 @@ export default function VehicleMaintenancesScreen({ route, navigation }) {
 
             {/* Main Form Modal */}
             <Modal visible={modalVisible} animationType="slide" transparent>
-                <View style={st.modalOverlay}>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={st.modalOverlay}>
                     <View style={st.modalContent}>
                         <View style={st.modalHeader}>
                             <Text style={st.modalTitle}>Yeni Bakım Kaydı Ekle</Text>
@@ -347,7 +363,7 @@ export default function VehicleMaintenancesScreen({ route, navigation }) {
                             <View style={{ height: 40 }} />
                         </ScrollView>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
 
             {/* Category Select Modal */}
@@ -401,35 +417,35 @@ export default function VehicleMaintenancesScreen({ route, navigation }) {
 }
 
 const st = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F8FAFC' },
+    container: { flex: 1, backgroundColor: '#020617' },
     loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 },
-    backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center' },
+    backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
     headerCenter: { flex: 1, alignItems: 'center' },
-    headerTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A', marginTop: 8 },
-    headerSubtitle: { fontSize: 12, fontWeight: '600', color: '#64748B', marginTop: 2 },
-    addHeaderBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#3B82F6', alignItems: 'center', justifyContent: 'center', shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 4 }, shadowopacity: 1, shadowRadius: 6, elevation: 4 },
+    headerTitle: { fontSize: 18, fontWeight: '800', color: '#F8FAFC', marginTop: 8, textShadowColor: 'rgba(255,255,255,0.2)', textShadowRadius: 10 },
+    headerSubtitle: { fontSize: 12, fontWeight: '600', color: '#94A3B8', marginTop: 2 },
+    addHeaderBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(59, 130, 246, 0.2)', borderWidth: 1, borderColor: '#3B82F6', alignItems: 'center', justifyContent: 'center', shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.8, shadowRadius: 10, elevation: 8 },
     
     listContent: { padding: 16, paddingBottom: 120 },
-    card: { backgroundColor: '#fff', borderRadius: 24, padding: 16, marginBottom: 16, shadowColor: '#94A3B8', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 4, borderLeftWidth: 5 },
+    card: { borderRadius: 24, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', overflow: 'hidden', borderLeftWidth: 5 },
     cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
     iconBox: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-    cardTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A', marginBottom: 2 },
-    cardDesc: { fontSize: 12, color: '#64748B', fontWeight: '500' },
-    amountText: { fontSize: 16, fontWeight: '900', color: '#0F172A' },
+    cardTitle: { fontSize: 16, fontWeight: '800', color: '#F8FAFC', marginBottom: 2 },
+    cardDesc: { fontSize: 12, color: '#94A3B8', fontWeight: '500' },
+    amountText: { fontSize: 16, fontWeight: '900', color: '#F8FAFC' },
     
-    cardGrid: { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: '#F1F5F9' },
+    cardGrid: { backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
     gridRow: { flexDirection: 'row', alignItems: 'flex-start' },
     gridCol: { flex: 1, paddingVertical: 4 },
-    gridDivider: { width: 1, backgroundColor: '#E2E8F0', marginHorizontal: 12 },
-    gridHorizontalDivider: { height: 1, backgroundColor: '#E2E8F0', marginVertical: 8 },
+    gridDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginHorizontal: 12 },
+    gridHorizontalDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 8 },
     gridLabelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 4 },
     gridLabel: { fontSize: 10, fontWeight: '800', color: '#64748B', letterSpacing: 0.5 },
-    gridValue: { fontSize: 13, fontWeight: '800', color: '#1E293B', marginBottom: 2 },
+    gridValue: { fontSize: 13, fontWeight: '800', color: '#E2E8F0', marginBottom: 2 },
     gridSubValue: { fontSize: 10, color: '#94A3B8', fontWeight: '600' },
 
-    actionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 16 },
-    actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
+    actionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 16 },
+    actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
     actionText: { fontSize: 12, fontWeight: '800', marginLeft: 4 },
 
     // Modal

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import api from '../api/axios';
 import { colors, spacing, radius } from '../theme';
 import { Header, EmptyState } from '../components';
+import useStatusBarStyle from '../hooks/useStatusBarStyle';
 
 export default function FinanceScreen({ navigation }) {
+    useStatusBarStyle('dark-content');
     const [summary, setSummary] = useState(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);

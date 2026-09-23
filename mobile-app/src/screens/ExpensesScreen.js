@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Modal, ScrollView, Platform } from 'react-native';
+import { KeyboardAvoidingView, View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Modal, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import { EmptyState, FormField, Header } from '../components';
 import DatePickerInput from '../components/DatePickerInput';
+import useStatusBarStyle from '../hooks/useStatusBarStyle';
 
 const fmtMoney = (v) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', minimumFractionDigits: 2 }).format(v || 0);
 
 export default function ExpensesScreen({ navigation }) {
+    useStatusBarStyle('dark-content');
     const { hasPermission } = useContext(AuthContext);
     const [expenses, setExpenses] = useState([]);
     const [types, setTypes] = useState({});
@@ -202,7 +204,7 @@ export default function ExpensesScreen({ navigation }) {
 
             {/* Main Form Modal */}
             <Modal visible={modalVisible} animationType="slide" transparent>
-                <View style={st.modalOverlay}>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={st.modalOverlay}>
                     <View style={st.modalContent}>
                         <View style={st.modalHeader}>
                             <Text style={st.modalTitle}>{editingId ? 'Masraf Düzenle' : 'Yeni Masraf Ekle'}</Text>
@@ -260,7 +262,7 @@ export default function ExpensesScreen({ navigation }) {
                             <View style={{ height: 40 }} />
                         </ScrollView>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
 
             {/* Type Select Modal */}

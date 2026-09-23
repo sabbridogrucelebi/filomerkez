@@ -4,15 +4,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import { Header } from '../components';
 import { AuthContext } from '../context/AuthContext';
 import dayjs from 'dayjs';
+import useStatusBarStyle from '../hooks/useStatusBarStyle';
 
 const { width: W } = Dimensions.get('window');
 const fmtMoney = (v) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(v || 0);
 
 export default function PayrollDetailScreen({ route, navigation }) {
+    useStatusBarStyle('dark-content');
     const { driverData, periodMonth } = route.params || {};
     const { userInfo } = useContext(AuthContext); // FIX: Use userInfo instead of user
 
@@ -399,7 +401,7 @@ const st = StyleSheet.create({
     printBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0F172A', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, gap: 6 },
     printBtnText: { color: '#fff', fontSize: 11, fontWeight: '800' },
     
-    scrollContent: { padding: 20, paddingBottom: 60 },
+    scrollContent: { padding: 20, paddingBottom: 120 },
     
     docHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 10 },
     docHeaderLeft: { flex: 1, paddingRight: 10 },

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList, Dimensions, Platform, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList, Dimensions, Platform, Alert, Animated } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import api from '../api/axios';
 
 const { width: W } = Dimensions.get('window');
@@ -62,109 +63,127 @@ export default function VehicleReportsScreen({ route, navigation }) {
         setDateObj(d);
     };
 
-    const renderHeader = () => (
-        <View style={st.headerWrap}>
-            <View style={st.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-                    <Icon name="arrow-left" size={24} color="#1E293B" />
-                </TouchableOpacity>
-                <View style={st.headerTitleBox}>
-                    <Text style={st.headerTitle}>Aylık Çalışma (Puantaj) Raporu</Text>
-                    <Text style={st.headerSub}>{vehicle?.plate || 'Araç'}</Text>
-                </View>
-                <View style={{ width: 44 }} />
-            </View>
-
-            {/* Month Picker */}
-            <View style={st.monthPicker}>
-                <TouchableOpacity style={st.monthBtn} onPress={handlePrevMonth}>
-                    <Icon name="chevron-left" size={24} color="#64748B" />
-                </TouchableOpacity>
-                <View style={st.monthDisplay}>
-                    <Icon name="calendar-month-outline" size={20} color="#3B82F6" />
-                    <Text style={st.monthText}>
-                        {MONTH_NAMES[dateObj.getMonth()]} {dateObj.getFullYear()}
-                    </Text>
-                </View>
-                <TouchableOpacity style={st.monthBtn} onPress={handleNextMonth}>
-                    <Icon name="chevron-right" size={24} color="#64748B" />
-                </TouchableOpacity>
-            </View>
-
-            {/* Summary Cards */}
-            <View style={st.summaryGrid}>
-                {/* Sabah */}
-                <View style={[st.sumCard, { backgroundColor: '#FFFBEB', borderColor: '#FEF3C7' }]}>
-                    <Text style={[st.sumLabel, { color: '#D97706' }]}>TOPLAM SABAH SEFERİ</Text>
-                    <Text style={[st.sumValue, { color: '#B45309' }]}>{totals.morning}</Text>
-                    <View style={st.sumFooter}>
-                        <View style={[st.sumDot, { backgroundColor: '#F59E0B' }]} />
-                        <Text style={[st.sumFooterText, { color: '#D97706' }]}>Gidiş / Sabah</Text>
+    const renderHeader = () => {
+        return (
+            <View style={st.headerWrap}>
+                <View style={st.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+                        <Icon name="arrow-left" size={24} color="#F8FAFC" />
+                    </TouchableOpacity>
+                    <View style={st.headerTitleBox}>
+                        <Text style={st.headerTitle}>Aylık Çalışma Raporu</Text>
+                        <Text style={st.headerSub}>{vehicle?.plate || 'Araç'}</Text>
                     </View>
-                    <Icon name="weather-sunny" size={60} color="#FEF3C7" style={st.bgIcon} />
+                    <View style={{ width: 44 }} />
                 </View>
 
-                {/* Akşam */}
-                <View style={[st.sumCard, { backgroundColor: '#EEF2FF', borderColor: '#E0E7FF' }]}>
-                    <Text style={[st.sumLabel, { color: '#4F46E5' }]}>TOPLAM AKŞAM SEFERİ</Text>
-                    <Text style={[st.sumValue, { color: '#3730A3' }]}>{totals.evening}</Text>
-                    <View style={st.sumFooter}>
-                        <View style={[st.sumDot, { backgroundColor: '#6366F1' }]} />
-                        <Text style={[st.sumFooterText, { color: '#4F46E5' }]}>Dönüş / Akşam</Text>
+                {/* Month Picker */}
+                <BlurView intensity={30} tint="dark" style={st.monthPicker}>
+                    <TouchableOpacity style={st.monthBtn} onPress={handlePrevMonth}>
+                        <Icon name="chevron-left" size={24} color="#94A3B8" />
+                    </TouchableOpacity>
+                    <View style={st.monthDisplay}>
+                        <Icon name="calendar-month-outline" size={20} color="#60A5FA" />
+                        <Text style={st.monthText}>
+                            {MONTH_NAMES[dateObj.getMonth()]} {dateObj.getFullYear()}
+                        </Text>
                     </View>
-                    <Icon name="weather-night" size={60} color="#E0E7FF" style={st.bgIcon} />
+                    <TouchableOpacity style={st.monthBtn} onPress={handleNextMonth}>
+                        <Icon name="chevron-right" size={24} color="#94A3B8" />
+                    </TouchableOpacity>
+                </BlurView>
+
+                {/* Summary Cards */}
+                <View style={st.summaryGrid}>
+                    {/* Sabah */}
+                    <BlurView intensity={30} tint="dark" style={[st.sumCard, { borderLeftColor: '#F59E0B' }]}>
+                        <Text style={[st.sumLabel, { color: '#FCD34D' }]}>TOPLAM SABAH SEFERİ</Text>
+                        <Text style={[st.sumValue, { color: '#FDE68A' }]}>{totals.morning}</Text>
+                        <View style={st.sumFooter}>
+                            <View style={[st.sumDot, { backgroundColor: '#FBBF24' }]} />
+                            <Text style={[st.sumFooterText, { color: '#FCD34D' }]}>Gidiş / Sabah</Text>
+                        </View>
+                        <Icon name="weather-sunny" size={60} color="rgba(245, 158, 11, 0.15)" style={st.bgIcon} />
+                    </BlurView>
+
+                    {/* Akşam */}
+                    <BlurView intensity={30} tint="dark" style={[st.sumCard, { borderLeftColor: '#6366F1' }]}>
+                        <Text style={[st.sumLabel, { color: '#A5B4FC' }]}>TOPLAM AKŞAM SEFERİ</Text>
+                        <Text style={[st.sumValue, { color: '#C7D2FE' }]}>{totals.evening}</Text>
+                        <View style={st.sumFooter}>
+                            <View style={[st.sumDot, { backgroundColor: '#818CF8' }]} />
+                            <Text style={[st.sumFooterText, { color: '#A5B4FC' }]}>Dönüş / Akşam</Text>
+                        </View>
+                        <Icon name="weather-night" size={60} color="rgba(99, 102, 241, 0.15)" style={st.bgIcon} />
+                    </BlurView>
+
+                    {/* Toplam */}
+                    <BlurView intensity={30} tint="dark" style={[st.sumCard, { borderLeftColor: '#10B981' }]}>
+                        <Text style={[st.sumLabel, { color: '#6EE7B7' }]}>AYLIK TOPLAM HAKEDİŞ</Text>
+                        <Text style={[st.sumValue, { color: '#34D399' }]}>{fmtMoney(totals.income)}</Text>
+                        <View style={st.sumFooter}>
+                            <View style={[st.sumDot, { backgroundColor: '#34D399' }]} />
+                            <Text style={[st.sumFooterText, { color: '#6EE7B7' }]}>Araç Bazlı Ciro</Text>
+                        </View>
+                        <Icon name="currency-try" size={60} color="rgba(16, 185, 129, 0.15)" style={st.bgIcon} />
+                    </BlurView>
                 </View>
 
-                {/* Toplam */}
-                <View style={[st.sumCard, { backgroundColor: '#ECFDF5', borderColor: '#D1FAE5' }]}>
-                    <Text style={[st.sumLabel, { color: '#059669' }]}>AYLIK TOPLAM HAKEDİŞ</Text>
-                    <Text style={[st.sumValue, { color: '#047857' }]}>{fmtMoney(totals.income)}</Text>
-                    <View style={st.sumFooter}>
-                        <View style={[st.sumDot, { backgroundColor: '#10B981' }]} />
-                        <Text style={[st.sumFooterText, { color: '#059669' }]}>Araç Bazlı Ciro</Text>
-                    </View>
-                    <Icon name="currency-try" size={60} color="#D1FAE5" style={st.bgIcon} />
+                <View style={st.listHeader}>
+                    <Text style={st.listTitle}>Müşteri / Kurum Analizi</Text>
                 </View>
             </View>
+        );
+    };
 
-            <View style={st.listHeader}>
-                <Text style={st.listTitle}>Müşteri / Kurum Analizi</Text>
-            </View>
-        </View>
-    );
+    const AnimatedReportRow = ({ item, index }) => {
+        const slideAnim = useRef(new Animated.Value(50)).current;
+        const opacityAnim = useRef(new Animated.Value(0)).current;
 
-    const renderItem = ({ item }) => (
-        <View style={st.rowCard}>
-            <View style={st.rowTop}>
-                <View style={st.rowCustomerIcon}>
-                    <Text style={st.rowCustomerInitial}>{item.customer_name.substring(0, 1)}</Text>
-                </View>
-                <View style={st.rowCustomerInfo}>
-                    <Text style={st.rowCustomerName}>{item.customer_name}</Text>
-                    <Text style={st.rowCustomerSub}>OPERASYON</Text>
-                </View>
-            </View>
-            
-            <View style={st.rowStats}>
-                <View style={st.statBox}>
-                    <Text style={st.statBoxLabel}>SABAH</Text>
-                    <View style={[st.statBoxBadge, { backgroundColor: '#FFFBEB' }]}>
-                        <Text style={[st.statBoxValue, { color: '#D97706' }]}>{item.morning_count}</Text>
+        useEffect(() => {
+            Animated.parallel([
+                Animated.timing(opacityAnim, { toValue: 1, duration: 400, delay: index * 100, useNativeDriver: true }),
+                Animated.spring(slideAnim, { toValue: 0, friction: 6, tension: 40, delay: index * 100, useNativeDriver: true })
+            ]).start();
+        }, []);
+
+        return (
+            <Animated.View style={{ opacity: opacityAnim, transform: [{ translateY: slideAnim }], marginBottom: 12, marginHorizontal: 16 }}>
+                <BlurView intensity={30} tint="dark" style={st.rowCard}>
+                    <View style={st.rowTop}>
+                        <View style={st.rowCustomerIcon}>
+                            <Text style={st.rowCustomerInitial}>{item.customer_name.substring(0, 1)}</Text>
+                        </View>
+                        <View style={st.rowCustomerInfo}>
+                            <Text style={st.rowCustomerName}>{item.customer_name}</Text>
+                            <Text style={st.rowCustomerSub}>OPERASYON</Text>
+                        </View>
                     </View>
-                </View>
-                <View style={st.statBox}>
-                    <Text style={st.statBoxLabel}>AKŞAM</Text>
-                    <View style={[st.statBoxBadge, { backgroundColor: '#EEF2FF' }]}>
-                        <Text style={[st.statBoxValue, { color: '#4F46E5' }]}>{item.evening_count}</Text>
+                    
+                    <View style={st.rowStats}>
+                        <View style={st.statBox}>
+                            <Text style={st.statBoxLabel}>SABAH</Text>
+                            <View style={[st.statBoxBadge, { backgroundColor: 'rgba(245, 158, 11, 0.2)' }]}>
+                                <Text style={[st.statBoxValue, { color: '#FCD34D' }]}>{item.morning_count}</Text>
+                            </View>
+                        </View>
+                        <View style={st.statBox}>
+                            <Text style={st.statBoxLabel}>AKŞAM</Text>
+                            <View style={[st.statBoxBadge, { backgroundColor: 'rgba(99, 102, 241, 0.2)' }]}>
+                                <Text style={[st.statBoxValue, { color: '#A5B4FC' }]}>{item.evening_count}</Text>
+                            </View>
+                        </View>
+                        <View style={[st.statBox, { alignItems: 'flex-end', flex: 1 }]}>
+                            <Text style={st.statBoxLabel}>TOPLAM KAZANÇ</Text>
+                            <Text style={st.statPrice}>{fmtMoney(item.total_price)}</Text>
+                        </View>
                     </View>
-                </View>
-                <View style={[st.statBox, { alignItems: 'flex-end', flex: 1 }]}>
-                    <Text style={st.statBoxLabel}>TOPLAM KAZANÇ</Text>
-                    <Text style={st.statPrice}>{fmtMoney(item.total_price)}</Text>
-                </View>
-            </View>
-        </View>
-    );
+                </BlurView>
+            </Animated.View>
+        );
+    };
+
+    const renderItem = ({ item, index }) => <AnimatedReportRow item={item} index={index} />;
 
     return (
         <SafeAreaView style={st.container} edges={['top']}>
@@ -194,22 +213,22 @@ export default function VehicleReportsScreen({ route, navigation }) {
 }
 
 const st = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F8FAFC' },
-    listContent: { paddingBottom: 40 },
+    container: { flex: 1, backgroundColor: '#020617' },
+    listContent: { paddingBottom: 120 },
     headerWrap: { paddingHorizontal: 16, paddingTop: Platform.OS === 'android' ? 20 : 30, paddingBottom: 16 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
-    backBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+    backBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
     headerTitleBox: { flex: 1, alignItems: 'center', paddingHorizontal: 10 },
-    headerTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B', textAlign: 'center' },
-    headerSub: { fontSize: 13, color: '#64748B', textAlign: 'center', fontWeight: '500', marginTop: 2 },
+    headerTitle: { fontSize: 18, fontWeight: '800', color: '#F8FAFC', textAlign: 'center', textShadowColor: 'rgba(255,255,255,0.2)', textShadowRadius: 10 },
+    headerSub: { fontSize: 13, color: '#94A3B8', textAlign: 'center', fontWeight: '500', marginTop: 2 },
     
-    monthPicker: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', borderRadius: 16, padding: 8, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
-    monthBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
+    monthPicker: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 16, padding: 8, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', overflow: 'hidden' },
+    monthBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' },
     monthDisplay: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    monthText: { fontSize: 16, fontWeight: '700', color: '#1E293B' },
+    monthText: { fontSize: 16, fontWeight: '700', color: '#F8FAFC' },
 
     summaryGrid: { gap: 12, marginBottom: 24 },
-    sumCard: { padding: 16, borderRadius: 20, borderWidth: 1, overflow: 'hidden', position: 'relative' },
+    sumCard: { padding: 16, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', overflow: 'hidden', position: 'relative', borderLeftWidth: 5 },
     sumLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5, marginBottom: 8 },
     sumValue: { fontSize: 28, fontWeight: '900', marginBottom: 12 },
     sumFooter: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -218,24 +237,24 @@ const st = StyleSheet.create({
     bgIcon: { position: 'absolute', right: -10, top: -5, opacity: 1, transform: [{ scale: 1.2 }] },
 
     listHeader: { marginBottom: 12 },
-    listTitle: { fontSize: 16, fontWeight: '700', color: '#334155' },
+    listTitle: { fontSize: 16, fontWeight: '700', color: '#F8FAFC' },
 
-    rowCard: { backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 12, borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
+    rowCard: { borderRadius: 16, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', overflow: 'hidden' },
     rowTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
-    rowCustomerIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
-    rowCustomerInitial: { fontSize: 16, fontWeight: '800', color: '#64748B' },
+    rowCustomerIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
+    rowCustomerInitial: { fontSize: 16, fontWeight: '800', color: '#F8FAFC' },
     rowCustomerInfo: { flex: 1 },
-    rowCustomerName: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
+    rowCustomerName: { fontSize: 15, fontWeight: '700', color: '#F8FAFC' },
     rowCustomerSub: { fontSize: 10, fontWeight: '700', color: '#94A3B8', marginTop: 2, letterSpacing: 0.5 },
 
-    rowStats: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, padding: 12, gap: 16 },
+    rowStats: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 12, gap: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
     statBox: { gap: 6 },
     statBoxLabel: { fontSize: 10, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.5 },
     statBoxBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, alignSelf: 'flex-start' },
     statBoxValue: { fontSize: 14, fontWeight: '800' },
-    statPrice: { fontSize: 16, fontWeight: '800', color: '#10B981', marginTop: 4 },
+    statPrice: { fontSize: 16, fontWeight: '800', color: '#34D399', marginTop: 4 },
 
-    loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.7)', justifyContent: 'center', alignItems: 'center', zIndex: 10 },
+    loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(2, 6, 23, 0.7)', justifyContent: 'center', alignItems: 'center', zIndex: 10 },
     emptyState: { alignItems: 'center', paddingVertical: 40 },
     emptyText: { color: '#94A3B8', fontSize: 14, fontWeight: '500', marginTop: 12 }
 });

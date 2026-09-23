@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
+import useStatusBarStyle from '../hooks/useStatusBarStyle';
 
 export default function MaintenanceSettingsScreen({ navigation }) {
+    useStatusBarStyle('dark-content');
     const { hasPermission } = React.useContext(AuthContext);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -165,7 +167,7 @@ export default function MaintenanceSettingsScreen({ navigation }) {
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+        <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#1e293b" />
@@ -389,7 +391,7 @@ const styles = StyleSheet.create({
     tabText: { fontSize: 14, fontWeight: '600', color: '#64748b' },
     tabTextActive: { color: '#4F46E5' },
 
-    scrollContent: { padding: 16, paddingBottom: 40 },
+    scrollContent: { padding: 16, paddingBottom: 120 },
     section: { gap: 16 },
     sectionHeader: { marginBottom: 8 },
     sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },

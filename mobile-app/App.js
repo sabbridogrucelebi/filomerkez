@@ -4,8 +4,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { AuthProvider, AuthContext } from './src/context/AuthContext';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator, Platform, StyleSheet, TouchableOpacity, Text } from 'react-native';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import { View, ActivityIndicator, Platform, StyleSheet, TouchableOpacity, Text, Animated, Easing } from 'react-native';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import GlobalSplashScreen from './src/components/GlobalSplashScreen';
@@ -34,7 +36,6 @@ import PersonnelDetailScreen from './src/screens/PersonnelDetailScreen';
 import CustomersScreen from './src/screens/CustomersScreen';
 import CustomerDetailScreen from './src/screens/CustomerDetailScreen';
 import TripsScreen from './src/screens/TripsScreen';
-import TripDetailScreen from './src/screens/TripDetailScreen';
 import PilotChatScreen from './src/screens/PilotChatScreen';
 import SupportScreen from './src/screens/SupportScreen';
 import SecurityScreen from './src/screens/SecurityScreen';
@@ -46,6 +47,7 @@ import TrackingReportsScreen from './src/screens/TrackingReportsScreen';
 import CompanyUsersScreen from './src/screens/CompanyUsersScreen';
 import CompanyUserFormScreen from './src/screens/CompanyUserFormScreen';
 import ReportsScreen from './src/screens/ReportsScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 import CompanyDocumentsScreen from './src/screens/CompanyDocumentsScreen';
 import TendersScreen from './src/screens/TendersScreen';
 import TenderFormScreen from './src/screens/TenderFormScreen';
@@ -60,8 +62,6 @@ import VehicleMaintenancesScreen from './src/screens/VehicleMaintenancesScreen';
 import VehiclePenaltiesScreen from './src/screens/VehiclePenaltiesScreen';
 import VehicleGalleryScreen from './src/screens/VehicleGalleryScreen';
 import VehicleReportsScreen from './src/screens/VehicleReportsScreen';
-import UpcomingInspectionsScreen from './src/screens/UpcomingInspectionsScreen';
-import UpcomingInsurancesScreen from './src/screens/UpcomingInsurancesScreen';
 import FuelsScreen from './src/screens/FuelsScreen';
 import FuelFormScreen from './src/screens/FuelFormScreen';
 import FuelStationsScreen from './src/screens/FuelStationsScreen';
@@ -75,7 +75,6 @@ import PilotCellPointsScreen from './src/screens/PilotCellPointsScreen';
 import PilotCellMapScreen from './src/screens/PilotCellMapScreen';
 import ParentHomeScreen from './src/screens/ParentHomeScreen';
 import ParentPaymentScreen from './src/screens/ParentPaymentScreen';
-import ParentNotificationsScreen from './src/screens/ParentNotificationsScreen';
 import ParentAbsenceScreen from './src/screens/ParentAbsenceScreen';
 import ParentSettingsScreen from './src/screens/ParentSettingsScreen';
 import PilotCellRadiusScreen from './src/screens/PilotCellRadiusScreen';
@@ -86,24 +85,82 @@ const Tab = createBottomTabNavigator();
 
 // Tema Renkleri (Uzay Derinliği Mavisi)
 const theme = {
-    primary: '#2563EB', // Blue 600
-    bg: '#F8FAFC', // Slate 50
-    inactive: '#94A3B8', // Slate 400
-    shadow: '#2563EB'
+    primary: '#60A5FA', // Daha parlak mavi (Koyu tema için)
+    bg: '#020617',
+    inactive: '#64748B',
+    shadow: '#3B82F6'
+};
+
+const AnimatedTabItem = ({ t, focused, onPress, unreadChatCount, isMessageTab, isParent }) => {
+    const scaleAnim = React.useRef(new Animated.Value(focused ? 1.15 : 1)).current;
+    
+    React.useEffect(() => {
+        Animated.spring(scaleAnim, {
+            toValue: focused ? 1.15 : 1,
+            friction: 5,
+            tension: 80,
+            useNativeDriver: true
+        }).start();
+    }, [focused]);
+
+    const activeColor = isParent ? '#A78BFA' : theme.primary;
+
+    return (
+        <TouchableOpacity style={tabS.tab} onPress={onPress} activeOpacity={0.7}>
+            <Animated.View style={{ alignItems: 'center', transform: [{ scale: scaleAnim }] }}>
+                <View style={{ position: 'relative' }}>
+                    <Icon name={focused ? t.iconActive : t.icon} size={26} color={focused ? activeColor : theme.inactive} style={focused && { textShadowColor: activeColor, textShadowRadius: 10 }} />
+                    {isMessageTab && unreadChatCount > 0 && (
+                        <View style={tabS.badge}>
+                            <Text style={tabS.badgeText}>{unreadChatCount > 9 ? '9+' : unreadChatCount}</Text>
+                        </View>
+                    )}
+                </View>
+                <Text style={[tabS.label, focused && { color: activeColor, fontWeight: '800' }]}>{t.label}</Text>
+                {focused && <View style={[tabS.activeDot, { backgroundColor: activeColor, shadowColor: activeColor }]} />}
+            </Animated.View>
+        </TouchableOpacity>
+    );
+};
+
+const AnimatedCenterButton = ({ onPress, isParent }) => {
+    const breatheAnim = React.useRef(new Animated.Value(1)).current;
+
+    React.useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(breatheAnim, { toValue: 1.1, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                Animated.timing(breatheAnim, { toValue: 1, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
+            ])
+        ).start();
+    }, []);
+
+    const colors = isParent ? ['#8B5CF6', '#6D28D9'] : ['#3B82F6', '#1D4ED8'];
+    const shadowCol = isParent ? '#8B5CF6' : '#3B82F6';
+    const iconName = isParent ? 'bell' : 'plus';
+
+    return (
+        <TouchableOpacity style={tabS.centerBtn} onPress={onPress} activeOpacity={0.9}>
+            <Animated.View style={[tabS.centerInnerWrap, { shadowColor: shadowCol, transform: [{ scale: breatheAnim }] }]}>
+                <LinearGradient colors={colors} style={tabS.centerInner}>
+                    <Icon name={iconName} size={32} color="#fff" style={{ textShadowColor: 'rgba(255,255,255,0.5)', textShadowRadius: 8 }} />
+                </LinearGradient>
+            </Animated.View>
+        </TouchableOpacity>
+    );
 };
 
 function CustomTabBar({ state, descriptors, navigation }) {
     const { unreadChatCount } = useContext(AuthContext);
     const insets = useSafeAreaInsets();
 
-    // Check if any active screen wants to hide the tab bar
     const focusedOptions = descriptors[state.routes[state.index].key].options;
     if (focusedOptions?.tabBarStyle?.display === 'none') return null;
 
-    const bottomPadding = Math.max(insets.bottom, 8);
+    const bottomPadding = Math.max(insets.bottom, 12);
 
     const tabs = [
-        { icon: 'menu', iconActive: 'menu-open', label: 'Menü' },
+        { icon: 'menu', iconActive: 'menu', label: 'Menü' },
         { icon: 'car-outline', iconActive: 'car', label: 'Araçlar' },
         { icon: 'plus', label: '' },
         { icon: 'chat-outline', iconActive: 'chat', label: 'Mesaj' },
@@ -111,45 +168,25 @@ function CustomTabBar({ state, descriptors, navigation }) {
     ];
     return (
         <View style={[tabS.wrap, { paddingBottom: bottomPadding }]}>
-            <View style={tabS.bar}>
-                {state.routes.map((route, i) => {
-                    const focused = state.index === i;
-                    const isCenter = i === 2;
-                    const t = tabs[i];
-                    const onPress = () => {
-                        const event = navigation.emit({
-                            type: 'tabPress',
-                            target: route.key,
-                            canPreventDefault: true,
-                        });
-
-                        if (!focused && !event.defaultPrevented) {
-                            navigation.navigate(route.name);
-                        } else if (focused && !event.defaultPrevented) {
-                            // Reset to initial screen of the stack if pressing already focused tab
-                            if (route.name === 'MenuTab') navigation.navigate('MenuTab', { screen: 'Menu' });
-                            if (route.name === 'VehiclesTab') navigation.navigate('VehiclesTab', { screen: 'Vehicles' });
-                        }
-                    };
-                    if (isCenter) return (
-                        <TouchableOpacity key={i} style={tabS.centerBtn} onPress={onPress} activeOpacity={0.85}>
-                            <View style={tabS.centerInner}><Icon name="plus" size={30} color="#fff" /></View>
-                        </TouchableOpacity>
-                    );
-                    return (
-                        <TouchableOpacity key={i} style={tabS.tab} onPress={onPress} activeOpacity={0.7}>
-                            <View style={{ position: 'relative' }}>
-                                <Icon name={focused ? t.iconActive : t.icon} size={26} color={focused ? theme.primary : theme.inactive} />
-                                {i === 3 && unreadChatCount > 0 && (
-                                    <View style={tabS.badge}>
-                                        <Text style={tabS.badgeText}>{unreadChatCount > 9 ? '9+' : unreadChatCount}</Text>
-                                    </View>
-                                )}
-                            </View>
-                            <Text style={[tabS.label, focused && tabS.labelActive]}>{t.label}</Text>
-                        </TouchableOpacity>
-                    );
-                })}
+            <View style={tabS.barContainer}>
+                <BlurView intensity={50} tint="dark" style={tabS.bar}>
+                    {state.routes.map((route, i) => {
+                        const focused = state.index === i;
+                        const isCenter = i === 2;
+                        const t = tabs[i];
+                        const onPress = () => {
+                            const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+                            if (!focused && !event.defaultPrevented) {
+                                navigation.navigate(route.name);
+                            } else if (focused && !event.defaultPrevented) {
+                                if (route.name === 'MenuTab') navigation.navigate('MenuTab', { screen: 'Menu' });
+                                if (route.name === 'VehiclesTab') navigation.navigate('VehiclesTab', { screen: 'Vehicles' });
+                            }
+                        };
+                        if (isCenter) return <AnimatedCenterButton key={i} onPress={onPress} isParent={false} />;
+                        return <AnimatedTabItem key={i} t={t} focused={focused} onPress={onPress} unreadChatCount={unreadChatCount} isMessageTab={i === 3} isParent={false} />;
+                    })}
+                </BlurView>
             </View>
         </View>
     );
@@ -160,63 +197,46 @@ function CustomParentTabBar({ state, descriptors, navigation }) {
     const focusedOptions = descriptors[state.routes[state.index].key].options;
     if (focusedOptions?.tabBarStyle?.display === 'none') return null;
 
-    const bottomPadding = Math.max(insets.bottom, 8);
+    const bottomPadding = Math.max(insets.bottom, 12);
 
     const tabs = [
-        { icon: 'credit-card-outline', iconActive: 'credit-card', label: 'Ödeme' },
         { icon: 'map-marker-outline', iconActive: 'map-marker', label: 'Takip Et' },
-        { icon: 'bell', label: '' },
         { icon: 'calendar-remove-outline', iconActive: 'calendar-remove', label: 'Gelmeyecek' },
+        { icon: 'credit-card-outline', iconActive: 'credit-card', label: 'Ödeme' },
         { icon: 'cog-outline', iconActive: 'cog', label: 'Ayarlar' },
     ];
 
     return (
         <View style={[tabS.wrap, { paddingBottom: bottomPadding }]}>
-            <View style={tabS.bar}>
-                {state.routes.map((route, i) => {
-                    const focused = state.index === i;
-                    const isCenter = i === 2;
-                    const t = tabs[i];
-                    const onPress = () => {
-                        const event = navigation.emit({
-                            type: 'tabPress',
-                            target: route.key,
-                            canPreventDefault: true,
-                        });
-
-                        if (!focused && !event.defaultPrevented) {
-                            navigation.navigate(route.name);
-                        }
-                    };
-                    if (isCenter) return (
-                        <TouchableOpacity key={i} style={tabS.centerBtn} onPress={onPress} activeOpacity={0.85}>
-                            <View style={[tabS.centerInner, { backgroundColor: '#8B5CF6', shadowColor: '#8B5CF6' }]}>
-                                <Icon name="bell" size={26} color="#fff" />
-                            </View>
-                        </TouchableOpacity>
-                    );
-                    return (
-                        <TouchableOpacity key={i} style={tabS.tab} onPress={onPress} activeOpacity={0.7}>
-                            <Icon name={focused ? t.iconActive : t.icon} size={26} color={focused ? '#8B5CF6' : theme.inactive} />
-                            <Text style={[tabS.label, focused && { color: '#8B5CF6', fontWeight: '700' }]}>{t.label}</Text>
-                        </TouchableOpacity>
-                    );
-                })}
+            <View style={tabS.barContainer}>
+                <BlurView intensity={50} tint="dark" style={tabS.bar}>
+                    {state.routes.map((route, i) => {
+                        const focused = state.index === i;
+                        const t = tabs[i];
+                        const onPress = () => {
+                            const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+                            if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+                        };
+                        return <AnimatedTabItem key={i} t={t} focused={focused} onPress={onPress} isMessageTab={false} isParent={true} />;
+                    })}
+                </BlurView>
             </View>
         </View>
     );
 }
 
 const tabS = StyleSheet.create({
-    wrap: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 16, backgroundColor: 'transparent' },
-    bar: { flexDirection: 'row', backgroundColor: '#ffffff', borderRadius: 28, paddingVertical: 12, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'space-around', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 15 },
+    wrap: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, backgroundColor: 'transparent' },
+    barContainer: { borderRadius: 32, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.6, shadowRadius: 20, elevation: 15 },
+    bar: { flexDirection: 'row', backgroundColor: 'rgba(2,6,23,0.6)', paddingVertical: 12, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'space-around' },
     tab: { alignItems: 'center', justifyContent: 'center', paddingVertical: 4, flex: 1 },
-    label: { fontSize: 10, fontWeight: '600', color: theme.inactive, marginTop: 4 },
-    labelActive: { color: theme.primary, fontWeight: '700' },
-    centerBtn: { alignItems: 'center', justifyContent: 'center', marginTop: -30 },
-    centerInner: { width: 56, height: 56, borderRadius: 28, backgroundColor: theme.primary, alignItems: 'center', justifyContent: 'center', shadowColor: theme.primary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 10 },
-    badge: { position: 'absolute', top: -4, right: -6, backgroundColor: '#EF4444', minWidth: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 1.5, borderColor: '#FFF' },
-    badgeText: { color: '#FFF', fontSize: 9, fontWeight: '900' }
+    label: { fontSize: 10, fontWeight: '700', color: theme.inactive, marginTop: 4, letterSpacing: 0.5 },
+    activeDot: { width: 4, height: 4, borderRadius: 2, marginTop: 4, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 6, elevation: 4 },
+    centerBtn: { alignItems: 'center', justifyContent: 'center', marginTop: -35 },
+    centerInnerWrap: { shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.5, shadowRadius: 16, elevation: 10 },
+    centerInner: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)' },
+    badge: { position: 'absolute', top: -6, right: -10, backgroundColor: '#EF4444', minWidth: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 1.5, borderColor: '#020617', shadowColor: '#EF4444', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 4, elevation: 3 },
+    badgeText: { color: '#FFF', fontSize: 10, fontWeight: '900' }
 });
 
 const VehiclesStack = createNativeStackNavigator();
@@ -252,7 +272,6 @@ function MenuStackScreen() {
             <MenuStack.Screen name="Customers" component={CustomersScreen} />
             <MenuStack.Screen name="CustomerDetail" component={CustomerDetailScreen} />
             <MenuStack.Screen name="Trips" component={TripsScreen} />
-            <MenuStack.Screen name="TripDetail" component={TripDetailScreen} />
             <MenuStack.Screen name="Reports" component={ReportsScreen} />
             <MenuStack.Screen name="Tracking" component={TrackingScreen} />
             <MenuStack.Screen name="CompanyDocuments" component={CompanyDocumentsScreen} />
@@ -269,10 +288,9 @@ function MenuStackScreen() {
             <MenuStack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
             <MenuStack.Screen name="AccountInfo" component={AccountInfoScreen} />
             <MenuStack.Screen name="MaintenanceSettings" component={MaintenanceSettingsScreen} />
-            <MenuStack.Screen name="UpcomingInspections" component={UpcomingInspectionsScreen} />
-            <MenuStack.Screen name="UpcomingInsurances" component={UpcomingInsurancesScreen} />
             <MenuStack.Screen name="CompanyUsers" component={CompanyUsersScreen} />
             <MenuStack.Screen name="CompanyUserForm" component={CompanyUserFormScreen} />
+            <MenuStack.Screen name="Settings" component={SettingsScreen} />
             <MenuStack.Screen name="PilotCellDriver" component={PilotCellDriverScreen} />
             <MenuStack.Screen name="PilotCellPoints" component={PilotCellPointsScreen} />
             <MenuStack.Screen name="PilotCellRadius" component={PilotCellRadiusScreen} />
@@ -291,6 +309,7 @@ function ProfileStackScreen() {
             <ProfileStack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
             <ProfileStack.Screen name="Security" component={SecurityScreen} />
             <ProfileStack.Screen name="Support" component={SupportScreen} />
+            <ProfileStack.Screen name="Settings" component={SettingsScreen} />
         </ProfileStack.Navigator>
     );
 }
@@ -310,10 +329,9 @@ function MainTabs() {
 function ParentTabs() {
     return (
         <Tab.Navigator tabBar={p => <CustomParentTabBar {...p} />} screenOptions={{ headerShown: false }} initialRouteName="ParentTrack">
-            <Tab.Screen name="ParentPayment" component={ParentPaymentScreen} />
             <Tab.Screen name="ParentTrack" component={ParentHomeScreen} />
-            <Tab.Screen name="ParentNotifications" component={ParentNotificationsScreen} />
             <Tab.Screen name="ParentAbsence" component={ParentAbsenceScreen} />
+            <Tab.Screen name="ParentPayment" component={ParentPaymentScreen} />
             <Tab.Screen name="ParentSettings" component={ParentSettingsScreen} />
         </Tab.Navigator>
     );
@@ -378,15 +396,16 @@ export default function App() {
     React.useEffect(() => {
         async function loadFonts() {
             try {
-                // Inter fontlarını yükle — Türkçe (Latin Extended) karakter seti tam destekli
-                const InterFonts = require('@expo-google-fonts/inter');
+                // Inter fontlarını yükle — Türkçe (Latin Extended) karakter seti tam destekli.
+                // Paketin tamamı yerine tek tek ağırlıklar alınıyor: aksi halde kullanılmayan
+                // 12 varyant (italikler dahil) da uygulama boyutuna ekleniyor.
                 await Font.loadAsync({
-                    Inter_400Regular: InterFonts.Inter_400Regular,
-                    Inter_500Medium: InterFonts.Inter_500Medium,
-                    Inter_600SemiBold: InterFonts.Inter_600SemiBold,
-                    Inter_700Bold: InterFonts.Inter_700Bold,
-                    Inter_800ExtraBold: InterFonts.Inter_800ExtraBold,
-                    Inter_900Black: InterFonts.Inter_900Black,
+                    Inter_400Regular: require('@expo-google-fonts/inter/400Regular').Inter_400Regular,
+                    Inter_500Medium: require('@expo-google-fonts/inter/500Medium').Inter_500Medium,
+                    Inter_600SemiBold: require('@expo-google-fonts/inter/600SemiBold').Inter_600SemiBold,
+                    Inter_700Bold: require('@expo-google-fonts/inter/700Bold').Inter_700Bold,
+                    Inter_800ExtraBold: require('@expo-google-fonts/inter/800ExtraBold').Inter_800ExtraBold,
+                    Inter_900Black: require('@expo-google-fonts/inter/900Black').Inter_900Black,
                 });
                 console.log('✅ Inter fontları başarıyla yüklendi');
             } catch (e) {

@@ -1,42 +1,68 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { View, StyleSheet, FlatList, ActivityIndicator, Alert, Text, Platform, TouchableOpacity, RefreshControl, Modal, ScrollView, Dimensions, Image, Animated } from 'react-native';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import { View, StyleSheet, FlatList, ActivityIndicator, Alert, Text, Platform, TouchableOpacity, RefreshControl, Modal, ScrollView, Dimensions, KeyboardAvoidingView, Animated, Easing, TextInput } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import * as IntentLauncher from 'expo-intent-launcher';
+import { BlurView } from 'expo-blur';
+import { Image } from 'expo-image';
 import api from '../api/axios';
+import { emoji } from '../emoji';
 import { AuthContext } from '../context/AuthContext';
-import { EmptyState, FormField } from '../components';
 import DatePickerInput from '../components/DatePickerInput';
+import dayjs from 'dayjs';
 
-const { width } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const fmtMoney = (v) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', minimumFractionDigits: 2 }).format(v || 0);
 const fmtKm = (v) => new Intl.NumberFormat('tr-TR').format(v || 0);
 
-const BlinkingPlate = ({ plate }) => {
-    const fadeAnim = useRef(new Animated.Value(1)).current;
-    
-    useEffect(() => {
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(fadeAnim, { toValue: 0.4, duration: 800, useNativeDriver: true }),
-                Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true })
-            ])
-        ).start();
-    }, [fadeAnim]);
+const SelectInput = ({ icon, placeholder, value, options, onSelect }) => {
+    const [open, setOpen] = useState(false);
+    const selected = options.find(o => o.value === value);
 
     return (
-        <Animated.View style={{ opacity: fadeAnim, backgroundColor: '#3B82F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, shadowColor: '#3B82F6', shadowOffset: { width:0, height:4 }, shadowOpacity: 0.4, shadowRadius: 6, elevation: 4 }}>
-            <Text style={{ fontSize: 16, fontWeight: '900', color: '#FFFFFF', letterSpacing: 1 }}>{plate}</Text>
-        </Animated.View>
+        <>
+            <TouchableOpacity style={s.fieldWrap} onPress={() => setOpen(true)} activeOpacity={0.7}>
+                {icon && <Icon name={icon} size={20} color="#94A3B8" style={s.fieldIcon} />}
+                <Text style={[s.fieldInput, { color: selected ? '#F8FAFC' : '#64748B', paddingTop: Platform.OS === 'ios' ? 16 : 14 }]}>
+                    {selected ? selected.label : placeholder}
+                </Text>
+                <Icon name="chevron-down" size={20} color="#94A3B8" />
+            </TouchableOpacity>
+
+            <Modal visible={open} transparent animationType="fade">
+                <BlurView intensity={40} tint="dark" style={s.modalOverlayCenter}>
+                    <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setOpen(false)} />
+                    <View style={s.centerModal}>
+                        <LinearGradient colors={['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.01)']} style={StyleSheet.absoluteFillObject} />
+                        <Text style={s.modalTitle}>{placeholder}</Text>
+                        <ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
+                            {options.map((opt, i) => (
+                                <TouchableOpacity 
+                                    key={i} 
+                                    style={[s.menuItem, value === opt.value && { backgroundColor: 'rgba(59,130,246,0.1)' }]}
+                                    onPress={() => { onSelect(opt.value); setOpen(false); }}
+                                >
+                                    <Text style={[s.menuText, value === opt.value ? { color: '#60A5FA', fontWeight: '800' } : { color: '#CBD5E1' }]}>{opt.label}</Text>
+                                    {value === opt.value && <Icon name="check" size={20} color="#60A5FA" style={{ position: 'absolute', right: 16 }} />}
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </View>
+                </BlurView>
+            </Modal>
+        </>
     );
 };
 
 export default function MaintenancesScreen({ navigation }) {
     const { hasPermission } = useContext(AuthContext);
+    const insets = useSafeAreaInsets();
+    
     const [maintenances, setMaintenances] = useState([]);
     const [summary, setSummary] = useState({ total_count: 0, this_month_count: 0, total_cost: 0 });
     const [downloadingFormat, setDownloadingFormat] = useState(null);
@@ -44,32 +70,46 @@ export default function MaintenancesScreen({ navigation }) {
     const [mechanics, setMechanics] = useState([]);
     const [noteSuggestions, setNoteSuggestions] = useState([]);
     const [titleSuggestions, setTitleSuggestions] = useState([]);
+    
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    
     const [filters, setFilters] = useState({ search: '', start_date: '', end_date: '' });
     const [activeFilters, setActiveFilters] = useState({ search: '', start_date: '', end_date: '' });
+    const [showFilters, setShowFilters] = useState(false);
 
     const [modalVisible, setModalVisible] = useState(false);
     const [saving, setSaving] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState({
-        vehicle_id: '',
-        service_date: new Date().toISOString().split('T')[0],
-        maintenance_type: 'Periyodik',
-        title: '',
-        km: '',
-        amount: '',
-        service_name: '',
-        description: ''
+        vehicle_id: '', service_date: new Date().toISOString().split('T')[0], maintenance_type: '',
+        title: '', km: '', amount: '', service_name: '', description: '', next_service_km: ''
     });
 
-    const [showCategorySelect, setShowCategorySelect] = useState(false);
-    const [showVehicleSelect, setShowVehicleSelect] = useState(false);
-    const [vehicleSearchQuery, setVehicleSearchQuery] = useState('');
-    const [showMechanicSelect, setShowMechanicSelect] = useState(false);
-    const [customMechanic, setCustomMechanic] = useState(false);
-    
     const categories = ['YAĞ BAKIMI', 'ALT YAĞLAMA', 'LASTİK BAKIMI', 'AKÜ BAKIMI', 'AĞIR BAKIM', 'ANTFRİZ BAKIMI', 'ARIZA/ONARIM', 'MUAYENE', 'DİĞER BAKIMLAR'];
+
+    // Animations
+    const scrollY = useRef(new Animated.Value(0)).current;
+    const blob1Anim = useRef(new Animated.Value(0)).current;
+    const blob2Anim = useRef(new Animated.Value(0)).current;
+    const flipAnims = useRef([...Array(60)].map(() => new Animated.Value(0))).current;
+
+    useEffect(() => {
+        const loop = Animated.loop(
+            Animated.sequence([
+                Animated.timing(blob1Anim, { toValue: 1, duration: 8000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+                Animated.timing(blob1Anim, { toValue: 0, duration: 8000, easing: Easing.inOut(Easing.sin), useNativeDriver: true })
+            ])
+        );
+        const loop2 = Animated.loop(
+            Animated.sequence([
+                Animated.timing(blob2Anim, { toValue: 1, duration: 10000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+                Animated.timing(blob2Anim, { toValue: 0, duration: 10000, easing: Easing.inOut(Easing.sin), useNativeDriver: true })
+            ])
+        );
+        loop.start(); loop2.start();
+        return () => { loop.stop(); loop2.stop(); };
+    }, []);
 
     const fetchData = async (isRefreshing = false) => {
         if (!isRefreshing) setLoading(true);
@@ -84,22 +124,24 @@ export default function MaintenancesScreen({ navigation }) {
                 api.get('/v1/maintenances/options')
             ]);
             
-            if (mRes.data && mRes.data.data) {
-                if (mRes.data.data.maintenances) {
-                    setMaintenances(mRes.data.data.maintenances);
-                }
-                if (mRes.data.data.summary) {
-                    setSummary(mRes.data.data.summary);
-                }
+            if (mRes.data?.data) {
+                setMaintenances(mRes.data.data.maintenances || []);
+                setSummary(mRes.data.data.summary || { total_count: 0, this_month_count: 0, total_cost: 0 });
             }
-            if (oRes.data && oRes.data.data) {
+            if (oRes.data?.data) {
                 if (oRes.data.data.vehicles) setVehicles(oRes.data.data.vehicles);
                 if (oRes.data.data.mechanics) setMechanics(oRes.data.data.mechanics);
                 if (oRes.data.data.noteSuggestions) setNoteSuggestions(oRes.data.data.noteSuggestions);
                 if (oRes.data.data.titleSuggestions) setTitleSuggestions(oRes.data.data.titleSuggestions);
             }
+
+            // Stagger animation
+            flipAnims.forEach(a => a.setValue(0));
+            Animated.stagger(80, flipAnims.map((anim) => 
+                Animated.spring(anim, { toValue: 1, friction: 7, tension: 40, useNativeDriver: true })
+            )).start();
+
         } catch (e) {
-            console.error(e);
             Alert.alert('Hata', 'Veriler yüklenirken bir sorun oluştu.');
         } finally {
             setLoading(false);
@@ -110,42 +152,22 @@ export default function MaintenancesScreen({ navigation }) {
     useEffect(() => { fetchData(); }, [activeFilters]);
 
     const openAdd = () => {
-        if (!hasPermission('maintenances.create')) {
-            Alert.alert('Yetki Yok', 'Bakım kaydı ekleme yetkiniz bulunmuyor.');
-            return;
-        }
-
-        const today = new Date();
-        const y = today.getFullYear();
-        const m = String(today.getMonth() + 1).padStart(2, '0');
-        const d = String(today.getDate()).padStart(2, '0');
-
+        if (!hasPermission('maintenances.create')) { Alert.alert('Yetki Yok', 'Bakım kaydı ekleme yetkiniz bulunmuyor.'); return; }
         setEditingId(null);
         setFormData({
-            vehicle_id: '',
-            service_date: `${y}-${m}-${d}`,
-            maintenance_type: '',
-            title: '',
-            km: '',
-            next_service_km: '',
-            amount: '',
-            service_name: '',
-            description: ''
+            vehicle_id: '', service_date: new Date().toISOString().split('T')[0], maintenance_type: '',
+            title: '', km: '', next_service_km: '', amount: '', service_name: '', description: ''
         });
-        setCustomMechanic(false);
         setModalVisible(true);
     };
 
     const openEdit = (item) => {
-        if (!hasPermission('maintenances.edit')) {
-            Alert.alert('Yetki Yok', 'Bakım kaydı düzenleme yetkiniz bulunmuyor.');
-            return;
-        }
+        if (!hasPermission('maintenances.edit')) { Alert.alert('Yetki Yok', 'Bakım kaydı düzenleme yetkiniz bulunmuyor.'); return; }
         setEditingId(item.id);
         setFormData({
-            vehicle_id: item.vehicle_id || '',
+            vehicle_id: item.vehicle_id ? item.vehicle_id.toString() : '',
             service_date: item.date ? item.date.split('T')[0] : new Date().toISOString().split('T')[0],
-            maintenance_type: item.type || '',
+            maintenance_type: item.type || item.maintenance_type || '',
             title: item.title || '',
             km: item.km ? item.km.toString() : '',
             next_service_km: item.next_km ? item.next_km.toString() : '',
@@ -153,35 +175,22 @@ export default function MaintenancesScreen({ navigation }) {
             service_name: item.service_name || '',
             description: item.description || ''
         });
-        
-        // Custom mechanic check
-        if (item.service_name && !mechanics.some(m => m.id === item.service_name)) {
-            setCustomMechanic(true);
-        } else {
-            setCustomMechanic(false);
-        }
         setModalVisible(true);
     };
 
     const handleSave = async () => {
-        if (!formData.vehicle_id) {
-            Alert.alert('Eksik Bilgi', 'Lütfen bir araç seçiniz.'); return;
+        if (!formData.vehicle_id || !formData.title || !formData.service_date || !formData.maintenance_type) {
+            Alert.alert('Eksik Bilgi', 'Araç, Tarih, Kategori ve İşlem Adı zorunludur.'); return;
         }
-        if (!formData.title || !formData.service_date || !formData.maintenance_type) {
-            Alert.alert('Eksik Bilgi', 'Tarih, Kategori ve İşlem Adı zorunludur.'); return;
-        }
-
         setSaving(true);
         try {
             const url = editingId ? `/v1/maintenances/${editingId}` : '/v1/maintenances';
             const method = editingId ? 'PUT' : 'POST';
             await api({ method, url, data: formData });
             
-            Alert.alert('Başarılı', editingId ? 'Bakım güncellendi.' : 'Bakım kaydedildi.');
             setModalVisible(false);
             fetchData();
         } catch (e) {
-            console.error(e);
             Alert.alert('Hata', 'Kayıt işlemi başarısız oldu.');
         } finally {
             setSaving(false);
@@ -189,10 +198,7 @@ export default function MaintenancesScreen({ navigation }) {
     };
 
     const confirmDelete = (id) => {
-        if (!hasPermission('maintenances.delete')) {
-            Alert.alert('Yetki Yok', 'Bakım kaydı silme yetkiniz bulunmuyor.');
-            return;
-        }
+        if (!hasPermission('maintenances.delete')) { Alert.alert('Yetki Yok', 'Yetkiniz bulunmuyor.'); return; }
         Alert.alert('Silinecek', 'Bu bakım kaydını silmek istediğinize emin misiniz?', [
             { text: 'İptal', style: 'cancel' },
             { text: 'Sil', style: 'destructive', onPress: async () => {
@@ -205,18 +211,11 @@ export default function MaintenancesScreen({ navigation }) {
     const handleDownload = async (format, isView = false) => {
         try {
             setDownloadingFormat(isView ? 'view' : format);
-            let token;
-            if (Platform.OS === 'web') {
-                token = await AsyncStorage.getItem('userToken');
-            } else {
-                token = await SecureStore.getItemAsync('userToken');
-            }
+            let token = Platform.OS === 'web' ? await AsyncStorage.getItem('userToken') : await SecureStore.getItemAsync('userToken');
             if (!token) throw new Error('Token not found');
 
             const params = new URLSearchParams();
             if (activeFilters.search) params.append('search', activeFilters.search);
-            if (activeFilters.vehicle_id) params.append('vehicle_id', activeFilters.vehicle_id);
-            if (activeFilters.maintenance_type) params.append('maintenance_type', activeFilters.maintenance_type);
             if (activeFilters.start_date) params.append('start_date', activeFilters.start_date);
             if (activeFilters.end_date) params.append('end_date', activeFilters.end_date);
 
@@ -226,34 +225,21 @@ export default function MaintenancesScreen({ navigation }) {
             const filename = `Bakim_Raporu_${new Date().getTime()}.${format === 'excel' ? 'xlsx' : 'pdf'}`;
             const fileUri = FileSystem.documentDirectory + filename;
 
-            const downloadRes = await FileSystem.downloadAsync(url, fileUri, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-
-            if (downloadRes.status !== 200) {
-                Alert.alert('Hata', 'Rapor oluşturulurken bir sorun oluştu.');
-                return;
-            }
+            const downloadRes = await FileSystem.downloadAsync(url, fileUri, { headers: { Authorization: `Bearer ${token}` } });
+            
+            if (downloadRes.status !== 200) { Alert.alert('Hata', 'Rapor oluşturulamadı.'); return; }
 
             if (isView && Platform.OS === 'android') {
                 const cUri = await FileSystem.getContentUriAsync(downloadRes.uri);
-                await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
-                    data: cUri,
-                    flags: 1,
-                    type: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                });
+                await IntentLauncher.startActivityAsync('android.intent.action.VIEW', { data: cUri, flags: 1, type: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             } else {
                 if (await Sharing.isAvailableAsync()) {
-                    await Sharing.shareAsync(downloadRes.uri, {
-                        UTI: format === 'pdf' ? 'com.adobe.pdf' : 'com.microsoft.excel.xls',
-                        dialogTitle: isView ? 'Görüntüle' : 'Dosyayı Kaydet / Paylaş'
-                    });
+                    await Sharing.shareAsync(downloadRes.uri, { UTI: format === 'pdf' ? 'com.adobe.pdf' : 'com.microsoft.excel.xls', dialogTitle: isView ? 'Görüntüle' : 'Dosyayı Paylaş' });
                 } else {
                     Alert.alert('Başarılı', 'Rapor indirildi: ' + downloadRes.uri);
                 }
             }
         } catch (e) {
-            console.error(e);
             Alert.alert('Hata', 'İndirme işlemi başarısız oldu.');
         } finally {
             setDownloadingFormat(null);
@@ -262,609 +248,396 @@ export default function MaintenancesScreen({ navigation }) {
 
     const getTypeStyle = (type) => {
         const t = (type || '').toUpperCase();
-        if (t.includes('LASTİK')) return { color: '#10B981', icon: 'tire', bg: '#D1FAE5' };
-        if (t.includes('AKÜ')) return { color: '#F59E0B', icon: 'car-battery', bg: '#FEF3C7' };
-        if (t.includes('AĞIR')) return { color: '#EF4444', icon: 'car-wrench', bg: '#FEE2E2' };
-        if (t.includes('ANTFRİZ') || t.includes('ANTİFRİZ')) return { color: '#3B82F6', icon: 'snowflake', bg: '#DBEAFE' };
-        if (t.includes('ALT YAĞLAMA')) return { color: '#06B6D4', icon: 'wrench', bg: '#CFFAFE' };
-        if (t.includes('YAĞ')) return { color: '#EAB308', icon: 'oil', bg: '#FEF9C3' };
-        if (t.includes('ARIZA')) return { color: '#EF4444', icon: 'alert-octagon-outline', bg: '#FEF2F2' };
-        if (t.includes('MUAYENE')) return { color: '#F59E0B', icon: 'shield-check-outline', bg: '#FFFBEB' };
-        return { color: '#6366F1', icon: 'tools', bg: '#E0E7FF' };
+        if (t.includes('LASTİK')) return { color: '#34D399', icon: 'tire', bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.3)' };
+        if (t.includes('AKÜ')) return { color: '#FBBF24', icon: 'car-battery', bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.3)' };
+        if (t.includes('AĞIR')) return { color: '#F87171', icon: 'car-wrench', bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.3)' };
+        if (t.includes('ANTFRİZ') || t.includes('ANTİFRİZ')) return { color: '#60A5FA', icon: 'snowflake', bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)' };
+        if (t.includes('ALT YAĞLAMA')) return { color: '#22D3EE', icon: 'wrench', bg: 'rgba(6,182,212,0.15)', border: 'rgba(6,182,212,0.3)' };
+        if (t.includes('YAĞ')) return { color: '#FACC15', icon: 'oil', bg: 'rgba(234,179,8,0.15)', border: 'rgba(234,179,8,0.3)' };
+        if (t.includes('ARIZA')) return { color: '#F87171', icon: 'alert-octagon-outline', bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.3)' };
+        if (t.includes('MUAYENE')) return { color: '#A78BFA', icon: 'shield-check-outline', bg: 'rgba(139,92,246,0.15)', border: 'rgba(139,92,246,0.3)' };
+        return { color: '#818CF8', icon: 'tools', bg: 'rgba(99,102,241,0.15)', border: 'rgba(99,102,241,0.3)' };
     };
 
-    const toTitleCase = (str) => {
-        if (!str) return '';
-        return str.toString().split(' ').map(word => {
-            if (!word) return '';
-            const first = word.charAt(0).toLocaleUpperCase('tr-TR');
-            const rest = word.slice(1).toLocaleLowerCase('tr-TR');
-            return first + rest;
-        }).join(' ');
+    const renderCard = ({ item, index }) => {
+        const animIndex = index % 60;
+        const flipAnim = flipAnims[animIndex] || new Animated.Value(1);
+        const ts = getTypeStyle(item.type || item.maintenance_type);
+
+        const animatedStyle = {
+            opacity: flipAnim,
+            transform: [
+                { perspective: 1000 },
+                { rotateX: flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['-90deg', '0deg'] }) },
+                { translateY: flipAnim.interpolate({ inputRange: [0, 1], outputRange: [50, 0] }) },
+                { scale: flipAnim.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0.8, 1.05, 1] }) }
+            ]
+        };
+
+        return (
+            <Animated.View style={[s.cardWrapper, animatedStyle]}>
+                <BlurView intensity={25} tint="dark" style={[s.card, { borderColor: ts.border }]}>
+                    <View style={s.cardHeader}>
+                        <View style={[s.iconBox, { backgroundColor: ts.bg }]}>
+                            <Icon name={ts.icon} size={26} color={ts.color} />
+                        </View>
+                        <View style={s.cardInfo}>
+                            <Text style={s.cardTitle}>{item.title}</Text>
+                            <View style={s.amountRow}>
+                                <Text style={s.amountText}>{fmtMoney(item.amount)}</Text>
+                                <View style={s.statusBadge}>
+                                    <View style={s.statusDot} />
+                                    <Text style={s.statusText}>Tamamlandı</Text>
+                                </View>
+                            </View>
+                            {item.description ? (
+                                <Text style={s.cardDesc} numberOfLines={2}>{item.description}</Text>
+                            ) : null}
+                        </View>
+                        <View style={s.cardActions}>
+                            <View style={s.plateBadge}>
+                                <Text style={s.plateText}>{item.vehicle?.plate || '?'}</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+                                <TouchableOpacity onPress={() => openEdit(item)}>
+                                    <Icon name="pencil" size={22} color="#60A5FA" />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => confirmDelete(item.id)}>
+                                    <Icon name="trash-can" size={22} color="#F87171" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+
+                    <View style={s.cardGrid}>
+                        <View style={s.gridRow}>
+                            <View style={s.gridCol}>
+                                <Text style={s.gridLabel}>TÜR</Text>
+                                <Text style={s.gridValue}>{item.maintenance_type || item.type || '-'}</Text>
+                            </View>
+                            <View style={s.gridDivider} />
+                            <View style={s.gridCol}>
+                                <Text style={[s.gridLabel, { color: '#FBBF24' }]}>TARİH</Text>
+                                <Text style={[s.gridValue, { color: '#F8FAFC' }]}>{item.service_date || item.date ? dayjs(item.service_date || item.date).format('DD.MM.YYYY') : '-'}</Text>
+                                <Text style={[s.gridSub, { color: '#FCD34D' }]}>{item.next_service_date || item.next_date ? `Sonraki: ${dayjs(item.next_service_date || item.next_date).format('DD.MM.YYYY')}` : 'Sonraki tarih yok'}</Text>
+                            </View>
+                        </View>
+                        <View style={s.gridHDivider} />
+                        <View style={s.gridRow}>
+                            <View style={s.gridCol}>
+                                <Text style={s.gridLabel}>SERVİS</Text>
+                                <Text style={s.gridValue} numberOfLines={1}>{item.service_name || '-'}</Text>
+                            </View>
+                            <View style={s.gridDivider} />
+                            <View style={s.gridCol}>
+                                <Text style={[s.gridLabel, { color: '#34D399' }]}>KİLOMETRE</Text>
+                                <Text style={[s.gridValue, { color: '#F8FAFC' }]}>{item.km ? `${fmtKm(item.km)} KM` : '-'}</Text>
+                                <Text style={[s.gridSub, { color: '#6EE7B7' }]}>{item.next_service_km || item.next_km ? `Sonraki: ${fmtKm(item.next_service_km || item.next_km)} KM` : 'Sonraki KM yok'}</Text>
+                            </View>
+                        </View>
+                    </View>
+                </BlurView>
+            </Animated.View>
+        );
     };
 
     const renderHeader = () => (
-        <View style={st.kpiContainer}>
-            <View style={st.kpiRow}>
-                <LinearGradient colors={['#60A5FA', '#2563EB', '#1D4ED8']} locations={[0, 0.5, 1]} style={[st.kpiCard, { flex: 1, marginRight: 8 }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                    <View style={st.kpiGlowTop} />
-                    <Image source={{ uri: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Hammer%20and%20Wrench.png' }} style={[st.kpiIconBg, { width: 80, height: 80, opacity: 1, right: -10, bottom: -10 }]} resizeMode="contain" />
-                    <Text style={st.kpiTitle}>Toplam Bakım</Text>
-                    <Text style={st.kpiValue}>{summary.total_count}</Text>
-                    <Text style={st.kpiSub}>Sistemde kayıtlı işlemler</Text>
-                </LinearGradient>
-                
-                <TouchableOpacity 
-                    style={{ flex: 1, marginLeft: 8 }}
-                    onPress={() => {
-                        const now = new Date();
-                        const y = now.getFullYear();
-                        const m = String(now.getMonth() + 1).padStart(2, '0');
-                        const firstDay = `${y}-${m}-01`;
-                        const lastDay = new Date(y, now.getMonth() + 1, 0).toISOString().split('T')[0];
-                        setFilters({...filters, start_date: firstDay, end_date: lastDay});
-                        setActiveFilters({...activeFilters, start_date: firstDay, end_date: lastDay});
-                    }}
-                >
-                    <LinearGradient colors={['#34D399', '#059669', '#047857']} locations={[0, 0.5, 1]} style={[st.kpiCard]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                        <View style={st.kpiGlowTop} />
-                        <Image source={{ uri: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Spiral%20Calendar.png' }} style={[st.kpiIconBg, { width: 80, height: 80, opacity: 1, right: -10, bottom: -10 }]} resizeMode="contain" />
-                        <Text style={st.kpiTitle}>Bu Ay Yapılan</Text>
-                        <Text style={st.kpiValue}>{summary.this_month_count}</Text>
-                        <Text style={st.kpiSub}>Tamamlanan kayıtlar</Text>
-                    </LinearGradient>
-                </TouchableOpacity>
-            </View>
-            <View style={[st.kpiRow, { marginTop: 16 }]}>
-                <LinearGradient colors={['#FB7185', '#E11D48', '#BE123C']} locations={[0, 0.5, 1]} style={[st.kpiCard, { flex: 1 }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                    <View style={st.kpiGlowTop} />
-                    <Image source={{ uri: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Money%20Bag.png' }} style={[st.kpiIconBg, { width: 100, height: 100, opacity: 1, right: -15, bottom: -15 }]} resizeMode="contain" />
-                    <Text style={st.kpiTitle}>Toplam Maliyet</Text>
-                    <Text style={st.kpiValue}>{fmtMoney(summary.total_cost)}</Text>
-                    <Text style={st.kpiSub}>Tüm bakım işlemlerinin maliyeti</Text>
-                </LinearGradient>
-            </View>
-
-            {/* Export Actions Row */}
-            <View style={st.exportActionsRow}>
-                <TouchableOpacity 
-                    style={[st.exportBtn, { flex: 1, borderColor: '#10B981', backgroundColor: '#ECFDF5' }]} 
-                    onPress={() => handleDownload('excel', false)}
-                    disabled={downloadingFormat !== null}
-                >
-                    {downloadingFormat === 'excel' ? <ActivityIndicator size="small" color="#10B981" /> : <Icon name="file-excel" size={16} color="#10B981" />}
-                    <Text style={[st.exportBtnText, { color: '#10B981', fontSize: 11 }]} numberOfLines={1}>Excel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                    style={[st.exportBtn, { flex: 1, borderColor: '#EF4444', backgroundColor: '#FEF2F2' }]} 
-                    onPress={() => handleDownload('pdf', false)}
-                    disabled={downloadingFormat !== null}
-                >
-                    {downloadingFormat === 'pdf' ? <ActivityIndicator size="small" color="#EF4444" /> : <Icon name="file-pdf-box" size={16} color="#EF4444" />}
-                    <Text style={[st.exportBtnText, { color: '#EF4444', fontSize: 11 }]} numberOfLines={1}>PDF İndir</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                    style={[st.exportBtn, { flex: 1, borderColor: '#3B82F6', backgroundColor: '#EFF6FF' }]} 
-                    onPress={() => handleDownload('pdf', true)}
-                    disabled={downloadingFormat !== null}
-                >
-                    {downloadingFormat === 'view' ? <ActivityIndicator size="small" color="#3B82F6" /> : <Icon name="eye" size={16} color="#3B82F6" />}
-                    <Text style={[st.exportBtnText, { color: '#3B82F6', fontSize: 11 }]} numberOfLines={1}>PDF Gör</Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* Filter Section */}
-            <View style={st.filterCard}>
-                <Text style={st.filterCardTitle}>Kayıtları Filtrele</Text>
-                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
-                    <View style={{ flex: 1 }}>
-                        <DatePickerInput 
-                            label="BAŞLANGIÇ TARİHİ" 
-                            value={filters.start_date} 
-                            onChange={(d) => setFilters({...filters, start_date: d})}
-                            placeholder="Seçiniz"
-                        />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                        <DatePickerInput 
-                            label="BİTİŞ TARİHİ" 
-                            value={filters.end_date} 
-                            onChange={(d) => setFilters({...filters, end_date: d})}
-                            placeholder="Seçiniz"
-                        />
-                    </View>
+        <View style={{ marginBottom: 20 }}>
+            {/* KPIs */}
+            <View style={s.kpiRow}>
+                <View style={s.kpiWrapper}>
+                    <BlurView intensity={20} tint="dark" style={[s.kpiCardFix, { borderColor: 'rgba(59,130,246,0.3)' }]}>
+                        <View style={[s.kpiIconWrap, { backgroundColor: 'rgba(59,130,246,0.15)' }]}><Icon name="tools" size={24} color="#60A5FA" /></View>
+                        <Text style={s.kpiValue}>{summary.total_count}</Text>
+                        <Text style={s.kpiLabel}>Toplam Bakım</Text>
+                    </BlurView>
                 </View>
-                <FormField 
-                    placeholder="Araç plakası, servis veya bakım adı..."
-                    value={filters.search}
-                    onChangeText={(t) => setFilters({...filters, search: t})}
-                    icon="magnify"
-                />
-                <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
-                    <TouchableOpacity style={st.filterClearBtn} onPress={() => {
-                        setFilters({ search: '', start_date: '', end_date: '' });
-                        setActiveFilters({ search: '', start_date: '', end_date: '' });
-                    }}>
-                        <Text style={st.filterClearText}>Temizle</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={st.filterBtn} onPress={() => setActiveFilters(filters)}>
-                        <Icon name="filter-variant" size={18} color="#fff" />
-                        <Text style={st.filterBtnText}>Filtrele</Text>
-                    </TouchableOpacity>
+                <View style={[s.kpiWrapper, { marginHorizontal: 12 }]}>
+                    <BlurView intensity={20} tint="dark" style={[s.kpiCardFix, { borderColor: 'rgba(16,185,129,0.3)' }]}>
+                        <View style={[s.kpiIconWrap, { backgroundColor: 'rgba(16,185,129,0.15)' }]}><Icon name="calendar-check" size={24} color="#34D399" /></View>
+                        <Text style={s.kpiValue}>{summary.this_month_count}</Text>
+                        <Text style={s.kpiLabel}>Bu Ay Yapılan</Text>
+                    </BlurView>
                 </View>
+                <View style={s.kpiWrapper}>
+                    <BlurView intensity={20} tint="dark" style={[s.kpiCardFix, { borderColor: 'rgba(239,68,68,0.3)' }]}>
+                        <View style={[s.kpiIconWrap, { backgroundColor: 'rgba(239,68,68,0.15)' }]}><Icon name="currency-try" size={24} color="#F87171" /></View>
+                        <Text style={s.kpiValue} numberOfLines={1} adjustsFontSizeToFit>{fmtMoney(summary.total_cost)}</Text>
+                        <Text style={s.kpiLabel}>Top. Maliyet</Text>
+                    </BlurView>
+                </View>
+            </View>
+
+            {/* Actions & Filters */}
+            <View style={s.actionsRow}>
+                <TouchableOpacity style={s.actionBtn} onPress={() => handleDownload('excel')} disabled={downloadingFormat !== null}>
+                    <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFillObject} />
+                    {downloadingFormat === 'excel' ? <ActivityIndicator size="small" color="#34D399" /> : <Icon name="file-excel" size={20} color="#34D399" />}
+                </TouchableOpacity>
+                <TouchableOpacity style={s.actionBtn} onPress={() => handleDownload('pdf')} disabled={downloadingFormat !== null}>
+                    <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFillObject} />
+                    {downloadingFormat === 'pdf' ? <ActivityIndicator size="small" color="#F87171" /> : <Icon name="file-pdf-box" size={20} color="#F87171" />}
+                </TouchableOpacity>
+                <TouchableOpacity style={s.actionBtn} onPress={() => handleDownload('pdf', true)} disabled={downloadingFormat !== null}>
+                    <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFillObject} />
+                    {downloadingFormat === 'view' ? <ActivityIndicator size="small" color="#60A5FA" /> : <Icon name="eye" size={20} color="#60A5FA" />}
+                </TouchableOpacity>
+                <TouchableOpacity style={[s.actionBtn, { flex: 2, backgroundColor: showFilters ? 'rgba(59,130,246,0.3)' : 'transparent' }]} onPress={() => setShowFilters(!showFilters)}>
+                    <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFillObject} />
+                    <Icon name="filter-variant" size={20} color="#F8FAFC" />
+                    <Text style={{ color: '#F8FAFC', fontWeight: '800', marginLeft: 8 }}>Filtrele</Text>
+                </TouchableOpacity>
             </View>
         </View>
     );
 
-    const renderItem = ({ item }) => {
-        const ts = getTypeStyle(item.type || item.maintenance_type);
-        const hasDesc = item.description && item.description.trim() !== '';
-
-        return (
-            <View style={[st.card, { borderLeftColor: ts.color }]}>
-                <View style={st.cardHeader}>
-                    <View style={[st.iconBox, { backgroundColor: ts.bg }]}>
-                        <Icon name={ts.icon} size={24} color={ts.color} />
-                    </View>
-                    <View style={{ flex: 1, paddingLeft: 12, paddingRight: 8 }}>
-                        <Text style={st.cardTitle}>{toTitleCase(item.title)}</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                            <Text style={st.amountTextSmall}>{fmtMoney(item.amount)}</Text>
-                            <View style={st.statusBadge}>
-                                <View style={st.statusDot} />
-                                <Text style={st.statusText}>Tamamlandı</Text>
-                            </View>
-                        </View>
-                        <Text style={[st.cardDesc, hasDesc && { color: '#EF4444' }]}>
-                            {hasDesc ? toTitleCase(item.description) : 'Açıklama yok'}
-                        </Text>
-                    </View>
-                    <View style={{ alignItems: 'flex-end', justifyContent: 'flex-start' }}>
-                        <BlinkingPlate plate={item.vehicle?.plate || 'Bilinmiyor'} />
-                        <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
-                            <TouchableOpacity onPress={() => openEdit(item)} style={{ padding: 4 }}>
-                                <Icon name="pencil-outline" size={20} color="#3B82F6" />
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => confirmDelete(item.id)} style={{ padding: 4 }}>
-                                <Icon name="trash-can-outline" size={20} color="#EF4444" />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-
-                {/* 2x2 Grid */}
-                <View style={st.cardGrid}>
-                    <View style={st.gridRow}>
-                        <View style={st.gridCol}>
-                            <View style={st.gridLabelRow}>
-                                <Icon name="tag-outline" size={14} color="#64748B" />
-                                <Text style={st.gridLabel}>TÜR</Text>
-                            </View>
-                            <Text style={st.gridValue}>{toTitleCase(item.maintenance_type || item.type) || '-'}</Text>
-                        </View>
-                        <View style={st.gridDivider} />
-                        <View style={st.gridCol}>
-                            <View style={st.gridLabelRow}>
-                                <Icon name="calendar-blank-outline" size={14} color="#F59E0B" />
-                                <Text style={[st.gridLabel, { color: '#F59E0B' }]}>TARİH</Text>
-                            </View>
-                            <Text style={[st.gridValue, { color: '#D97706' }]}>{item.service_date || item.date ? new Date(item.service_date || item.date).toLocaleDateString('tr-TR') : '-'}</Text>
-                            <Text style={[st.gridSubValue, { color: '#FBBF24' }]}>{item.next_service_date || item.next_date ? `Sonraki: ${new Date(item.next_service_date || item.next_date).toLocaleDateString('tr-TR')}` : 'Sonraki tarih yok'}</Text>
-                        </View>
-                    </View>
-                    
-                    <View style={st.gridHorizontalDivider} />
-                    
-                    <View style={st.gridRow}>
-                        <View style={st.gridCol}>
-                            <View style={st.gridLabelRow}>
-                                <Icon name="store-outline" size={14} color="#64748B" />
-                                <Text style={st.gridLabel}>SERVİS</Text>
-                            </View>
-                            <Text style={st.gridValue}>{toTitleCase(item.service_name) || '-'}</Text>
-                        </View>
-                        <View style={st.gridDivider} />
-                        <View style={st.gridCol}>
-                            <View style={st.gridLabelRow}>
-                                <Icon name="speedometer" size={14} color="#10B981" />
-                                <Text style={[st.gridLabel, { color: '#10B981' }]}>KİLOMETRE</Text>
-                            </View>
-                            <Text style={[st.gridValue, { color: '#059669' }]}>{item.km ? `${fmtKm(item.km)} KM` : '-'}</Text>
-                            <Text style={[st.gridSubValue, { color: '#34D399' }]}>{item.next_service_km || item.next_km ? `Sonraki: ${fmtKm(item.next_service_km || item.next_km)} KM` : 'Sonraki KM yok'}</Text>
-                        </View>
-                    </View>
-                </View>
-            </View>
-        );
-    };
-
     return (
-        <View style={st.container}>
-            <View style={{ backgroundColor: '#fff', zIndex: 10, paddingTop: Platform.OS === 'android' ? 44 : 54, paddingBottom: 12 }}>
-                <View style={st.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-                        <Icon name="chevron-left" size={26} color="#0F172A" />
-                    </TouchableOpacity>
-                    <View style={st.headerCenter}>
-                        <Text style={st.headerTitle}>Bakım / Tamir</Text>
-                        <Text style={st.headerSubtitle}>Tüm Araç Bakım Kayıtları</Text>
+        <View style={s.container}>
+            {/* 3D Animated Background */}
+            <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateY: scrollY.interpolate({ inputRange: [-100, 0, 500], outputRange: [-20, 0, 100], extrapolate: 'clamp' }) }] }]}>
+                <LinearGradient colors={['#020617', '#0F172A', '#1E1B4B']} style={StyleSheet.absoluteFillObject} />
+                <Animated.View style={[s.bgBlob1, { transform: [{ translateY: blob1Anim.interpolate({ inputRange:[0,1], outputRange:[0, 50] }) }, { scale: blob1Anim.interpolate({ inputRange:[0,1], outputRange:[1, 1.2] }) }] }]} />
+                <Animated.View style={[s.bgBlob2, { transform: [{ translateX: blob2Anim.interpolate({ inputRange:[0,1], outputRange:[0, -50] }) }, { scale: blob2Anim.interpolate({ inputRange:[0,1], outputRange:[1, 1.3] }) }] }]} />
+            </Animated.View>
+
+            <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
+                {/* Header */}
+                <View style={s.header}>
+                    <View style={{ flex: 1 }}>
+                        <Text style={s.headerTitle}>Bakım & Tamir</Text>
+                        <Text style={s.headerSub}>Tüm Araç Bakım Kayıtları</Text>
                     </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={{ flexDirection: 'row', gap: 10 }}>
                         {hasPermission('maintenances.view') && (
-                            <TouchableOpacity onPress={() => navigation.navigate('MaintenanceSettings')} style={st.headerSettingsBtn}>
-                                <Icon name="cog-outline" size={22} color="#0F172A" />
+                            <TouchableOpacity style={s.headerIconBtn} onPress={() => navigation.navigate('MaintenanceSettings')}>
+                                <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFillObject} />
+                                <Icon name="cog" size={22} color="#FFF" />
                             </TouchableOpacity>
                         )}
-                        {hasPermission('maintenances.create') ? (
-                            <TouchableOpacity onPress={openAdd} style={st.headerAddBtn}>
-                                <Icon name="plus" size={22} color="#fff" />
+                        {hasPermission('maintenances.create') && (
+                            <TouchableOpacity style={s.headerIconBtn} onPress={openAdd}>
+                                <LinearGradient colors={['#8B5CF6', '#4F46E5']} style={StyleSheet.absoluteFillObject} />
+                                <Icon name="plus" size={24} color="#FFF" />
                             </TouchableOpacity>
-                        ) : (
-                            <View style={{ width: 40 }} />
-                        )}
-                    </View>
-                </View>
-            </View>
-
-            {loading ? (
-                <View style={st.loader}><ActivityIndicator size="large" color="#3B82F6" /></View>
-            ) : (
-                <FlatList
-                    data={maintenances}
-                    ListHeaderComponent={renderHeader()}
-                    renderItem={renderItem}
-                    keyExtractor={item => item.id.toString()}
-                    contentContainerStyle={st.listContent}
-                    showsVerticalScrollIndicator={false}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchData(true)} tintColor="#3B82F6" />}
-                    ListEmptyComponent={<EmptyState title="Bakım Kaydı Yok" message="Sistemde henüz bakım kaydı bulunmuyor." icon="wrench-outline" />}
-                />
-            )}
-
-            {/* Main Form Modal */}
-            <Modal visible={modalVisible} animationType="slide" transparent>
-                <View style={st.modalOverlay}>
-                    <View style={st.modalContent}>
-                        <View style={st.modalHeader}>
-                            <Text style={st.modalTitle}>{editingId ? 'Bakım Düzenle' : 'Yeni Bakım Ekle'}</Text>
-                            <TouchableOpacity style={st.modalCloseBtn} onPress={() => setModalVisible(false)}>
-                                <Icon name="close" size={24} color="#64748B" />
-                            </TouchableOpacity>
-                        </View>
-                        
-                        <ScrollView contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={false}>
-                            <Text style={st.inputLabel}>Araç *</Text>
-                            <TouchableOpacity style={st.selectBtn} onPress={() => { setShowVehicleSelect(true); setVehicleSearchQuery(''); }}>
-                                <Text style={[st.selectBtnText, !formData.vehicle_id && { color: '#94A3B8' }]}>
-                                    {formData.vehicle_id ? (vehicles?.find(v => v.id === formData.vehicle_id)?.plate || 'Seçildi') : 'Araç Seçiniz'}
-                                </Text>
-                                <Icon name="chevron-down" size={20} color="#64748B" />
-                            </TouchableOpacity>
-
-                            <View style={{ marginTop: 16 }}>
-                                <DatePickerInput
-                                    label="Tarih *"
-                                    value={formData.service_date}
-                                    onChange={(val) => setFormData({ ...formData, service_date: val })}
-                                />
-                            </View>
-
-                            <Text style={[st.inputLabel, { marginTop: 16 }]}>Kategori *</Text>
-                            <TouchableOpacity style={st.selectBtn} onPress={() => setShowCategorySelect(true)}>
-                                <Text style={[st.selectBtnText, !formData.maintenance_type && { color: '#94A3B8' }]}>
-                                    {formData.maintenance_type || 'KATEGORİ SEÇİNİZ'}
-                                </Text>
-                                <Icon name="chevron-down" size={20} color="#64748B" />
-                            </TouchableOpacity>
-
-                            <Text style={[st.inputLabel, { marginTop: 16 }]}>Araca Yapılan İşlem Adı *</Text>
-                            <FormField
-                                value={formData.title}
-                                onChangeText={(val) => setFormData({ ...formData, title: val })}
-                                placeholder="Örn: Yağ Bakımı Yapıldı"
-                            />
-                            {titleSuggestions?.length > 0 && formData.title?.length > 0 && (
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }} keyboardShouldPersistTaps="handled">
-                                    {titleSuggestions.filter(s => s && s.toUpperCase().includes(formData.title.toUpperCase()) && s.toUpperCase() !== formData.title.toUpperCase()).map((s, idx) => (
-                                        <TouchableOpacity key={idx} style={st.suggestionPill} onPress={() => setFormData({...formData, title: s})}>
-                                            <Text style={st.suggestionText}>{s}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
-                            )}
-
-                            <Text style={[st.inputLabel, { marginTop: 16 }]}>Araç Bakım KM'si</Text>
-                            <FormField
-                                value={formData.km}
-                                onChangeText={(val) => setFormData({ ...formData, km: val })}
-                                placeholder="Örn: 150000"
-                                keyboardType="numeric"
-                            />
-
-                            <Text style={[st.inputLabel, { marginTop: 16 }]}>Bir Sonraki Bakım KM</Text>
-                            <FormField
-                                value={formData.next_service_km || ''}
-                                onChangeText={(val) => setFormData({ ...formData, next_service_km: val })}
-                                placeholder="Opsiyonel"
-                                keyboardType="numeric"
-                            />
-                            <Text style={st.helperText}>YAĞ BAKIMI veya ALT YAĞLAMA seçildiğinde otomatik hesaplanır.</Text>
-
-                            <Text style={[st.inputLabel, { marginTop: 16 }]}>Tutar</Text>
-                            <FormField
-                                value={formData.amount}
-                                onChangeText={(val) => setFormData({ ...formData, amount: val })}
-                                placeholder="₺"
-                                keyboardType="numeric"
-                            />
-
-                            <Text style={[st.inputLabel, { marginTop: 16 }]}>Usta</Text>
-                            <TouchableOpacity style={st.selectBtn} onPress={() => setShowMechanicSelect(true)}>
-                                <Text style={[st.selectBtnText, !formData.service_name && !customMechanic && { color: '#94A3B8' }]}>
-                                    {customMechanic ? 'DİĞER' : (formData.service_name || 'SEÇİNİZ')}
-                                </Text>
-                                <Icon name="chevron-down" size={20} color="#64748B" />
-                            </TouchableOpacity>
-
-                            {customMechanic && (
-                                <View style={{ marginTop: 12 }}>
-                                    <FormField
-                                        value={formData.service_name}
-                                        onChangeText={(val) => setFormData({ ...formData, service_name: val })}
-                                        placeholder="Usta veya Servis Adı Yazınız"
-                                    />
-                                </View>
-                            )}
-
-                            <Text style={[st.inputLabel, { marginTop: 16 }]}>Not</Text>
-                            <FormField
-                                value={formData.description}
-                                onChangeText={(val) => setFormData({ ...formData, description: val })}
-                                placeholder="Bakım ile ilgili notlar..."
-                                multiline
-                                numberOfLines={4}
-                                style={{ height: 100, textAlignVertical: 'top' }}
-                            />
-                            {noteSuggestions?.length > 0 && formData.description?.length > 0 && (
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }} keyboardShouldPersistTaps="handled">
-                                    {noteSuggestions.filter(s => s && s.toUpperCase().includes(formData.description.toUpperCase()) && s.toUpperCase() !== formData.description.toUpperCase()).map((s, idx) => (
-                                        <TouchableOpacity key={idx} style={st.suggestionPill} onPress={() => setFormData({...formData, description: s})}>
-                                            <Text style={st.suggestionText}>{s}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
-                            )}
-
-                            <TouchableOpacity 
-                                style={[st.saveBtn, saving && { opacity: 0.7 }]} 
-                                onPress={handleSave} 
-                                disabled={saving}
-                            >
-                                {saving ? <ActivityIndicator color="#fff" /> : <Text style={st.saveBtnText}>{editingId ? 'Güncelle' : 'Kaydet'}</Text>}
-                            </TouchableOpacity>
-                            <View style={{ height: 60 }} />
-                        </ScrollView>
-
-                        {/* İç İçe Modal Çözümü (Android Fix) -> Absolute Positioned Overlay */}
-                        {showVehicleSelect && (
-                            <View style={[StyleSheet.absoluteFill, { backgroundColor: '#fff', borderRadius: 24, zIndex: 100 }]}>
-                                <View style={st.modalHeader}>
-                                    <Text style={st.modalTitle}>Araç Seçiniz</Text>
-                                    <TouchableOpacity style={st.modalClose} onPress={() => setShowVehicleSelect(false)}>
-                                        <Icon name="close" size={20} color="#64748B" />
-                                    </TouchableOpacity>
-                                </View>
-                                
-                                <View style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }}>
-                                    <FormField 
-                                        placeholder="Plaka Ara..." 
-                                        value={vehicleSearchQuery} 
-                                        onChangeText={setVehicleSearchQuery}
-                                        icon="magnify"
-                                        autoCapitalize="characters"
-                                    />
-                                </View>
-
-                                <ScrollView>
-                                    {vehicles?.filter(v => v.plate.toUpperCase().includes(vehicleSearchQuery.toUpperCase())).map(v => (
-                                        <TouchableOpacity 
-                                            key={v.id} 
-                                            style={[st.categoryOption, formData.vehicle_id === v.id && st.categoryOptionActive]}
-                                            onPress={() => {
-                                                setFormData({...formData, vehicle_id: v.id});
-                                                setShowVehicleSelect(false);
-                                            }}
-                                        >
-                                            <Icon name="car" size={22} color={formData.vehicle_id === v.id ? '#3B82F6' : '#94A3B8'} />
-                                            <Text style={[st.categoryOptionText, formData.vehicle_id === v.id && st.categoryOptionTextActive, { flex: 1, marginLeft: 12 }]}>
-                                                {v.plate}
-                                            </Text>
-                                            {formData.vehicle_id === v.id && <Icon name="check-circle" size={22} color="#3B82F6" />}
-                                        </TouchableOpacity>
-                                    ))}
-                                    <View style={{height:30}}/>
-                                </ScrollView>
-                            </View>
-                        )}
-
-                        {showCategorySelect && (
-                            <View style={[StyleSheet.absoluteFill, { backgroundColor: '#fff', borderRadius: 24, zIndex: 100 }]}>
-                                <View style={st.modalHeader}>
-                                    <Text style={st.modalTitle}>Kategori Seçiniz</Text>
-                                    <TouchableOpacity style={st.modalClose} onPress={() => setShowCategorySelect(false)}>
-                                        <Icon name="close" size={20} color="#64748B" />
-                                    </TouchableOpacity>
-                                </View>
-                                <ScrollView>
-                                    {categories.map((cat, idx) => {
-                                        const cIcon = getTypeStyle(cat);
-                                        return (
-                                        <TouchableOpacity 
-                                            key={idx} 
-                                            style={[st.categoryOption, formData.maintenance_type === cat && st.categoryOptionActive]}
-                                            onPress={() => {
-                                                let newTitle = formData.title;
-                                                if (!formData.title || formData.title.endsWith('Yapıldı') || formData.title.endsWith('Bakımı')) {
-                                                    if (cat === 'YAĞ BAKIMI') newTitle = 'Yağ Bakımı Yapıldı';
-                                                    else if (cat === 'ALT YAĞLAMA') newTitle = 'Alt Yağlama Yapıldı';
-                                                    else if (cat === 'LASTİK BAKIMI') newTitle = 'Lastik Bakımı Yapıldı';
-                                                    else if (cat === 'AKÜ BAKIMI') newTitle = 'Akü Bakımı Yapıldı';
-                                                    else if (cat === 'AĞIR BAKIM') newTitle = 'Ağır Bakım Yapıldı';
-                                                    else if (cat === 'ANTFRİZ BAKIMI') newTitle = 'Antfriz Bakımı Yapıldı';
-                                                    else if (cat === 'ARIZA/ONARIM') newTitle = 'Arıza Onarım Yapıldı';
-                                                    else if (cat === 'MUAYENE') newTitle = 'Muayene Yapıldı';
-                                                }
-
-                                                setFormData({...formData, maintenance_type: cat, title: newTitle});
-                                                setShowCategorySelect(false);
-                                            }}
-                                        >
-                                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: cIcon.bg, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                                                    <Icon name={cIcon.icon} size={18} color={cIcon.color} />
-                                                </View>
-                                                <Text style={[st.categoryOptionText, formData.maintenance_type === cat && st.categoryOptionTextActive]}>
-                                                    {cat}
-                                                </Text>
-                                            </View>
-                                            {formData.maintenance_type === cat && <Icon name="check-circle" size={20} color="#3B82F6" />}
-                                        </TouchableOpacity>
-                                        );
-                                    })}
-                                    <View style={{height:30}}/>
-                                </ScrollView>
-                            </View>
-                        )}
-
-                        {showMechanicSelect && (
-                            <View style={[StyleSheet.absoluteFill, { backgroundColor: '#fff', borderRadius: 24, zIndex: 100 }]}>
-                                <View style={st.modalHeader}>
-                                    <Text style={st.modalTitle}>Usta Seçiniz</Text>
-                                    <TouchableOpacity style={st.modalClose} onPress={() => setShowMechanicSelect(false)}>
-                                        <Icon name="close" size={20} color="#64748B" />
-                                    </TouchableOpacity>
-                                </View>
-                                <ScrollView>
-                                    {mechanics?.map((m, idx) => (
-                                        <TouchableOpacity 
-                                            key={idx} 
-                                            style={[st.categoryOption, formData.service_name === m && !customMechanic && st.categoryOptionActive]}
-                                            onPress={() => {
-                                                setCustomMechanic(false);
-                                                setFormData({...formData, service_name: m});
-                                                setShowMechanicSelect(false);
-                                            }}
-                                        >
-                                            <Icon name="account-wrench" size={22} color={formData.service_name === m && !customMechanic ? '#3B82F6' : '#94A3B8'} />
-                                            <Text style={[st.categoryOptionText, formData.service_name === m && !customMechanic && st.categoryOptionTextActive, { marginLeft: 12, flex: 1 }]}>
-                                                {m}
-                                            </Text>
-                                            {formData.service_name === m && !customMechanic && <Icon name="check-circle" size={22} color="#3B82F6" />}
-                                        </TouchableOpacity>
-                                    ))}
-                                    <TouchableOpacity 
-                                        style={[st.categoryOption, customMechanic && st.categoryOptionActive]}
-                                        onPress={() => {
-                                            setCustomMechanic(true);
-                                            setFormData({...formData, service_name: ''});
-                                            setShowMechanicSelect(false);
-                                        }}
-                                    >
-                                        <Icon name="pencil" size={22} color={customMechanic ? '#3B82F6' : '#94A3B8'} />
-                                        <Text style={[st.categoryOptionText, customMechanic && st.categoryOptionTextActive, { marginLeft: 12, flex: 1 }]}>
-                                            DİĞER
-                                        </Text>
-                                        {customMechanic && <Icon name="check-circle" size={22} color="#3B82F6" />}
-                                    </TouchableOpacity>
-                                    <View style={{height:30}}/>
-                                </ScrollView>
-                            </View>
                         )}
                     </View>
                 </View>
+
+                {/* Filter Modal Overlay */}
+                <Modal visible={showFilters} transparent animationType="slide">
+                    <BlurView intensity={40} tint="dark" style={s.modalOverlay}>
+                        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setShowFilters(false)} />
+                        <BlurView intensity={50} tint="dark" style={[s.bottomSheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+                            <View style={s.sheetHandle} />
+                            <Text style={s.sheetTitle}>Kayıtları Filtrele</Text>
+                            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+                                <View style={{ flex: 1 }}>
+                                    <DatePickerInput label="BAŞLANGIÇ" value={filters.start_date} onChange={(d) => setFilters({...filters, start_date: d})} darkTheme />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <DatePickerInput label="BİTİŞ" value={filters.end_date} onChange={(d) => setFilters({...filters, end_date: d})} darkTheme />
+                                </View>
+                            </View>
+                            <View style={s.fieldWrap}>
+                                <Icon name="magnify" size={20} color="#94A3B8" style={{ marginRight: 10 }} />
+                                <TextInput style={s.fieldInput} placeholderTextColor="#64748B" placeholder="Plaka, servis, bakım adı..." value={filters.search} onChangeText={t => setFilters({...filters, search: t})} />
+                            </View>
+                            <View style={s.formActions}>
+                                <TouchableOpacity style={s.cancelBtn} onPress={() => { setFilters({ search: '', start_date: '', end_date: '' }); setActiveFilters({ search: '', start_date: '', end_date: '' }); setShowFilters(false); }}>
+                                    <Text style={s.cancelBtnText}>Temizle</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={s.saveBtn} onPress={() => { setActiveFilters(filters); setShowFilters(false); }}>
+                                    <LinearGradient colors={['#3B82F6', '#2563EB']} style={StyleSheet.absoluteFillObject} />
+                                    <Text style={s.saveBtnText}>Uygula</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </BlurView>
+                    </BlurView>
+                </Modal>
+
+                {/* List */}
+                {loading ? (
+                    <View style={s.loader}><ActivityIndicator size="large" color="#60A5FA" /></View>
+                ) : (
+                    <Animated.FlatList
+                        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+                        scrollEventThrottle={16}
+                        data={maintenances}
+                        keyExtractor={item => item.id.toString()}
+                        renderItem={renderCard}
+                        ListHeaderComponent={renderHeader}
+                        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100, paddingTop: 10 }}
+                        showsVerticalScrollIndicator={false}
+                        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchData(true)} tintColor="#60A5FA" />}
+                        ListEmptyComponent={
+                            <View style={s.empty}>
+                                <Image source={emoji('Objects/Hammer and Wrench')} style={{width: 64, height: 64, opacity: 0.8}} resizeMode="contain" />
+                                <Text style={s.emptyText}>Bakım kaydı bulunamadı.</Text>
+                            </View>
+                        }
+                    />
+                )}
+
+            </SafeAreaView>
+
+            {/* Add/Edit Form Modal */}
+            <Modal visible={modalVisible} transparent animationType="slide">
+                <BlurView intensity={40} tint="dark" style={s.modalOverlay}>
+                    <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setModalVisible(false)} />
+                    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', flex: 1, justifyContent: 'flex-end' }}>
+                        <BlurView intensity={50} tint="dark" style={[s.formSheet, { paddingBottom: Math.max(insets.bottom, 20), maxHeight: SCREEN_HEIGHT * 0.9 }]}>
+                            <View style={s.sheetHeader}>
+                                <Text style={s.sheetTitle}>{editingId ? 'Bakım Düzenle' : 'Yeni Bakım Ekle'}</Text>
+                                <TouchableOpacity onPress={() => setModalVisible(false)} style={s.closeIcon}>
+                                    <Icon name="close" size={22} color="#CBD5E1" />
+                                </TouchableOpacity>
+                            </View>
+                            
+                            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20 }}>
+                                <Text style={s.sectionTitle}>Temel Bilgiler</Text>
+                                <SelectInput icon="car" placeholder="Araç Seçin *" value={formData.vehicle_id} options={vehicles.map(v => ({ label: v.plate, value: v.id.toString() }))} onSelect={v => setFormData({...formData, vehicle_id: v})} />
+                                <View style={{ marginBottom: 12 }}>
+                                    <DatePickerInput label="Tarih *" value={formData.service_date} onChange={d => setFormData({...formData, service_date: d})} darkTheme />
+                                </View>
+                                <SelectInput icon="tag" placeholder="Kategori Seçin *" value={formData.maintenance_type} options={categories.map(c => ({ label: c, value: c }))} onSelect={v => setFormData({...formData, maintenance_type: v})} />
+
+                                <Text style={s.sectionTitle}>Detaylar</Text>
+                                <View style={s.fieldWrap}>
+                                    <Icon name="text" size={20} color="#94A3B8" style={s.fieldIcon} />
+                                    <TextInput style={s.fieldInput} placeholderTextColor="#64748B" placeholder="İşlem Adı *" value={formData.title} onChangeText={t => setFormData({...formData, title: t})} />
+                                </View>
+                                {titleSuggestions?.length > 0 && formData.title?.length > 0 && (
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                                        {titleSuggestions.filter(s => s && s.toUpperCase().includes(formData.title.toUpperCase()) && s.toUpperCase() !== formData.title.toUpperCase()).map((s, idx) => (
+                                            <TouchableOpacity key={idx} style={s.suggestionPill} onPress={() => setFormData({...formData, title: s})}>
+                                                <Text style={s.suggestionText}>{s}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </ScrollView>
+                                )}
+
+                                <View style={{ flexDirection: 'row', gap: 10 }}>
+                                    <View style={[s.fieldWrap, { flex: 1 }]}>
+                                        <Icon name="speedometer" size={20} color="#94A3B8" style={s.fieldIcon} />
+                                        <TextInput style={s.fieldInput} placeholderTextColor="#64748B" placeholder="Mevcut KM" value={formData.km} onChangeText={t => setFormData({...formData, km: t})} keyboardType="numeric" />
+                                    </View>
+                                    <View style={[s.fieldWrap, { flex: 1 }]}>
+                                        <Icon name="speedometer-medium" size={20} color="#94A3B8" style={s.fieldIcon} />
+                                        <TextInput style={s.fieldInput} placeholderTextColor="#64748B" placeholder="Sonraki KM" value={formData.next_service_km} onChangeText={t => setFormData({...formData, next_service_km: t})} keyboardType="numeric" />
+                                    </View>
+                                </View>
+
+                                <View style={{ flexDirection: 'row', gap: 10 }}>
+                                    <View style={[s.fieldWrap, { flex: 1 }]}>
+                                        <Icon name="currency-try" size={20} color="#94A3B8" style={s.fieldIcon} />
+                                        <TextInput style={s.fieldInput} placeholderTextColor="#64748B" placeholder="Tutar" value={formData.amount} onChangeText={t => setFormData({...formData, amount: t})} keyboardType="numeric" />
+                                    </View>
+                                    <View style={[s.fieldWrap, { flex: 1 }]}>
+                                        <Icon name="store" size={20} color="#94A3B8" style={s.fieldIcon} />
+                                        <TextInput style={s.fieldInput} placeholderTextColor="#64748B" placeholder="Servis/Usta" value={formData.service_name} onChangeText={t => setFormData({...formData, service_name: t})} />
+                                    </View>
+                                </View>
+
+                                <View style={[s.fieldWrap, { height: 80, alignItems: 'flex-start', paddingTop: 12 }]}>
+                                    <Icon name="text-box-outline" size={20} color="#94A3B8" style={s.fieldIcon} />
+                                    <TextInput style={[s.fieldInput, { textAlignVertical: 'top' }]} placeholderTextColor="#64748B" placeholder="Notlar..." value={formData.description} onChangeText={t => setFormData({...formData, description: t})} multiline numberOfLines={3} />
+                                </View>
+                                <View style={{ height: 40 }} />
+                            </ScrollView>
+
+                            <View style={s.formActionsWrap}>
+                                <TouchableOpacity style={s.cancelBtn} onPress={() => setModalVisible(false)}>
+                                    <Text style={s.cancelBtnText}>Vazgeç</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={s.saveBtn} onPress={handleSave} disabled={saving}>
+                                    <LinearGradient colors={['#8B5CF6', '#4F46E5']} style={StyleSheet.absoluteFillObject} />
+                                    {saving ? <ActivityIndicator color="#FFF" /> : <Text style={s.saveBtnText}>{editingId ? 'Güncelle' : 'Kaydet'}</Text>}
+                                </TouchableOpacity>
+                            </View>
+                        </BlurView>
+                    </KeyboardAvoidingView>
+                </BlurView>
             </Modal>
         </View>
     );
 }
 
-const st = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F8FAFC' },
-    loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 },
-    backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center' },
-    headerCenter: { flex: 1, alignItems: 'center' },
-    headerTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A', marginTop: 8 },
-    headerSubtitle: { fontSize: 12, fontWeight: '600', color: '#64748B', marginTop: 2 },
+const s = StyleSheet.create({
+    container: { flex: 1, backgroundColor: '#020617' },
+    bgBlob1: { position: 'absolute', top: -100, right: -100, width: 350, height: 350, borderRadius: 175, backgroundColor: 'rgba(99, 102, 241, 0.15)', filter: 'blur(40px)' },
+    bgBlob2: { position: 'absolute', bottom: -50, left: -100, width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(236, 72, 153, 0.12)', filter: 'blur(40px)' },
     
-    listContent: { padding: 16, paddingBottom: 100 },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 10 : 30, paddingBottom: 16 },
+    headerTitle: { fontSize: 30, fontWeight: '900', color: '#F8FAFC', letterSpacing: -0.5, textShadowColor: 'rgba(255,255,255,0.3)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10 },
+    headerSub: { fontSize: 13, color: '#94A3B8', fontWeight: '500', marginTop: 4 },
+    headerIconBtn: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
     
-    kpiContainer: { marginBottom: 20 },
-    kpiRow: { flexDirection: 'row', justifyContent: 'space-between' },
-    kpiCard: { padding: 20, borderRadius: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 12 }, shadowopacity: 15, shadowRadius: 16, elevation: 10, position: 'relative', overflow: 'hidden' },
-    kpiGlowTop: { position: 'absolute', top: 0, left: 0, right: 0, height: 2, backgroundColor: 'rgba(255,255,255,0.6)', opacity: 0.8 },
-    kpiIconBg: { position: 'absolute', right: -15, bottom: -15, transform: [{ rotate: '-15deg' }] },
-    kpiTitle: { fontSize: 13, fontWeight: '800', color: 'rgba(255,255,255,0.9)', marginBottom: 6, textShadowColor: 'rgba(0,0,0,0.2)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
-    kpiValue: { fontSize: 32, fontWeight: '900', color: '#FFF', letterSpacing: -1, marginBottom: 4, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
-    kpiSub: { fontSize: 11, color: 'rgba(255,255,255,0.8)', fontWeight: '600' },
+    kpiRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
+    kpiWrapper: { flex: 1 },
+    kpiCardFix: { padding: 14, borderRadius: 20, overflow: 'hidden', justifyContent: 'space-between', borderWidth: 1 },
+    kpiIconWrap: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+    kpiValue: { fontSize: 22, fontWeight: '900', color: '#F8FAFC', letterSpacing: -0.5 },
+    kpiLabel: { fontSize: 11, color: '#94A3B8', fontWeight: '700', marginTop: 4 },
 
-    filterCard: { backgroundColor: '#fff', borderRadius: 20, padding: 16, marginTop: 16, shadowColor: '#94A3B8', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3 },
-    filterCardTitle: { fontSize: 13, fontWeight: '800', color: '#64748B', marginBottom: 12 },
-    filterBtn: { flex: 2, backgroundColor: '#3B82F6', borderRadius: 10, height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-    filterBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
-    filterClearBtn: { flex: 1, backgroundColor: '#F1F5F9', borderRadius: 10, height: 44, alignItems: 'center', justifyContent: 'center' },
-    filterClearText: { color: '#64748B', fontWeight: '700', fontSize: 14 },
+    actionsRow: { flexDirection: 'row', gap: 10 },
+    actionBtn: { flex: 1, height: 44, borderRadius: 14, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', flexDirection: 'row' },
 
-    card: { backgroundColor: '#fff', borderRadius: 24, padding: 16, marginBottom: 16, shadowColor: '#94A3B8', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 4, borderLeftWidth: 5 },
-    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-    iconBox: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-    cardTitle: { fontSize: 15, fontWeight: '800', color: '#0F172A', marginBottom: 2 },
-    cardPlate: { fontSize: 11, fontWeight: '700', color: '#2563EB', backgroundColor: '#EFF6FF', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, overflow: 'hidden' },
-    statusBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF5', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-    statusDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#10B981', marginRight: 4 },
-    statusText: { fontSize: 10, fontWeight: '700', color: '#10B981' },
-    cardDesc: { fontSize: 12, color: '#64748B', fontWeight: '500', marginTop: 4 },
-    amountTextSmall: { fontSize: 14, fontWeight: '900', color: '#0F172A' },
+    loader: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 100 },
+    empty: { alignItems: 'center', marginTop: 80 },
+    emptyText: { fontSize: 15, color: '#94A3B8', fontWeight: '600', marginTop: 12 },
+
+    cardWrapper: { marginBottom: 16 },
+    card: { borderRadius: 24, borderWidth: 1, overflow: 'hidden' },
+    cardHeader: { flexDirection: 'row', alignItems: 'flex-start', padding: 20 },
+    iconBox: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+    cardInfo: { flex: 1, marginLeft: 14 },
+    cardTitle: { fontSize: 16, fontWeight: '900', color: '#F8FAFC', letterSpacing: -0.2, marginBottom: 6 },
+    amountRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+    amountText: { fontSize: 16, fontWeight: '900', color: '#34D399' },
+    statusBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(16,185,129,0.15)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)' },
+    statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#34D399', marginRight: 6 },
+    statusText: { fontSize: 10, fontWeight: '900', color: '#34D399' },
+    cardDesc: { fontSize: 13, color: '#94A3B8', fontWeight: '500' },
+    cardActions: { alignItems: 'flex-end' },
+    plateBadge: { backgroundColor: 'rgba(59,130,246,0.15)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(59,130,246,0.3)' },
+    plateText: { fontSize: 13, fontWeight: '900', color: '#60A5FA' },
+
+    cardGrid: { backgroundColor: 'rgba(0,0,0,0.2)', padding: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
+    gridRow: { flexDirection: 'row' },
+    gridCol: { flex: 1 },
+    gridDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginHorizontal: 16 },
+    gridHDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 12 },
+    gridLabel: { fontSize: 10, fontWeight: '800', color: '#64748B', letterSpacing: 0.5, marginBottom: 4 },
+    gridValue: { fontSize: 14, fontWeight: '800', color: '#CBD5E1' },
+    gridSub: { fontSize: 11, fontWeight: '600', marginTop: 2 },
+
+    modalOverlay: { flex: 1, justifyContent: 'flex-end' },
+    modalOverlayCenter: { flex: 1, justifyContent: 'center', padding: 20 },
+    bottomSheet: { borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
+    sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginBottom: 20 },
+    sheetTitle: { fontSize: 22, fontWeight: '900', color: '#F8FAFC', marginBottom: 24 },
     
-    cardGrid: { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: '#F1F5F9' },
-    gridRow: { flexDirection: 'row', alignItems: 'flex-start' },
-    gridCol: { flex: 1, paddingVertical: 4 },
-    gridDivider: { width: 1, backgroundColor: '#E2E8F0', marginHorizontal: 12 },
-    gridHorizontalDivider: { height: 1, backgroundColor: '#E2E8F0', marginVertical: 8 },
-    gridLabelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 4 },
-    gridLabel: { fontSize: 10, fontWeight: '800', color: '#64748B', letterSpacing: 0.5 },
-    gridValue: { fontSize: 13, fontWeight: '800', color: '#1E293B', marginBottom: 2 },
-    gridSubValue: { fontSize: 10, color: '#94A3B8', fontWeight: '600' },
-
-    headerAddBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#3B82F6', alignItems: 'center', justifyContent: 'center', shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 4 }, shadowopacity: 1, shadowRadius: 6, elevation: 4 },
-    headerSettingsBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
-
-    exportActionsRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12, paddingHorizontal: 16, marginBottom: 16, marginTop: -4 },
-    exportBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, gap: 6 },
-    exportBtnText: { fontSize: 13, fontWeight: '700' },
-
-    // Modal
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(15,23,42,0.6)', justifyContent: 'flex-end' },
-    modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%' },
-    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-    modalTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
-    modalClose: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
-    inputLabel: { fontSize: 13, fontWeight: '700', color: '#475569', marginBottom: 8, marginTop: 16 },
-    saveBtn: { backgroundColor: '#3B82F6', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 24 },
-    saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
-
-    // Select button styles
-    selectBtn: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, paddingHorizontal: 16, height: 50 },
-    selectBtnText: { fontSize: 14, color: '#0F172A', fontWeight: '600' },
-    helperText: { fontSize: 11, color: '#64748B', marginTop: 4, marginLeft: 4 },
+    formSheet: { borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingTop: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
+    sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 20 },
+    closeIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' },
+    sectionTitle: { fontSize: 13, fontWeight: '900', color: '#8B5CF6', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12, marginTop: 10 },
     
-    // Category modal options
-    categoryOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-    categoryOptionActive: { backgroundColor: '#EFF6FF', borderRadius: 8, borderBottomWidth: 0 },
-    categoryOptionText: { fontSize: 14, color: '#334155', fontWeight: '500' },
-    categoryOptionTextActive: { color: '#3B82F6', fontWeight: '700' },
+    fieldWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderRadius: 14, paddingHorizontal: 16, height: 54, marginBottom: 12 },
+    fieldIcon: { marginRight: 12 },
+    fieldInput: { flex: 1, fontSize: 15, color: '#F8FAFC', fontWeight: '600', height: '100%' },
+    
+    formActionsWrap: { flexDirection: 'row', padding: 20, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', backgroundColor: 'rgba(0,0,0,0.3)' },
+    formActions: { flexDirection: 'row', marginTop: 10 },
+    cancelBtn: { flex: 1, paddingVertical: 16, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', marginRight: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    cancelBtnText: { color: '#94A3B8', fontSize: 15, fontWeight: '800' },
+    saveBtn: { flex: 2, borderRadius: 16, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+    saveBtnText: { color: '#FFF', fontSize: 15, fontWeight: '900' },
 
-    suggestionPill: { backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, marginRight: 8, borderWidth: 1, borderColor: '#BFDBFE' },
-    suggestionText: { color: '#1D4ED8', fontSize: 12, fontWeight: '600' },
+    suggestionPill: { backgroundColor: 'rgba(59,130,246,0.15)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, marginRight: 8, borderWidth: 1, borderColor: 'rgba(59,130,246,0.3)' },
+    suggestionText: { fontSize: 12, fontWeight: '700', color: '#60A5FA' },
+
+    centerModal: { backgroundColor: 'rgba(15,23,42,0.8)', borderRadius: 24, padding: 24, maxHeight: '80%', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
+    modalTitle: { fontSize: 18, fontWeight: '800', color: '#F8FAFC', marginBottom: 16 },
+    menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
+    menuText: { fontSize: 15, fontWeight: '600' }
 });

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator, RefreshControl, TouchableOpacity, TextInput, Modal, Alert } from 'react-native';
+import { Platform, KeyboardAvoidingView, View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, TouchableOpacity, TextInput, Modal, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api/axios';
 import SpaceWaves from '../components/SpaceWaves';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -94,7 +95,7 @@ export default function ParentSettingsScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={styles.container} edges={['top']}>
                 <SpaceWaves />
                 <View style={styles.centerContent}>
                     <ActivityIndicator size="large" color="#8B5CF6" />
@@ -105,7 +106,7 @@ export default function ParentSettingsScreen() {
 
     if (!data || !data.student) {
         return (
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={styles.container} edges={['top']}>
                 <SpaceWaves />
                 <View style={styles.centerContent}>
                     <Text style={{color: '#94A3B8'}}>Bilgiler alınamadı.</Text>
@@ -119,7 +120,7 @@ export default function ParentSettingsScreen() {
     const route = student.routes && student.routes.length > 0 ? student.routes[0] : null;
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['top']}>
             <SpaceWaves />
             
             <View style={styles.header}>
@@ -282,7 +283,7 @@ export default function ParentSettingsScreen() {
 
             {/* Düzenleme Modalı */}
             <Modal visible={editModalVisible} animationType="slide" transparent={true}>
-                <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>
@@ -359,7 +360,7 @@ export default function ParentSettingsScreen() {
                             </LinearGradient>
                         </TouchableOpacity>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </SafeAreaView>
     );
@@ -371,7 +372,7 @@ const styles = StyleSheet.create({
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 15, zIndex: 10 },
     headerTitle: { color: '#fff', fontSize: 24, fontWeight: '900', letterSpacing: 0.5 },
     logoutBtn: { padding: 10, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.2)' },
-    scrollContent: { padding: 20, zIndex: 10 },
+    scrollContent: { padding: 20, paddingBottom: 120, zIndex: 10 },
     
     studentCardPremium: { backgroundColor: 'rgba(30, 41, 59, 0.7)', borderRadius: 24, overflow: 'hidden', marginBottom: 20, borderWidth: 1, borderColor: 'rgba(139, 92, 246, 0.3)' },
     studentCardInner: { padding: 24, flexDirection: 'row', alignItems: 'center' },

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, spacing, typography, shadow } from '../theme';
 
 export default function Header({ title, subtitle, right, onBack, accent = null }) {

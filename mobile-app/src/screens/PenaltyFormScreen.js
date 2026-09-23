@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, StyleSheet, ScrollView, Text, TouchableOpacity, ActivityIndicator, Alert, Platform, Modal, FlatList } from 'react-native';
+import { View, StyleSheet, ScrollView, Text, TouchableOpacity, ActivityIndicator, Alert, Platform, Modal, FlatList, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import api from '../api/axios';
 import { FormField } from '../components';
 import DatePickerInput from '../components/DatePickerInput';
 import * as DocumentPicker from 'expo-document-picker';
 import { AuthContext } from '../context/AuthContext';
+import useStatusBarStyle from '../hooks/useStatusBarStyle';
 
 const toTitleCase = (str) => {
     if (!str) return '';
@@ -21,6 +22,7 @@ const toTitleCase = (str) => {
 const fmtMoney = (v) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', minimumFractionDigits: 2 }).format(v || 0);
 
 export default function PenaltyFormScreen({ route, navigation }) {
+    useStatusBarStyle('dark-content');
     const { penaltyId, penalty } = route.params || {};
     const { hasPermission } = useContext(AuthContext);
     
@@ -192,6 +194,7 @@ export default function PenaltyFormScreen({ route, navigation }) {
 
     return (
         <SafeAreaView style={st.container} edges={['top']}>
+            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
             <View style={st.header}>
                 <View style={st.headerTitleRow}>
                     <View style={st.headerLine} />
@@ -207,7 +210,7 @@ export default function PenaltyFormScreen({ route, navigation }) {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={st.scrollContent} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={st.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                 
                 {/* 1. KART: Ceza Bilgileri */}
                 <View style={st.card}>
@@ -399,7 +402,7 @@ export default function PenaltyFormScreen({ route, navigation }) {
                     </TouchableOpacity>
                 </View>
 
-                <View style={{ height: 40 }} />
+                <View style={{ height: 120 }} />
             </ScrollView>
 
             <Modal visible={vehicleModalVisible} transparent animationType="slide">
@@ -433,6 +436,7 @@ export default function PenaltyFormScreen({ route, navigation }) {
                     </View>
                 </View>
             </Modal>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }

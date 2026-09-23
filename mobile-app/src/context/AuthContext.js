@@ -2,7 +2,6 @@ import React, { createContext, useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { DeviceEventEmitter, Platform, Vibration } from 'react-native';
-import { Audio } from 'expo-av';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
@@ -11,7 +10,10 @@ import StylishNotification from '../components/StylishNotification';
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
-        shouldShowAlert: true, // Uygulama açıkken de sistem bildirimi (WhatsApp gibi) düşsün
+        // Uygulama açıkken de sistem bildirimi (WhatsApp gibi) düşsün.
+        // SDK 54'te shouldShowAlert kaldırıldı; banner + liste ayrı ayrı verilmeli.
+        shouldShowBanner: true,
+        shouldShowList: true,
         shouldPlaySound: true,
         shouldSetBadge: true,
     }),
@@ -98,11 +100,6 @@ export const AuthProvider = ({ children }) => {
     const playNotificationSound = async () => {
         try {
             if (Platform.OS !== 'web') Vibration.vibrate();
-            const { sound } = await Audio.Sound.createAsync(
-                { uri: 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg' },
-                { shouldPlay: true }
-            );
-            setTimeout(() => { sound.unloadAsync(); }, 2000);
         } catch (e) {
             console.error('Sound play error', e);
         }

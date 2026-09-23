@@ -1,65 +1,24 @@
 import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Animated, PanResponder, Dimensions, TextInput, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Animated, Dimensions, TextInput, Modal, Easing, RefreshControl } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { BlurView } from 'expo-blur';
+import { Image } from 'expo-image';
 import dayjs from 'dayjs';
 import api from '../api/axios';
+import { emoji } from '../emoji';
 import { AuthContext } from '../context/AuthContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-// Custom Swipeable Row
-const SwipeableRow = ({ children, onEdit, onDelete, hasEditPerm, hasDeletePerm }) => {
-    const pan = useRef(new Animated.ValueXY()).current;
-    
-    const panResponder = useRef(
-        PanResponder.create({
-            onMoveShouldSetPanResponder: (e, gestureState) => Math.abs(gestureState.dx) > 15 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
-            onPanResponderMove: (e, gestureState) => {
-                if (gestureState.dx < 0 && gestureState.dx > -160) {
-                    pan.setValue({ x: gestureState.dx, y: 0 });
-                }
-            },
-            onPanResponderRelease: (e, gestureState) => {
-                if (gestureState.dx < -60) {
-                    Animated.spring(pan, { toValue: { x: -140, y: 0 }, useNativeDriver: true, tension: 40, friction: 5 }).start();
-                } else {
-                    Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: true, tension: 40, friction: 5 }).start();
-                }
-            }
-        })
-    ).current;
-
-    const close = () => {
-        Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: true }).start();
-    };
-
-    return (
-        <View style={s.swipeContainer}>
-            <View style={s.actionButtons}>
-                {hasEditPerm && (
-                    <TouchableOpacity style={[s.actionBtn, { backgroundColor: '#3B82F6' }]} onPress={() => { close(); onEdit(); }}>
-                        <Icon name="pencil" size={24} color="#FFF" />
-                    </TouchableOpacity>
-                )}
-                {hasDeletePerm && (
-                    <TouchableOpacity style={[s.actionBtn, { backgroundColor: '#EF4444' }]} onPress={() => { close(); onDelete(); }}>
-                        <Icon name="delete" size={24} color="#FFF" />
-                    </TouchableOpacity>
-                )}
-            </View>
-            <Animated.View style={[s.swipeContent, { transform: [{ translateX: pan.x }] }]} {...panResponder.panHandlers}>
-                {children}
-            </Animated.View>
-        </View>
-    );
-};
+const fmtMoney = (v) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', minimumFractionDigits: 2 }).format(v || 0);
+const fmtKm = (v) => new Intl.NumberFormat('tr-TR').format(v || 0);
 
 export default function FuelsScreen({ navigation }) {
     const { hasPermission } = useContext(AuthContext);
+    const insets = useSafeAreaInsets();
     
     const [rawFuels, setRawFuels] = useState([]);
     const [processedFuels, setProcessedFuels] = useState([]);
@@ -68,20 +27,41 @@ export default function FuelsScreen({ navigation }) {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     
-    // Filters
     const [searchQuery, setSearchQuery] = useState('');
     const [startDate, setStartDate] = useState(null);
     const [endDate, setEndDate] = useState(null);
+    
+    const [showFilters, setShowFilters] = useState(false);
     const [showStartPicker, setShowStartPicker] = useState(false);
     const [showEndPicker, setShowEndPicker] = useState(false);
 
-    // KPIs
     const [kpi, setKpi] = useState({ totalCost: 0, totalLiters: 0, count: 0, debt: 0 });
 
+    // Animations
+    const scrollY = useRef(new Animated.Value(0)).current;
+    const blob1Anim = useRef(new Animated.Value(0)).current;
+    const blob2Anim = useRef(new Animated.Value(0)).current;
+    const flipAnims = useRef([...Array(100)].map(() => new Animated.Value(0))).current;
+
+    useEffect(() => {
+        const loop = Animated.loop(
+            Animated.sequence([
+                Animated.timing(blob1Anim, { toValue: 1, duration: 9000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+                Animated.timing(blob1Anim, { toValue: 0, duration: 9000, easing: Easing.inOut(Easing.sin), useNativeDriver: true })
+            ])
+        );
+        const loop2 = Animated.loop(
+            Animated.sequence([
+                Animated.timing(blob2Anim, { toValue: 1, duration: 11000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+                Animated.timing(blob2Anim, { toValue: 0, duration: 11000, easing: Easing.inOut(Easing.sin), useNativeDriver: true })
+            ])
+        );
+        loop.start(); loop2.start();
+        return () => { loop.stop(); loop2.stop(); };
+    }, []);
+
     const processFuels = (data) => {
-        // Sort ascending by date to calculate KM differences accurately
         const sortedAsc = [...data].sort((a, b) => new Date(a.date) - new Date(b.date));
-        
         const grouped = {};
         sortedAsc.forEach(f => {
             const plate = f.vehicle?.plate || 'Bilinmeyen';
@@ -108,7 +88,6 @@ export default function FuelsScreen({ navigation }) {
             });
         });
 
-        // Re-sort descending for the list display
         return finalData.sort((a, b) => new Date(b.date) - new Date(a.date));
     };
 
@@ -116,13 +95,19 @@ export default function FuelsScreen({ navigation }) {
         if (!hideLoader) setLoading(true);
         try {
             const res = await api.get('/v1/fuels');
-            const data = res.data.data.fuels || [];
-            const apiDebt = res.data.data.total_debt || 0;
+            const data = res.data?.data?.fuels || [];
+            const apiDebt = res.data?.data?.total_debt || 0;
             setRawFuels(data);
             
             const pFuels = processFuels(data);
             setProcessedFuels(pFuels);
             applyFilters(pFuels, searchQuery, startDate, endDate, apiDebt);
+
+            // Stagger animation
+            flipAnims.forEach(a => a.setValue(0));
+            Animated.stagger(60, flipAnims.map((anim) => 
+                Animated.spring(anim, { toValue: 1, friction: 8, tension: 50, useNativeDriver: true })
+            )).start();
 
         } catch (e) {
             console.log('Fuels Error:', e.response?.data || e.message);
@@ -153,7 +138,6 @@ export default function FuelsScreen({ navigation }) {
 
         setDisplayedFuels(filtered);
         
-        // Update KPIs based on filtered data
         const cost = filtered.reduce((sum, item) => sum + parseFloat(item.gross_total_cost || item.total_cost || 0), 0);
         const liters = filtered.reduce((sum, item) => sum + parseFloat(item.liters || 0), 0);
         
@@ -167,6 +151,7 @@ export default function FuelsScreen({ navigation }) {
 
     const handleFilterSubmit = () => {
         applyFilters(processedFuels, searchQuery, startDate, endDate);
+        setShowFilters(false);
     };
 
     const handleClearFilters = () => {
@@ -174,6 +159,7 @@ export default function FuelsScreen({ navigation }) {
         setStartDate(null);
         setEndDate(null);
         applyFilters(processedFuels, '', null, null);
+        setShowFilters(false);
     };
 
     useFocusEffect(useCallback(() => { fetchData(true); }, []));
@@ -183,307 +169,343 @@ export default function FuelsScreen({ navigation }) {
             Alert.alert('Silme Onayı', `${dayjs(item.date).format('DD.MM.YYYY')} tarihli yakıt kaydını silmek istediğinize emin misiniz?`, [
                 { text: 'Vazgeç', style: 'cancel' },
                 { 
-                    text: 'Sil', 
-                    style: 'destructive', 
+                    text: 'Sil', style: 'destructive', 
                     onPress: async () => {
                         try {
                             await api.delete(`/v1/fuels/${item.id}`);
                             fetchData(true);
-                        } catch (e) {
-                            Alert.alert('Hata', 'Kayıt silinemedi.');
-                        }
+                        } catch (e) {}
                     }
                 }
             ]);
         });
     };
 
-    const formatCurrency = (val) => {
-        return new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
-    };
+    const renderHeader = () => (
+        <View style={{ marginBottom: 20 }}>
+            {/* Action Bar */}
+            <View style={s.actionsRow}>
+                <TouchableOpacity style={[s.actionBtn, { flex: 2, backgroundColor: showFilters ? 'rgba(59,130,246,0.3)' : 'transparent' }]} onPress={() => setShowFilters(true)}>
+                    <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFillObject} />
+                    <Icon name="filter-variant" size={20} color="#F8FAFC" />
+                    <Text style={{ color: '#F8FAFC', fontWeight: '800', marginLeft: 8 }}>Kayıtları Filtrele</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={s.actionBtn} onPress={() => navigation.navigate('FuelStations')}>
+                    <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFillObject} />
+                    <Icon name="gas-station" size={20} color="#34D399" />
+                    <Text style={{ color: '#34D399', fontWeight: '800', marginLeft: 8 }}>İstasyonlar</Text>
+                </TouchableOpacity>
+            </View>
 
-    const renderDataRow = ({ item }) => {
-        const stationName = item.station?.name || item.station_name || 'Bilinmiyor';
-        
-        return (
-            <SwipeableRow 
-                onEdit={() => navigation.navigate('FuelForm', { id: item.id })} 
-                onDelete={() => confirmDelete(item)}
-                hasEditPerm={hasPermission('fuels.edit')}
-                hasDeletePerm={hasPermission('fuels.delete')}
+            {/* KPI ScrollView */}
+            <Animated.ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                contentContainerStyle={s.kpiScrollContent}
+                decelerationRate="fast"
+                snapToInterval={SCREEN_WIDTH * 0.45 + 12}
             >
-                <LinearGradient 
-                    colors={['#FFFFFF', '#F8FAFC']} 
-                    start={{x:0, y:0}} 
-                    end={{x:0, y:1}} 
-                    style={[s.dataRow, { borderLeftWidth: 4, borderLeftColor: item.is_paid ? '#10B981' : '#EF4444' }]}
-                >
-                    <View style={s.rowTop}>
-                        <Text style={s.colDate}>{dayjs(item.date).format('DD.MM.YY')}</Text>
-                        <Text style={s.colPlate} numberOfLines={1}>{item.vehicle?.plate || '-'}</Text>
-                        <Text style={s.colStation} numberOfLines={1}>{stationName}</Text>
-                        <Text style={[s.colTotal, { color: item.is_paid ? '#10B981' : '#EF4444' }]}>₺{formatCurrency(item.gross_total_cost || item.total_cost)}</Text>
+                <View style={s.statCardContainer}>
+                    <BlurView intensity={25} tint="dark" style={[s.statCard, { borderColor: 'rgba(59,130,246,0.3)' }]}>
+                        <View style={s.kpiTopRow}>
+                            <View style={[s.kpiIconWrap, { backgroundColor: 'rgba(59,130,246,0.15)' }]}><Icon name="currency-try" size={20} color="#60A5FA" /></View>
+                        </View>
+                        <Text style={s.kpiValue} numberOfLines={1} adjustsFontSizeToFit>₺{fmtMoney(kpi.totalCost)}</Text>
+                        <Text style={s.kpiLabel}>Toplam Tutar</Text>
+                    </BlurView>
+                </View>
+
+                <View style={s.statCardContainer}>
+                    <BlurView intensity={25} tint="dark" style={[s.statCard, { borderColor: 'rgba(16,185,129,0.3)' }]}>
+                        <View style={s.kpiTopRow}>
+                            <View style={[s.kpiIconWrap, { backgroundColor: 'rgba(16,185,129,0.15)' }]}><Icon name="water-outline" size={20} color="#34D399" /></View>
+                        </View>
+                        <Text style={s.kpiValue} numberOfLines={1} adjustsFontSizeToFit>{fmtKm(kpi.totalLiters)} L</Text>
+                        <Text style={s.kpiLabel}>Toplam Litre</Text>
+                    </BlurView>
+                </View>
+
+                <View style={s.statCardContainer}>
+                    <BlurView intensity={25} tint="dark" style={[s.statCard, { borderColor: 'rgba(168,85,247,0.3)' }]}>
+                        <View style={s.kpiTopRow}>
+                            <View style={[s.kpiIconWrap, { backgroundColor: 'rgba(168,85,247,0.15)' }]}><Icon name="file-document-outline" size={20} color="#C084FC" /></View>
+                        </View>
+                        <Text style={s.kpiValue} numberOfLines={1} adjustsFontSizeToFit>{kpi.count}</Text>
+                        <Text style={s.kpiLabel}>Kayıt Adedi</Text>
+                    </BlurView>
+                </View>
+
+                <View style={s.statCardContainer}>
+                    <BlurView intensity={25} tint="dark" style={[s.statCard, { borderColor: kpi.debt < 0 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)' }]}>
+                        <View style={s.kpiTopRow}>
+                            <View style={[s.kpiIconWrap, { backgroundColor: kpi.debt < 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)' }]}><Icon name="bank-outline" size={20} color={kpi.debt < 0 ? '#34D399' : '#F87171'} /></View>
+                        </View>
+                        <Text style={s.kpiValue} numberOfLines={1} adjustsFontSizeToFit>{kpi.debt < 0 ? '-' : ''}₺{fmtKm(Math.abs(kpi.debt))}</Text>
+                        <Text style={s.kpiLabel}>İstasyon Borcu</Text>
+                    </BlurView>
+                </View>
+            </Animated.ScrollView>
+        </View>
+    );
+
+    const renderCard = ({ item, index }) => {
+        const animIndex = index % 100;
+        const flipAnim = flipAnims[animIndex] || new Animated.Value(1);
+        const stationName = item.station?.name || item.station_name || 'Bilinmiyor';
+
+        const animatedStyle = {
+            opacity: flipAnim,
+            transform: [
+                { perspective: 1000 },
+                { rotateX: flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['-90deg', '0deg'] }) },
+                { translateY: flipAnim.interpolate({ inputRange: [0, 1], outputRange: [50, 0] }) },
+                { scale: flipAnim.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0.8, 1.05, 1] }) }
+            ]
+        };
+
+        return (
+            <Animated.View style={[s.cardWrapper, animatedStyle]}>
+                <BlurView intensity={25} tint="dark" style={[s.card, { borderLeftWidth: 4, borderLeftColor: item.is_paid ? '#10B981' : '#F87171' }]}>
+                    <View style={s.cardHeader}>
+                        {/* Top Row: Plate and Amount */}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                            <View style={s.plateBadge}>
+                                <Text style={s.plateText}>{item.vehicle?.plate || '?'}</Text>
+                            </View>
+                            <Text style={[s.amountText, { color: item.is_paid ? '#34D399' : '#F87171' }]}>₺{fmtKm(item.gross_total_cost || item.total_cost)}</Text>
+                        </View>
+                        
+                        {/* Bottom Row: Station Name, Date and Actions */}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                            <View style={s.cardInfo}>
+                                <Text style={s.cardTitle} numberOfLines={2}>{stationName}</Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                                    <Icon name="calendar-blank" size={14} color="#94A3B8" />
+                                    <Text style={s.cardDesc}>{dayjs(item.date).format('DD.MM.YYYY')}</Text>
+                                </View>
+                            </View>
+                            <View style={{ flexDirection: 'row', gap: 12, paddingBottom: 4 }}>
+                                {hasPermission('fuels.edit') && (
+                                    <TouchableOpacity onPress={() => navigation.navigate('FuelForm', { id: item.id })}>
+                                        <Icon name="pencil" size={22} color="#60A5FA" />
+                                    </TouchableOpacity>
+                                )}
+                                {hasPermission('fuels.delete') && (
+                                    <TouchableOpacity onPress={() => confirmDelete(item)}>
+                                        <Icon name="trash-can" size={22} color="#F87171" />
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        </View>
                     </View>
-                    <View style={s.rowDivider} />
-                    <View style={s.rowMid}>
-                        <View style={s.dataCell}><Text style={s.cellLabel}>KM</Text><Text style={s.cellVal}>{item.km || '-'}</Text></View>
-                        <View style={s.dataCell}><Text style={s.cellLabel}>Fark</Text><Text style={s.cellVal}>{item.km_diff}</Text></View>
-                        <View style={s.dataCell}><Text style={s.cellLabel}>Tür</Text><Text style={s.cellVal}>{item.fuel_type}</Text></View>
-                        <View style={s.dataCell}><Text style={s.cellLabel}>Litre</Text><Text style={s.cellVal}>{parseFloat(item.liters).toFixed(2)}</Text></View>
-                        <View style={s.dataCell}><Text style={s.cellLabel}>Fiyat</Text><Text style={s.cellVal}>₺{parseFloat(item.price_per_liter).toFixed(2)}</Text></View>
-                        <View style={s.dataCell}><Text style={s.cellLabel}>KM/L</Text><Text style={s.cellVal}>{item.km_per_liter}</Text></View>
+
+                    <View style={s.cardGrid}>
+                        <View style={s.gridRow}>
+                            <View style={s.gridCol}>
+                                <Text style={s.gridLabel}>KİLOMETRE</Text>
+                                <Text style={s.gridValue}>{item.km ? fmtKm(item.km) : '-'}</Text>
+                            </View>
+                            <View style={s.gridDivider} />
+                            <View style={s.gridCol}>
+                                <Text style={[s.gridLabel, { color: '#FBBF24' }]}>KM FARK</Text>
+                                <Text style={[s.gridValue, { color: '#FCD34D' }]}>{item.km_diff}</Text>
+                            </View>
+                            <View style={s.gridDivider} />
+                            <View style={s.gridCol}>
+                                <Text style={[s.gridLabel, { color: '#60A5FA' }]}>LİTRE</Text>
+                                <Text style={[s.gridValue, { color: '#93C5FD' }]}>{parseFloat(item.liters).toFixed(2)} L</Text>
+                            </View>
+                        </View>
+                        <View style={s.gridHDivider} />
+                        <View style={s.gridRow}>
+                            <View style={s.gridCol}>
+                                <Text style={s.gridLabel}>BİRİM FİYAT</Text>
+                                <Text style={s.gridValue}>₺{parseFloat(item.price_per_liter).toFixed(2)}</Text>
+                            </View>
+                            <View style={s.gridDivider} />
+                            <View style={s.gridCol}>
+                                <Text style={s.gridLabel}>YAKIT TÜRÜ</Text>
+                                <Text style={s.gridValue}>{item.fuel_type}</Text>
+                            </View>
+                            <View style={s.gridDivider} />
+                            <View style={s.gridCol}>
+                                <Text style={[s.gridLabel, { color: '#34D399' }]}>KM/L</Text>
+                                <Text style={[s.gridValue, { color: '#6EE7B7' }]}>{item.km_per_liter}</Text>
+                            </View>
+                        </View>
                     </View>
-                </LinearGradient>
-            </SwipeableRow>
+                </BlurView>
+            </Animated.View>
         );
     };
-
-    if (loading && !refreshing) {
-        return (
-            <SafeAreaView style={s.container} edges={['top']}>
-                <View style={s.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-                        <Icon name="chevron-left" size={26} color="#0F172A" />
-                    </TouchableOpacity>
-                    <Text style={s.headerTitle}>Yakıt Kayıt Listesi</Text>
-                    <View style={{width: 40}} />
-                </View>
-                <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 100 }} />
-            </SafeAreaView>
-        );
-    }
 
     return (
-        <SafeAreaView style={s.container} edges={['top']}>
-            <View style={s.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-                    <Icon name="chevron-left" size={26} color="#0F172A" />
-                </TouchableOpacity>
-                <Text style={s.headerTitle}>Yakıt Kayıt Listesi</Text>
-                <TouchableOpacity 
-                    onPress={() => navigation.navigate('FuelStations')}
-                    style={s.stationsBtn}
-                >
-                    <Icon name="gas-station" size={20} color="#3B82F6" />
-                </TouchableOpacity>
-            </View>
+        <View style={s.container}>
+            {/* 3D Animated Background */}
+            <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateY: scrollY.interpolate({ inputRange: [-100, 0, 500], outputRange: [-20, 0, 100], extrapolate: 'clamp' }) }] }]}>
+                <LinearGradient colors={['#020617', '#0F172A', '#1E1B4B']} style={StyleSheet.absoluteFillObject} />
+                <Animated.View style={[s.bgBlob1, { transform: [{ translateY: blob1Anim.interpolate({ inputRange:[0,1], outputRange:[0, 60] }) }, { scale: blob1Anim.interpolate({ inputRange:[0,1], outputRange:[1, 1.25] }) }] }]} />
+                <Animated.View style={[s.bgBlob2, { transform: [{ translateX: blob2Anim.interpolate({ inputRange:[0,1], outputRange:[0, -60] }) }, { scale: blob2Anim.interpolate({ inputRange:[0,1], outputRange:[1, 1.3] }) }] }]} />
+            </Animated.View>
 
-            {/* 2x2 Dense KPI Grid (3D Premium) */}
-            <View style={s.kpiGrid}>
-                <View style={[s.statCardContainer, { width: '48%' }]}>
-                    <LinearGradient colors={['#3B82F6', '#2563EB']} start={{x:0, y:0}} end={{x:1, y:1}} style={s.statCard}>
-                        <Image source={{ uri: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Money%20Bag.png' }} style={[s.statCardBgIcon, { width: 70, height: 70, opacity: 1 }]} resizeMode="contain" />
-                        <View style={s.statCardInner}>
-                            <Text style={s.statCardLabel}>Toplam Tutar</Text>
-                            <Text style={s.statCardVal} numberOfLines={1}>₺{formatCurrency(kpi.totalCost)}</Text>
-                        </View>
-                    </LinearGradient>
-                </View>
-
-                <View style={[s.statCardContainer, { width: '48%' }]}>
-                    <LinearGradient colors={['#10B981', '#059669']} start={{x:0, y:0}} end={{x:1, y:1}} style={s.statCard}>
-                        <Image source={{ uri: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Fuel%20Pump.png' }} style={[s.statCardBgIcon, { width: 70, height: 70, opacity: 1 }]} resizeMode="contain" />
-                        <View style={s.statCardInner}>
-                            <Text style={s.statCardLabel}>Toplam Litre</Text>
-                            <Text style={s.statCardVal} numberOfLines={1}>{formatCurrency(kpi.totalLiters)}</Text>
-                        </View>
-                    </LinearGradient>
-                </View>
-
-                <View style={[s.statCardContainer, { width: '48%' }]}>
-                    <LinearGradient colors={['#8B5CF6', '#6D28D9']} start={{x:0, y:0}} end={{x:1, y:1}} style={s.statCard}>
-                        <Image source={{ uri: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Page%20with%20Curl.png' }} style={[s.statCardBgIcon, { width: 70, height: 70, opacity: 1 }]} resizeMode="contain" />
-                        <View style={s.statCardInner}>
-                            <Text style={s.statCardLabel}>Kayıt Adedi</Text>
-                            <Text style={s.statCardVal} numberOfLines={1}>{kpi.count}</Text>
-                        </View>
-                    </LinearGradient>
-                </View>
-
-                <View style={[s.statCardContainer, { width: '48%' }]}>
-                    <LinearGradient colors={kpi.debt < 0 ? ['#10B981', '#059669'] : ['#EC4899', '#BE185D']} start={{x:0, y:0}} end={{x:1, y:1}} style={s.statCard}>
-                        <Image source={{ uri: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Bank.png' }} style={[s.statCardBgIcon, { width: 70, height: 70, opacity: 1 }]} resizeMode="contain" />
-                        <View style={s.statCardInner}>
-                            <Text style={s.statCardLabel}>İstasyon Borcu</Text>
-                            <Text style={s.statCardVal} numberOfLines={1}>{kpi.debt < 0 ? '-' : ''}₺{formatCurrency(Math.abs(kpi.debt))}</Text>
-                        </View>
-                    </LinearGradient>
-                </View>
-            </View>
-
-            {/* Filter Section */}
-            <View style={s.filterContainer}>
-                <View style={s.filterRow}>
-                    <TouchableOpacity style={s.dateBtn} onPress={() => setShowStartPicker(true)}>
-                        <Icon name="calendar-start" size={16} color="#64748B" />
-                        <Text style={s.dateBtnText}>{startDate ? dayjs(startDate).format('DD.MM.YY') : 'Başlangıç'}</Text>
+            <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
+                {/* Header */}
+                <View style={s.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={s.headerIconBtn}>
+                        <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFillObject} />
+                        <Icon name="chevron-left" size={26} color="#FFF" />
                     </TouchableOpacity>
-                    <View style={{ width: 8 }} />
-                    <TouchableOpacity style={s.dateBtn} onPress={() => setShowEndPicker(true)}>
-                        <Icon name="calendar-end" size={16} color="#64748B" />
-                        <Text style={s.dateBtnText}>{endDate ? dayjs(endDate).format('DD.MM.YY') : 'Bitiş'}</Text>
-                    </TouchableOpacity>
-                </View>
-                
-                <View style={s.searchRow}>
-                    <View style={s.searchWrap}>
-                        <Icon name="magnify" size={20} color="#94A3B8" style={{ marginLeft: 12 }} />
-                        <TextInput 
-                            style={s.searchInput}
-                            placeholder="Plaka / İstasyon Ara..."
-                            placeholderTextColor="#94A3B8"
-                            value={searchQuery}
-                            onChangeText={setSearchQuery}
-                            returnKeyType="search"
-                            onSubmitEditing={handleFilterSubmit}
-                        />
+                    <View style={{ flex: 1, paddingLeft: 16 }}>
+                        <Text style={s.headerTitle}>Yakıt Kayıtları</Text>
                     </View>
-                    <TouchableOpacity style={s.filterBtn} onPress={handleFilterSubmit}>
-                        <Text style={s.filterBtnText}>Filtrele</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={s.clearBtn} onPress={handleClearFilters}>
-                        <Icon name="close" size={20} color="#64748B" />
-                    </TouchableOpacity>
                 </View>
-            </View>
 
-            {(showStartPicker || showEndPicker) && (
-                <DateTimePicker 
-                    value={showStartPicker ? (startDate || new Date()) : (endDate || new Date())} 
-                    mode="date" 
-                    display="default" 
-                    onChange={(e, selected) => {
-                        setShowStartPicker(false);
-                        setShowEndPicker(false);
-                        if (selected) {
-                            if (showStartPicker) setStartDate(selected);
-                            else setEndDate(selected);
+                {/* Filter Modal Overlay */}
+                <Modal visible={showFilters} transparent animationType="slide">
+                    <BlurView intensity={40} tint="dark" style={s.modalOverlay}>
+                        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setShowFilters(false)} />
+                        <BlurView intensity={50} tint="dark" style={[s.bottomSheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+                            <View style={s.sheetHandle} />
+                            <Text style={s.sheetTitle}>Kayıtları Filtrele</Text>
+                            
+                            <View style={s.fieldWrap}>
+                                <Icon name="magnify" size={20} color="#94A3B8" style={{ marginRight: 10 }} />
+                                <TextInput style={s.fieldInput} placeholderTextColor="#64748B" placeholder="Plaka veya İstasyon Ara..." value={searchQuery} onChangeText={setSearchQuery} />
+                            </View>
+
+                            <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+                                <TouchableOpacity style={[s.fieldWrap, { flex: 1 }]} onPress={() => setShowStartPicker(true)}>
+                                    <Icon name="calendar-start" size={20} color="#94A3B8" style={{ marginRight: 10 }} />
+                                    <Text style={[s.fieldInput, !startDate && { color: '#64748B' }, { paddingTop: 16 }]}>{startDate ? dayjs(startDate).format('DD.MM.YY') : 'Başlangıç'}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={[s.fieldWrap, { flex: 1 }]} onPress={() => setShowEndPicker(true)}>
+                                    <Icon name="calendar-end" size={20} color="#94A3B8" style={{ marginRight: 10 }} />
+                                    <Text style={[s.fieldInput, !endDate && { color: '#64748B' }, { paddingTop: 16 }]}>{endDate ? dayjs(endDate).format('DD.MM.YY') : 'Bitiş'}</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <View style={s.formActions}>
+                                <TouchableOpacity style={s.cancelBtn} onPress={handleClearFilters}>
+                                    <Text style={s.cancelBtnText}>Temizle</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={s.saveBtn} onPress={handleFilterSubmit}>
+                                    <LinearGradient colors={['#3B82F6', '#2563EB']} style={StyleSheet.absoluteFillObject} />
+                                    <Text style={s.saveBtnText}>Uygula</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </BlurView>
+                    </BlurView>
+                </Modal>
+
+                {/* Date Pickers */}
+                {(showStartPicker || showEndPicker) && (
+                    <DateTimePicker 
+                        value={showStartPicker ? (startDate || new Date()) : (endDate || new Date())} 
+                        mode="date" display="default" themeVariant="dark"
+                        onChange={(e, selected) => {
+                            setShowStartPicker(false); setShowEndPicker(false);
+                            if (selected) {
+                                if (showStartPicker) setStartDate(selected);
+                                else setEndDate(selected);
+                            }
+                        }} 
+                    />
+                )}
+
+                {/* List */}
+                {loading ? (
+                    <View style={s.loader}><ActivityIndicator size="large" color="#60A5FA" /></View>
+                ) : (
+                    <Animated.FlatList
+                        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+                        scrollEventThrottle={16}
+                        data={displayedFuels}
+                        keyExtractor={item => item.id.toString()}
+                        renderItem={renderCard}
+                        ListHeaderComponent={renderHeader}
+                        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100, paddingTop: 10 }}
+                        showsVerticalScrollIndicator={false}
+                        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchData(true)} tintColor="#60A5FA" />}
+                        ListEmptyComponent={
+                            <View style={s.empty}>
+                                <Image source={emoji('Travel and places/Fuel Pump')} style={{width: 64, height: 64, opacity: 0.8}} resizeMode="contain" />
+                                <Text style={s.emptyText}>Yakıt kaydı bulunamadı.</Text>
+                            </View>
                         }
-                    }} 
-                />
-            )}
+                    />
+                )}
 
-            <FlatList
-                data={displayedFuels}
-                keyExtractor={item => item.id.toString()}
-                renderItem={renderDataRow}
-                contentContainerStyle={s.listContent}
-                showsVerticalScrollIndicator={false}
-                refreshing={refreshing}
-                onRefresh={() => { setRefreshing(true); fetchData(false); }}
-                ListEmptyComponent={
-                    <View style={s.empty}>
-                        <Image source={{ uri: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Fuel%20Pump.png' }} style={{ width: 64, height: 64, opacity: 0.7 }} resizeMode="contain" />
-                        <Text style={s.emptyText}>Kriterlere uygun kayıt bulunamadı.</Text>
-                    </View>
-                }
-            />
+            </SafeAreaView>
 
+            {/* FAB */}
             {hasPermission('fuels.create') && (
-                <TouchableOpacity 
-                    style={s.fab} 
-                    activeOpacity={0.8}
-                    onPress={() => navigation.navigate('FuelForm')}
-                >
-                    <LinearGradient colors={['#3B82F6', '#2563EB']} style={s.fabGradient}>
-                        <Icon name="plus" size={28} color="#FFF" />
+                <TouchableOpacity style={[s.fab, { bottom: Math.max(insets.bottom, 24) }]} onPress={() => navigation.navigate('FuelForm')}>
+                    <LinearGradient colors={['#8B5CF6', '#4F46E5']} style={s.fabGradient} start={{x:0, y:0}} end={{x:1, y:1}}>
+                        <Icon name="gas-station-outline" size={24} color="#FFF" />
+                        <Icon name="plus" size={14} color="#FFF" style={{ position: 'absolute', top: 12, right: 12 }} />
                     </LinearGradient>
                 </TouchableOpacity>
             )}
-        </SafeAreaView>
+        </View>
     );
 }
 
 const s = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F1F5F9' },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 15 },
-    backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-    headerTitle: { fontSize: 18, fontWeight: '900', color: '#0F172A' },
-    stationsBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#BFDBFE' },
+    container: { flex: 1, backgroundColor: '#020617' },
+    bgBlob1: { position: 'absolute', top: -100, left: -50, width: 350, height: 350, borderRadius: 175, backgroundColor: 'rgba(59, 130, 246, 0.15)', filter: 'blur(40px)' },
+    bgBlob2: { position: 'absolute', bottom: -50, right: -100, width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(16, 185, 129, 0.12)', filter: 'blur(40px)' },
     
-    // 3D Premium KPI Grid
-    kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, justifyContent: 'space-between', rowGap: 12, paddingBottom: 16 },
-    statCardContainer: { 
-        height: 85, 
-        borderRadius: 20,
-        shadowColor: '#000', 
-        shadowOffset: { width: 0, height: 6 }, 
-        shadowOpacity: 0.25, 
-        shadowRadius: 10, 
-        elevation: 8,
-        backgroundColor: '#fff' 
-    },
-    statCard: { 
-        flex: 1, 
-        borderRadius: 20, 
-        overflow: 'hidden',
-        borderTopWidth: 1.5,
-        borderTopColor: 'rgba(255,255,255,0.4)',
-        borderBottomWidth: 4,
-        borderBottomColor: 'rgba(0,0,0,0.2)',
-        borderLeftWidth: 0.5,
-        borderRightWidth: 0.5,
-        borderColor: 'rgba(0,0,0,0.1)'
-    },
-    statCardBgIcon: { position: 'absolute', right: -10, bottom: -10, transform: [{ rotate: '-15deg' }] },
-    statCardInner: { flex: 1, padding: 12, justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)' },
-    statCardLabel: { fontSize: 11, color: 'rgba(255,255,255,0.9)', fontWeight: '800', letterSpacing: 0.5, textShadowColor: 'rgba(0,0,0,0.2)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2, marginBottom: 4 },
-    statCardVal: { fontSize: 18, color: '#FFF', fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.2)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
-
-    // Filters
-    filterContainer: { paddingHorizontal: 16, paddingBottom: 12 },
-    filterRow: { flexDirection: 'row', marginBottom: 8 },
-    dateBtn: { flex: 1, flexDirection: 'row', backgroundColor: '#FFF', height: 38, borderRadius: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
-    dateBtnText: { fontSize: 13, color: '#334155', fontWeight: '600', marginLeft: 6 },
+    header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16 },
+    headerIconBtn: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+    headerTitle: { fontSize: 26, fontWeight: '900', color: '#F8FAFC', letterSpacing: -0.5, textShadowColor: 'rgba(255,255,255,0.3)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10 },
     
-    searchRow: { flexDirection: 'row', alignItems: 'center' },
-    searchWrap: { flex: 1, flexDirection: 'row', backgroundColor: '#FFF', height: 40, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
-    searchInput: { flex: 1, height: '100%', paddingHorizontal: 10, fontSize: 13, color: '#0F172A' },
-    filterBtn: { backgroundColor: '#3B82F6', height: 40, paddingHorizontal: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
-    filterBtnText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
-    clearBtn: { backgroundColor: '#FFF', height: 40, width: 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginLeft: 8, borderWidth: 1, borderColor: '#E2E8F0' },
+    actionsRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginBottom: 16 },
+    actionBtn: { flex: 1, height: 44, borderRadius: 14, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', flexDirection: 'row' },
 
-    // List
-    listContent: { paddingHorizontal: 16, paddingBottom: 100 },
-    empty: { alignItems: 'center', marginTop: 40 },
-    emptyText: { fontSize: 14, color: '#94A3B8', fontWeight: '600', marginTop: 12 },
+    kpiScrollContent: { paddingHorizontal: 20, paddingBottom: 16, gap: 12 },
+    statCardContainer: { width: SCREEN_WIDTH * 0.45 },
+    statCard: { padding: 16, borderRadius: 20, overflow: 'hidden', borderWidth: 1 },
+    kpiTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
+    kpiIconWrap: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+    kpiValue: { fontSize: 18, fontWeight: '900', color: '#F8FAFC', letterSpacing: -0.5, marginBottom: 4 },
+    kpiLabel: { fontSize: 12, color: '#94A3B8', fontWeight: '600' },
 
-    // Swipe & Rows
-    swipeContainer: { 
-        marginBottom: 16, 
-        borderRadius: 16, 
-        backgroundColor: '#FFF',
-        shadowColor: '#3B82F6',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 4,
-    },
-    actionButtons: { position: 'absolute', right: 0, top: 0, bottom: 0, flexDirection: 'row', width: 140 },
-    actionBtn: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-    swipeContent: { backgroundColor: 'transparent', borderRadius: 16 },
+    loader: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 100 },
+    empty: { alignItems: 'center', marginTop: 80 },
+    emptyText: { fontSize: 15, color: '#94A3B8', fontWeight: '600', marginTop: 12 },
 
-    // Data Row (Dense Table - 3D Premium)
-    dataRow: { 
-        padding: 16, 
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        borderBottomWidth: 4,
-    },
-    rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    colDate: { width: 60, fontSize: 12, color: '#64748B', fontWeight: '600' },
-    colPlate: { width: 75, fontSize: 13, color: '#0F172A', fontWeight: '800' },
-    colStation: { flex: 1, fontSize: 12, color: '#475569', fontWeight: '500', marginHorizontal: 4 },
-    colTotal: { fontSize: 14, color: '#10B981', fontWeight: '800', textAlign: 'right' },
+    cardWrapper: { marginBottom: 16 },
+    card: { borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
+    cardHeader: { padding: 20, paddingBottom: 16 },
+    plateBadge: { backgroundColor: 'rgba(59,130,246,0.15)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(59,130,246,0.3)' },
+    plateText: { fontSize: 15, fontWeight: '900', color: '#60A5FA', letterSpacing: 1 },
+    cardInfo: { flex: 1, paddingRight: 16 },
+    cardTitle: { fontSize: 16, fontWeight: '800', color: '#F8FAFC', letterSpacing: -0.2, lineHeight: 22 },
+    cardDesc: { fontSize: 13, color: '#94A3B8', fontWeight: '600' },
+    amountText: { fontSize: 20, fontWeight: '900' },
+
+    cardGrid: { backgroundColor: 'rgba(0,0,0,0.2)', padding: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
+    gridRow: { flexDirection: 'row' },
+    gridCol: { flex: 1 },
+    gridDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginHorizontal: 12 },
+    gridHDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 12 },
+    gridLabel: { fontSize: 10, fontWeight: '800', color: '#64748B', letterSpacing: 0.5, marginBottom: 4 },
+    gridValue: { fontSize: 13, fontWeight: '800', color: '#CBD5E1' },
+
+    modalOverlay: { flex: 1, justifyContent: 'flex-end' },
+    bottomSheet: { borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
+    sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginBottom: 20 },
+    sheetTitle: { fontSize: 22, fontWeight: '900', color: '#F8FAFC', marginBottom: 24 },
     
-    rowDivider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 8 },
+    fieldWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderRadius: 14, paddingHorizontal: 16, height: 54 },
+    fieldInput: { flex: 1, fontSize: 15, color: '#F8FAFC', fontWeight: '600', height: '100%' },
     
-    rowMid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-    dataCell: { width: '31%', marginBottom: 6 },
-    cellLabel: { fontSize: 10, color: '#94A3B8', fontWeight: '600', textTransform: 'uppercase', marginBottom: 2 },
-    cellVal: { fontSize: 12, color: '#334155', fontWeight: '700' },
+    formActions: { flexDirection: 'row', marginTop: 24 },
+    cancelBtn: { flex: 1, paddingVertical: 16, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', marginRight: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    cancelBtnText: { color: '#94A3B8', fontSize: 15, fontWeight: '800' },
+    saveBtn: { flex: 2, borderRadius: 16, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+    saveBtnText: { color: '#FFF', fontSize: 15, fontWeight: '900' },
 
-    fab: { position: 'absolute', right: 20, bottom: 24, borderRadius: 28, shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 6 }, shadowopacity: 1, shadowRadius: 10, elevation: 8 },
+    fab: { position: 'absolute', right: 20, borderRadius: 28, shadowColor: '#8B5CF6', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 8 },
     fabGradient: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
 });

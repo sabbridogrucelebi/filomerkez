@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Dimensions, Linking, Platform } from 'react-native';
+import React, { useState, useEffect, useContext, useRef } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Dimensions, Linking, Platform, Animated, Easing } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import { EmptyState } from '../components';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
 export default function TendersScreen({ navigation }) {
     const { hasPermission } = useContext(AuthContext);
@@ -13,6 +14,23 @@ export default function TendersScreen({ navigation }) {
     const [stats, setStats] = useState({ total: 0, won: 0, lost: 0, evaluating: 0 });
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+
+    // Animations
+    const blob1Anim = useRef(new Animated.Value(0)).current;
+    const blob2Anim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        const loop = Animated.loop(Animated.sequence([
+            Animated.timing(blob1Anim, { toValue: 1, duration: 8000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+            Animated.timing(blob1Anim, { toValue: 0, duration: 8000, easing: Easing.inOut(Easing.sin), useNativeDriver: true })
+        ]));
+        const loop2 = Animated.loop(Animated.sequence([
+            Animated.timing(blob2Anim, { toValue: 1, duration: 11000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+            Animated.timing(blob2Anim, { toValue: 0, duration: 11000, easing: Easing.inOut(Easing.sin), useNativeDriver: true })
+        ]));
+        loop.start(); loop2.start();
+        return () => { loop.stop(); loop2.stop(); };
+    }, []);
 
     const fetchTenders = async (isRefreshing = false) => {
         if (!isRefreshing) setLoading(true);
@@ -55,10 +73,10 @@ export default function TendersScreen({ navigation }) {
 
     const getStatusStyle = (status) => {
         switch(status) {
-            case 'Kazanıldı': return { bg: '#ECFDF5', text: '#10B981', dot: '#10B981' };
-            case 'Kaybedildi': return { bg: '#FEF2F2', text: '#EF4444', dot: '#EF4444' };
-            case 'Değerlendirmede': return { bg: '#FFFBEB', text: '#F59E0B', dot: '#F59E0B' };
-            default: return { bg: '#F1F5F9', text: '#64748B', dot: '#64748B' };
+            case 'Kazanıldı': return { bg: 'rgba(16,185,129,0.15)', text: '#34D399', dot: '#10B981' };
+            case 'Kaybedildi': return { bg: 'rgba(239,68,68,0.15)', text: '#F87171', dot: '#EF4444' };
+            case 'Değerlendirmede': return { bg: 'rgba(245,158,11,0.15)', text: '#FBBF24', dot: '#F59E0B' };
+            default: return { bg: 'rgba(100,116,139,0.15)', text: '#94A3B8', dot: '#64748B' };
         }
     };
 
@@ -71,7 +89,7 @@ export default function TendersScreen({ navigation }) {
         const statusStyle = getStatusStyle(item.status);
 
         return (
-            <View style={st.card}>
+            <BlurView intensity={30} tint="dark" style={st.card}>
                 <View style={st.cardHeader}>
                     <View style={[st.statusBadge, { backgroundColor: statusStyle.bg }]}>
                         <View style={[st.statusDot, { backgroundColor: statusStyle.dot }]} />
@@ -97,13 +115,13 @@ export default function TendersScreen({ navigation }) {
                 <View style={st.financeBox}>
                     <View style={st.financeRow}>
                         <Text style={st.financeLabel}>Bizim Teklifimiz</Text>
-                        <Text style={[st.financeValue, { color: '#3B82F6' }]}>{formatMoney(item.our_bid)}</Text>
+                        <Text style={[st.financeValue, { color: '#38BDF8' }]}>{formatMoney(item.our_bid)}</Text>
                     </View>
                     <View style={st.divider} />
                     <View style={st.financeRow}>
                         <Text style={st.financeLabel}>Kazanan Firma / Teklif</Text>
                         <View style={{ alignItems: 'flex-end' }}>
-                            <Text style={[st.financeValue, { color: '#F59E0B' }]}>{formatMoney(item.winning_amount)}</Text>
+                            <Text style={[st.financeValue, { color: '#FBBF24' }]}>{formatMoney(item.winning_amount)}</Text>
                             <Text style={st.winningCompany}>{item.winning_company || 'Bilinmiyor'}</Text>
                         </View>
                     </View>
@@ -111,9 +129,9 @@ export default function TendersScreen({ navigation }) {
 
                 <View style={st.actionRow}>
                     {item.file_url ? (
-                        <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#EFF6FF' }]} onPress={() => Linking.openURL(item.file_url)}>
-                            <Icon name="file-pdf-box" size={18} color="#3B82F6" />
-                            <Text style={[st.actionBtnText, { color: '#3B82F6' }]}>PDF</Text>
+                        <TouchableOpacity style={[st.actionBtn, { backgroundColor: 'rgba(56,189,248,0.15)' }]} onPress={() => Linking.openURL(item.file_url)}>
+                            <Icon name="file-pdf-box" size={18} color="#38BDF8" />
+                            <Text style={[st.actionBtnText, { color: '#38BDF8' }]}>PDF</Text>
                         </TouchableOpacity>
                     ) : (
                         <View style={st.actionBtn} />
@@ -121,29 +139,35 @@ export default function TendersScreen({ navigation }) {
 
                     <View style={{ flexDirection: 'row', gap: 8 }}>
                         {hasPermission('tenders.edit') && (
-                            <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#F8FAFC' }]} onPress={() => navigation.navigate('TenderForm', { tenderId: item.id })}>
-                                <Icon name="pencil" size={18} color="#64748B" />
+                            <TouchableOpacity style={[st.actionBtn, { backgroundColor: 'rgba(255,255,255,0.1)' }]} onPress={() => navigation.navigate('TenderForm', { tenderId: item.id })}>
+                                <Icon name="pencil" size={18} color="#E2E8F0" />
                             </TouchableOpacity>
                         )}
                         {hasPermission('tenders.delete') && (
-                            <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#FEF2F2' }]} onPress={() => confirmDelete(item.id)}>
-                                <Icon name="trash-can-outline" size={18} color="#EF4444" />
+                            <TouchableOpacity style={[st.actionBtn, { backgroundColor: 'rgba(239,68,68,0.15)' }]} onPress={() => confirmDelete(item.id)}>
+                                <Icon name="trash-can-outline" size={18} color="#F87171" />
                             </TouchableOpacity>
                         )}
                     </View>
                 </View>
-            </View>
+            </BlurView>
         );
     };
 
     return (
         <View style={st.container}>
-            <LinearGradient colors={['#F8FAFC', '#F1F5F9']} style={StyleSheet.absoluteFillObject} />
+            {/* Animated Background */}
+            <Animated.View style={StyleSheet.absoluteFill}>
+                <LinearGradient colors={['#020617', '#0F172A', '#1E1B4B']} style={StyleSheet.absoluteFillObject} />
+                <Animated.View style={[st.bgBlob1, { transform: [{ translateY: blob1Anim.interpolate({ inputRange:[0,1], outputRange:[0, 60] }) }] }]} />
+                <Animated.View style={[st.bgBlob2, { transform: [{ translateX: blob2Anim.interpolate({ inputRange:[0,1], outputRange:[0, -60] }) }] }]} />
+            </Animated.View>
+
             <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-                
                 <View style={st.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-                        <Icon name="chevron-left" size={28} color="#0F172A" />
+                        <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFillObject} />
+                        <Icon name="chevron-left" size={28} color="#FFF" />
                     </TouchableOpacity>
                     <View style={st.headerCenter}>
                         <Text style={st.headerTitle}>İhaleler</Text>
@@ -151,27 +175,28 @@ export default function TendersScreen({ navigation }) {
                     </View>
                     {hasPermission('tenders.create') ? (
                         <TouchableOpacity style={st.addHeaderBtn} onPress={() => navigation.navigate('TenderForm')}>
+                            <LinearGradient colors={['#3B82F6', '#2563EB']} style={StyleSheet.absoluteFillObject} />
                             <Icon name="plus" size={24} color="#fff" />
                         </TouchableOpacity>
                     ) : <View style={{ width: 44 }} />}
                 </View>
 
-                <View style={st.statsContainer}>
+                <BlurView intensity={40} tint="dark" style={st.statsContainer}>
                     <View style={st.statBox}>
                         <Text style={st.statValue}>{stats.total}</Text>
                         <Text style={st.statLabel}>KAYITLI İHALE</Text>
                     </View>
                     <View style={st.statDivider} />
                     <View style={st.statBox}>
-                        <Text style={[st.statValue, { color: '#10B981' }]}>{stats.won}</Text>
+                        <Text style={[st.statValue, { color: '#34D399' }]}>{stats.won}</Text>
                         <Text style={st.statLabel}>KAZANILAN</Text>
                     </View>
                     <View style={st.statDivider} />
                     <View style={st.statBox}>
-                        <Text style={[st.statValue, { color: '#EF4444' }]}>{stats.lost}</Text>
+                        <Text style={[st.statValue, { color: '#F87171' }]}>{stats.lost}</Text>
                         <Text style={st.statLabel}>KAYBEDİLEN</Text>
                     </View>
-                </View>
+                </BlurView>
 
                 {loading ? (
                     <View style={st.loader}><ActivityIndicator size="large" color="#3B82F6" /></View>
@@ -192,23 +217,26 @@ export default function TendersScreen({ navigation }) {
 }
 
 const st = StyleSheet.create({
-    container: { flex: 1 },
+    container: { flex: 1, backgroundColor: '#020617' },
+    bgBlob1: { position: 'absolute', top: -50, left: -50, width: 350, height: 350, borderRadius: 175, backgroundColor: 'rgba(56,189,248,0.15)', filter: 'blur(40px)' },
+    bgBlob2: { position: 'absolute', bottom: -50, right: -100, width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(59,130,246,0.15)', filter: 'blur(40px)' },
+    
     loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 16, paddingTop: 8 },
-    backBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
+    backBtn: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
     headerCenter: { flex: 1, alignItems: 'center' },
-    headerTitle: { fontSize: 20, fontWeight: '900', color: '#0F172A' },
-    headerSubtitle: { fontSize: 13, fontWeight: '600', color: '#3B82F6', marginTop: 2 },
-    addHeaderBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#3B82F6', alignItems: 'center', justifyContent: 'center', shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 6, elevation: 4 },
+    headerTitle: { fontSize: 20, fontWeight: '900', color: '#F8FAFC' },
+    headerSubtitle: { fontSize: 13, fontWeight: '600', color: '#38BDF8', marginTop: 2 },
+    addHeaderBtn: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(59,130,246,0.5)' },
     
-    statsContainer: { flexDirection: 'row', backgroundColor: '#fff', marginHorizontal: 16, borderRadius: 20, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2, marginBottom: 8 },
+    statsContainer: { flexDirection: 'row', marginHorizontal: 16, borderRadius: 20, padding: 16, marginBottom: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
     statBox: { flex: 1, alignItems: 'center' },
-    statValue: { fontSize: 20, fontWeight: '900', color: '#0F172A' },
+    statValue: { fontSize: 20, fontWeight: '900', color: '#F8FAFC' },
     statLabel: { fontSize: 10, fontWeight: '800', color: '#94A3B8', marginTop: 4, letterSpacing: 0.5 },
-    statDivider: { width: 1, height: '80%', backgroundColor: '#F1F5F9', alignSelf: 'center' },
+    statDivider: { width: 1, height: '80%', backgroundColor: 'rgba(255,255,255,0.1)', alignSelf: 'center' },
 
     listContent: { padding: 16, paddingBottom: 120 },
-    card: { backgroundColor: '#fff', borderRadius: 24, padding: 20, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.05, shadowRadius: 15, elevation: 3, borderWidth: 1, borderColor: '#F1F5F9' },
+    card: { borderRadius: 24, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
     
     cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
     statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, gap: 6 },
@@ -216,22 +244,22 @@ const st = StyleSheet.create({
     statusText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
     dateText: { fontSize: 12, fontWeight: '700', color: '#94A3B8' },
 
-    institutionName: { fontSize: 17, fontWeight: '900', color: '#1E293B', marginBottom: 2 },
-    iknText: { fontSize: 12, fontWeight: '600', color: '#64748B', marginBottom: 12 },
+    institutionName: { fontSize: 17, fontWeight: '900', color: '#F8FAFC', marginBottom: 2 },
+    iknText: { fontSize: 12, fontWeight: '600', color: '#94A3B8', marginBottom: 12 },
 
     infoGrid: { flexDirection: 'row', gap: 12, marginBottom: 16 },
-    infoBox: { flex: 1, backgroundColor: '#F8FAFC', padding: 10, borderRadius: 12 },
+    infoBox: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', padding: 10, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
     infoLabel: { fontSize: 10, fontWeight: '800', color: '#94A3B8', marginBottom: 4 },
-    infoValue: { fontSize: 13, fontWeight: '700', color: '#334155' },
+    infoValue: { fontSize: 13, fontWeight: '700', color: '#E2E8F0' },
 
-    financeBox: { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: '#F1F5F9' },
+    financeBox: { backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 16, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
     financeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    financeLabel: { fontSize: 12, fontWeight: '700', color: '#64748B' },
+    financeLabel: { fontSize: 12, fontWeight: '700', color: '#94A3B8' },
     financeValue: { fontSize: 15, fontWeight: '900' },
-    divider: { height: 1, backgroundColor: '#E2E8F0', marginVertical: 8 },
+    divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 8 },
     winningCompany: { fontSize: 11, fontWeight: '600', color: '#94A3B8', marginTop: 2 },
 
-    actionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
+    actionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
     actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10, gap: 6 },
     actionBtnText: { fontSize: 12, fontWeight: '800' }
 });

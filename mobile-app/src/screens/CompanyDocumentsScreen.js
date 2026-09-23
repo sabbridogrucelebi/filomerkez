@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Dimensions, Linking, Platform, Modal, ScrollView, Image } from 'react-native';
+import React, { useState, useEffect, useContext, useRef } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Dimensions, Linking, Platform, Modal, ScrollView, Image, Animated, Easing, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import api from '../api/axios';
+import { emoji } from '../emoji';
 import { AuthContext } from '../context/AuthContext';
 import { EmptyState, FormField } from '../components';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
 const { width: W } = Dimensions.get('window');
 
@@ -27,6 +29,23 @@ export default function CompanyDocumentsScreen({ navigation }) {
     const [file, setFile] = useState(null);
     const [documentName, setDocumentName] = useState('');
 
+    // Animations
+    const blob1Anim = useRef(new Animated.Value(0)).current;
+    const blob2Anim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        const loop = Animated.loop(Animated.sequence([
+            Animated.timing(blob1Anim, { toValue: 1, duration: 8000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+            Animated.timing(blob1Anim, { toValue: 0, duration: 8000, easing: Easing.inOut(Easing.sin), useNativeDriver: true })
+        ]));
+        const loop2 = Animated.loop(Animated.sequence([
+            Animated.timing(blob2Anim, { toValue: 1, duration: 11000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+            Animated.timing(blob2Anim, { toValue: 0, duration: 11000, easing: Easing.inOut(Easing.sin), useNativeDriver: true })
+        ]));
+        loop.start(); loop2.start();
+        return () => { loop.stop(); loop2.stop(); };
+    }, []);
+
     const fetchDocuments = async (isRefreshing = false) => {
         if (!isRefreshing) setLoading(true);
         try {
@@ -34,10 +53,8 @@ export default function CompanyDocumentsScreen({ navigation }) {
             if (r.data.data) {
                 setDocuments(r.data.data);
             } else if (r.data.current_page !== undefined) {
-                // If it's paginated, we use r.data.data from the pagination object
                 setDocuments(r.data.data);
             } else {
-                // Array directly or under data
                 setDocuments(r.data);
             }
             setSelectedIds([]);
@@ -173,13 +190,13 @@ export default function CompanyDocumentsScreen({ navigation }) {
     const getEmojiForType = (type, filePath) => {
         const isPdf = filePath?.toLowerCase().endsWith('.pdf');
         
-        if (type === 'Vergi Levhası') return 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Chart%20Increasing%20with%20Yen.png';
-        if (type === 'Sicil Gazetesi') return 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Rolled-Up%20Newspaper.png';
-        if (type === 'İmza Sirküsü') return 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Fountain%20Pen.png';
-        if (type === 'Faaliyet Belgesi') return 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Briefcase.png';
-        
-        if (isPdf) return 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Page%20Facing%20Up.png';
-        return 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Framed%20Picture.png';
+        if (type === 'Vergi Levhası') return emoji('Objects/Chart Increasing with Yen');
+        if (type === 'Sicil Gazetesi') return emoji('Objects/Rolled-Up Newspaper');
+        if (type === 'İmza Sirküsü') return emoji('Objects/Fountain Pen');
+        if (type === 'Faaliyet Belgesi') return emoji('Objects/Briefcase');
+
+        if (isPdf) return emoji('Objects/Page Facing Up');
+        return emoji('Objects/Framed Picture');
     };
 
     const renderItem = ({ item }) => {
@@ -189,47 +206,55 @@ export default function CompanyDocumentsScreen({ navigation }) {
             <TouchableOpacity 
                 activeOpacity={0.8} 
                 onPress={() => toggleSelection(item.id)}
-                style={[st.card, isSelected && st.cardSelected]}
+                style={{marginBottom: 16}}
             >
-                <View style={st.cardTop}>
-                    <View style={[st.checkbox, isSelected && st.checkboxSelected]}>
-                        {isSelected && <Icon name="check" size={16} color="#fff" />}
+                <BlurView intensity={30} tint="dark" style={[st.card, isSelected && st.cardSelected]}>
+                    <View style={st.cardTop}>
+                        <View style={[st.checkbox, isSelected && st.checkboxSelected]}>
+                            {isSelected && <Icon name="check" size={16} color="#0F172A" />}
+                        </View>
+                        <View style={st.iconBox}>
+                            <Image source={getEmojiForType(item.document_type, item.file_path)} style={st.emojiIcon} />
+                        </View>
+                        <View style={st.cardInfo}>
+                            <Text style={st.docType}>{item.document_type || 'Diğer'}</Text>
+                            <Text style={st.docName}>{item.document_name}</Text>
+                            <Text style={st.dateText}>{item.created_at ? new Date(item.created_at).toLocaleDateString('tr-TR') : ''}</Text>
+                        </View>
                     </View>
-                    <View style={st.iconBox}>
-                        <Image source={{ uri: getEmojiForType(item.document_type, item.file_path) }} style={st.emojiIcon} />
-                    </View>
-                    <View style={st.cardInfo}>
-                        <Text style={st.docType}>{item.document_type || 'Diğer'}</Text>
-                        <Text style={st.docName}>{item.document_name}</Text>
-                        <Text style={st.dateText}>{item.created_at ? new Date(item.created_at).toLocaleDateString('tr-TR') : ''}</Text>
-                    </View>
-                </View>
 
-                <View style={st.actionRow}>
-                    <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#EFF6FF' }]} onPress={() => Linking.openURL(item.file_url)}>
-                        <Icon name="eye-outline" size={18} color="#3B82F6" />
-                        <Text style={[st.actionText, { color: '#3B82F6' }]}>İncele</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#FFFBEB' }]} onPress={() => handleShare(item)}>
-                        <Icon name="share-variant-outline" size={18} color="#F59E0B" />
-                        <Text style={[st.actionText, { color: '#F59E0B' }]}>Paylaş</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#FEF2F2' }]} onPress={() => confirmDelete(item.id)}>
-                        <Icon name="trash-can-outline" size={18} color="#EF4444" />
-                    </TouchableOpacity>
-                </View>
+                    <View style={st.actionRow}>
+                        <TouchableOpacity style={[st.actionBtn, { backgroundColor: 'rgba(56,189,248,0.1)' }]} onPress={() => Linking.openURL(item.file_url)}>
+                            <Icon name="eye-outline" size={18} color="#38BDF8" />
+                            <Text style={[st.actionText, { color: '#38BDF8' }]}>İncele</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[st.actionBtn, { backgroundColor: 'rgba(251,191,36,0.1)' }]} onPress={() => handleShare(item)}>
+                            <Icon name="share-variant-outline" size={18} color="#FBBF24" />
+                            <Text style={[st.actionText, { color: '#FBBF24' }]}>Paylaş</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[st.actionBtn, { backgroundColor: 'rgba(248,113,113,0.1)' }]} onPress={() => confirmDelete(item.id)}>
+                            <Icon name="trash-can-outline" size={18} color="#F87171" />
+                        </TouchableOpacity>
+                    </View>
+                </BlurView>
             </TouchableOpacity>
         );
     };
 
     return (
         <View style={st.container}>
-            <LinearGradient colors={['#F8FAFC', '#F1F5F9']} style={StyleSheet.absoluteFillObject} />
+            {/* Animated Background */}
+            <Animated.View style={StyleSheet.absoluteFill}>
+                <LinearGradient colors={['#020617', '#0F172A', '#1E1B4B']} style={StyleSheet.absoluteFillObject} />
+                <Animated.View style={[st.bgBlob1, { transform: [{ translateY: blob1Anim.interpolate({ inputRange:[0,1], outputRange:[0, 60] }) }] }]} />
+                <Animated.View style={[st.bgBlob2, { transform: [{ translateX: blob2Anim.interpolate({ inputRange:[0,1], outputRange:[0, -60] }) }] }]} />
+            </Animated.View>
+
             <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-                
                 <View style={st.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-                        <Icon name="chevron-left" size={28} color="#0F172A" />
+                        <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFillObject} />
+                        <Icon name="chevron-left" size={28} color="#FFF" />
                     </TouchableOpacity>
                     <View style={st.headerCenter}>
                         <Text style={st.headerTitle}>Şirket Evrakları</Text>
@@ -237,19 +262,20 @@ export default function CompanyDocumentsScreen({ navigation }) {
                     </View>
                     {hasPermission('company_documents.create') ? (
                         <TouchableOpacity style={st.addHeaderBtn} onPress={() => setModalVisible(true)}>
+                            <LinearGradient colors={['#8B5CF6', '#6D28D9']} style={StyleSheet.absoluteFillObject} />
                             <Icon name="plus" size={24} color="#fff" />
                         </TouchableOpacity>
                     ) : <View style={{ width: 44 }} />}
                 </View>
 
                 {selectedIds.length > 0 && (
-                    <View style={st.bulkActionContainer}>
+                    <BlurView intensity={40} tint="dark" style={st.bulkActionContainer}>
                         <Text style={st.bulkText}>{selectedIds.length} Belge Seçildi</Text>
                         <TouchableOpacity style={st.bulkDeleteBtn} onPress={handleBulkDelete}>
                             <Icon name="trash-can" size={18} color="#fff" />
                             <Text style={st.bulkDeleteText}>Toplu Sil</Text>
                         </TouchableOpacity>
-                    </View>
+                    </BlurView>
                 )}
 
                 {loading ? (
@@ -268,30 +294,38 @@ export default function CompanyDocumentsScreen({ navigation }) {
 
                 {/* Upload Modal */}
                 <Modal visible={modalVisible} animationType="slide" transparent>
-                    <View style={st.modalOverlay}>
-                        <View style={st.modalContent}>
+                    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={st.modalOverlay}>
+                        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setModalVisible(false)} />
+                        <BlurView intensity={70} tint="dark" style={st.modalContent}>
+                            <View style={st.sheetHandle} />
                             <View style={st.modalHeader}>
                                 <Text style={st.modalTitle}>Yeni Evrak Yükle</Text>
                                 <TouchableOpacity onPress={() => setModalVisible(false)} style={st.modalClose}>
-                                    <Icon name="close" size={24} color="#64748B" />
+                                    <Icon name="close" size={24} color="#F8FAFC" />
                                 </TouchableOpacity>
                             </View>
                             <ScrollView style={{ padding: 20 }}>
                                 <View style={{ alignItems: 'center', marginBottom: 20 }}>
-                                    <Image source={{ uri: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Outbox%20Tray.png' }} style={{ width: 64, height: 64 }} />
-                                    <Text style={{ fontSize: 13, color: '#64748B', textAlign: 'center', marginTop: 8 }}>PDF veya resim dosyalarınızı yükleyebilirsiniz.</Text>
+                                    <Image source={emoji('Objects/Outbox Tray')} style={{ width: 64, height: 64 }} />
+                                    <Text style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center', marginTop: 8 }}>PDF veya resim dosyalarınızı yükleyebilirsiniz.</Text>
                                 </View>
 
                                 <Text style={st.inputLabel}>EVRAK ADI</Text>
-                                <FormField value={documentName} onChangeText={setDocumentName} placeholder="Örn: 2026 Vergi Levhası" />
+                                <View style={st.inputWrapper}>
+                                    <FormField 
+                                        value={documentName} 
+                                        onChangeText={setDocumentName} 
+                                        placeholder="Örn: 2026 Vergi Levhası" 
+                                    />
+                                </View>
                                 
                                 <Text style={st.inputLabel}>DOSYA SEÇİMİ</Text>
                                 <TouchableOpacity style={st.fileBtn} onPress={pickDocument}>
                                     {file ? (
                                         <>
-                                            <Icon name="file-check-outline" size={28} color="#10B981" />
+                                            <Icon name="file-check-outline" size={28} color="#34D399" />
                                             <View style={{ flex: 1, marginLeft: 10 }}>
-                                                <Text style={[st.fileBtnText, { color: '#0F172A' }]} numberOfLines={1}>{file.name || 'Dosya Seçildi'}</Text>
+                                                <Text style={[st.fileBtnText, { color: '#F8FAFC' }]} numberOfLines={1}>{file.name || 'Dosya Seçildi'}</Text>
                                             </View>
                                         </>
                                     ) : (
@@ -303,12 +337,13 @@ export default function CompanyDocumentsScreen({ navigation }) {
                                 </TouchableOpacity>
 
                                 <TouchableOpacity style={[st.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
+                                    <LinearGradient colors={['#8B5CF6', '#6D28D9']} style={StyleSheet.absoluteFillObject} />
                                     {saving ? <ActivityIndicator color="#fff" /> : <Text style={st.saveBtnText}>Evrağı Kaydet</Text>}
                                 </TouchableOpacity>
                                 <View style={{ height: 40 }} />
                             </ScrollView>
-                        </View>
-                    </View>
+                        </BlurView>
+                    </KeyboardAvoidingView>
                 </Modal>
             </SafeAreaView>
         </View>
@@ -316,34 +351,37 @@ export default function CompanyDocumentsScreen({ navigation }) {
 }
 
 const st = StyleSheet.create({
-    container: { flex: 1 },
+    container: { flex: 1, backgroundColor: '#020617' },
+    bgBlob1: { position: 'absolute', top: -50, left: -50, width: 350, height: 350, borderRadius: 175, backgroundColor: 'rgba(139,92,246,0.15)', filter: 'blur(40px)' },
+    bgBlob2: { position: 'absolute', bottom: -50, right: -100, width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(56,189,248,0.15)', filter: 'blur(40px)' },
+    
     loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 16, paddingTop: 8 },
-    backBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
+    backBtn: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
     headerCenter: { flex: 1, alignItems: 'center' },
-    headerTitle: { fontSize: 20, fontWeight: '900', color: '#0F172A' },
-    headerSubtitle: { fontSize: 13, fontWeight: '600', color: '#8B5CF6', marginTop: 2 },
-    addHeaderBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center', shadowColor: '#8B5CF6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 6, elevation: 4 },
+    headerTitle: { fontSize: 20, fontWeight: '900', color: '#F8FAFC' },
+    headerSubtitle: { fontSize: 13, fontWeight: '600', color: '#A78BFA', marginTop: 2 },
+    addHeaderBtn: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(139,92,246,0.5)' },
     
-    bulkActionContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F1F5F9', marginHorizontal: 16, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, marginBottom: 10, borderWidth: 1, borderColor: '#E2E8F0' },
-    bulkText: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
+    bulkActionContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 16, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
+    bulkText: { fontSize: 14, fontWeight: '700', color: '#F8FAFC' },
     bulkDeleteBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EF4444', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, gap: 6 },
     bulkDeleteText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 
     listContent: { padding: 16, paddingBottom: 120 },
-    card: { backgroundColor: '#fff', borderRadius: 24, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.05, shadowRadius: 15, elevation: 3, borderWidth: 1, borderColor: '#F1F5F9' },
-    cardSelected: { borderColor: '#8B5CF6', backgroundColor: '#F5F3FF' },
+    card: { borderRadius: 24, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
+    cardSelected: { borderColor: '#8B5CF6', backgroundColor: 'rgba(139,92,246,0.1)' },
     cardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
     
-    checkbox: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: '#CBD5E1', alignItems: 'center', justifyContent: 'center', marginRight: 12, backgroundColor: '#fff' },
+    checkbox: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', alignItems: 'center', justifyContent: 'center', marginRight: 12, backgroundColor: 'rgba(0,0,0,0.3)' },
     checkboxSelected: { backgroundColor: '#8B5CF6', borderColor: '#8B5CF6' },
     
-    iconBox: { width: 56, height: 56, borderRadius: 16, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#F1F5F9' },
+    iconBox: { width: 56, height: 56, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
     emojiIcon: { width: 36, height: 36 },
     
     cardInfo: { flex: 1, marginLeft: 16 },
-    docType: { fontSize: 11, fontWeight: '800', color: '#8B5CF6', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
-    docName: { fontSize: 16, fontWeight: '900', color: '#1E293B', letterSpacing: -0.3, marginBottom: 4 },
+    docType: { fontSize: 11, fontWeight: '800', color: '#A78BFA', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+    docName: { fontSize: 16, fontWeight: '900', color: '#F8FAFC', letterSpacing: -0.3, marginBottom: 4 },
     dateText: { fontSize: 12, fontWeight: '600', color: '#94A3B8' },
 
     actionRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -351,14 +389,18 @@ const st = StyleSheet.create({
     actionText: { fontSize: 13, fontWeight: '800' },
 
     // Modal
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(15,23,42,0.6)', justifyContent: 'flex-end' },
-    modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: '90%' },
-    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-    modalTitle: { fontSize: 20, fontWeight: '900', color: '#0F172A' },
-    modalClose: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
-    inputLabel: { fontSize: 12, fontWeight: '800', color: '#64748B', marginTop: 16, marginBottom: 8, marginLeft: 4, letterSpacing: 0.5 },
-    fileBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 20, backgroundColor: '#F5F3FF', borderRadius: 20, borderWidth: 2, borderColor: '#DDD6FE', borderStyle: 'dashed' },
-    fileBtnText: { fontSize: 15, fontWeight: '800', color: '#8B5CF6', marginLeft: 10 },
-    saveBtn: { backgroundColor: '#8B5CF6', borderRadius: 20, paddingVertical: 18, alignItems: 'center', marginTop: 28, shadowColor: '#8B5CF6', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
-    saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+    modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
+    modalContent: { borderTopLeftRadius: 32, borderTopRightRadius: 32, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden', maxHeight: '90%' },
+    sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: 12 },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
+    modalTitle: { fontSize: 20, fontWeight: '900', color: '#F8FAFC' },
+    modalClose: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
+    
+    inputLabel: { fontSize: 12, fontWeight: '800', color: '#94A3B8', marginTop: 16, marginBottom: 8, marginLeft: 4, letterSpacing: 0.5 },
+    inputWrapper: { backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 16, padding: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    fileBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 20, backgroundColor: 'rgba(139,92,246,0.1)', borderRadius: 20, borderWidth: 2, borderColor: 'rgba(139,92,246,0.3)', borderStyle: 'dashed' },
+    fileBtnText: { fontSize: 15, fontWeight: '800', color: '#A78BFA', marginLeft: 10 },
+    
+    saveBtn: { borderRadius: 20, paddingVertical: 18, alignItems: 'center', marginTop: 28, overflow: 'hidden' },
+    saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 0.5 },
 });

@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState, useContext } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, Dimensions, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthContext } from '../context/AuthContext';
 import SpaceWaves from '../components/SpaceWaves';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 
 const { width } = Dimensions.get('window');
 
@@ -87,7 +88,7 @@ export default function LoginTransitionScreen({ onFinish }) {
 
             </Animated.View>
 
-            <View style={styles.bottomArea}>
+            <SafeAreaView style={styles.bottomArea} edges={['bottom']}>
                 <Text style={styles.loadingText}>PROGRAMINIZ HAZIRLANIYOR...</Text>
                 
                 <View style={styles.progressContainer}>
@@ -95,7 +96,7 @@ export default function LoginTransitionScreen({ onFinish }) {
                 </View>
                 
                 <Text style={styles.percentageText}>%{progress}</Text>
-            </View>
+            </SafeAreaView>
 
         </View>
     );

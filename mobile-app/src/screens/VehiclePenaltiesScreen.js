@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { View, StyleSheet, FlatList, ActivityIndicator, Alert, Text, Platform, TouchableOpacity, RefreshControl, Modal, ScrollView, Linking } from 'react-native';
+import React, { useState, useEffect, useContext, useRef } from 'react';
+import { KeyboardAvoidingView, View, StyleSheet, FlatList, ActivityIndicator, Alert, Text, Platform, TouchableOpacity, RefreshControl, Modal, ScrollView, Linking, Animated } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
@@ -203,7 +204,17 @@ export default function VehiclePenaltiesScreen({ route, navigation }) {
         return true;
     }) : [];
 
-    const renderItem = ({ item }) => {
+    const AnimatedPenaltyRow = ({ item, index }) => {
+        const slideAnim = useRef(new Animated.Value(50)).current;
+        const opacityAnim = useRef(new Animated.Value(0)).current;
+
+        useEffect(() => {
+            Animated.parallel([
+                Animated.timing(opacityAnim, { toValue: 1, duration: 400, delay: index * 100, useNativeDriver: true }),
+                Animated.spring(slideAnim, { toValue: 0, friction: 6, tension: 40, delay: index * 100, useNativeDriver: true })
+            ]).start();
+        }, []);
+
         const isPaid = !!item.payment_date;
         const discountDeadline = item.discount_deadline ? new Date(item.discount_deadline) : new Date(new Date(item.date).getTime() + 30 * 24 * 60 * 60 * 1000);
         
@@ -216,133 +227,137 @@ export default function VehiclePenaltiesScreen({ route, navigation }) {
         }
 
         return (
-            <View style={st.card}>
-                <View style={st.cardHeader}>
-                    <View style={[st.iconBox, { backgroundColor: isPaid ? '#ECFDF5' : '#FEF2F2' }]}>
-                        <Icon name={isPaid ? "check-circle-outline" : "alert-circle-outline"} size={20} color={isPaid ? '#10B981' : '#EF4444'} />
-                    </View>
-                    <View style={{ flex: 1, paddingLeft: 10, paddingRight: 8 }}>
-                        <Text style={st.cardTitle}>{item.penalty_no?.toUpperCase() || '-'}</Text>
-                        <Text style={st.cardDesc}>
-                            {vehicle?.plate || 'Plaka Yok'} • Şoför: {toTitleCase(item.driver_name) || '-'}
-                        </Text>
-                    </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={[st.amountText, isPaid && { color: '#059669' }]}>
-                            {fmtMoney(isPaid && item.paid_amount ? item.paid_amount : item.amount)}
-                        </Text>
-                        {!isPaid && !isDiscountExpired && (
-                            <Text style={st.discountText}>
-                                İndirimli: {fmtMoney(item.amount * 0.75)}
-                            </Text>
-                        )}
-                    </View>
-                </View>
-
-                {/* Grid Structure - Compact */}
-                <View style={st.cardGrid}>
-                    <View style={st.gridRow}>
-                        <View style={st.gridCol}>
-                            <View style={st.gridLabelRow}>
-                                <Icon name="calendar-blank-outline" size={12} color="#F59E0B" />
-                                <Text style={[st.gridLabel, { color: '#F59E0B' }]}>TARİH</Text>
-                            </View>
-                            <Text style={[st.gridValue, { color: '#D97706' }]}>
-                                {item.date ? new Date(item.date).toLocaleDateString('tr-TR') : '-'} 
-                                {item.time ? ` ${item.time}` : ''}
+            <Animated.View style={{ opacity: opacityAnim, transform: [{ translateY: slideAnim }], marginBottom: 16 }}>
+                <BlurView intensity={30} tint="dark" style={[st.card, { borderLeftColor: isPaid ? '#34D399' : '#F87171' }]}>
+                    <View style={st.cardHeader}>
+                        <View style={[st.iconBox, { backgroundColor: isPaid ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)' }]}>
+                            <Icon name={isPaid ? "check-circle-outline" : "alert-circle-outline"} size={20} color={isPaid ? '#34D399' : '#F87171'} />
+                        </View>
+                        <View style={{ flex: 1, paddingLeft: 10, paddingRight: 8 }}>
+                            <Text style={st.cardTitle}>{item.penalty_no?.toUpperCase() || '-'}</Text>
+                            <Text style={st.cardDesc}>
+                                {vehicle?.plate || 'Plaka Yok'} • Şoför: {toTitleCase(item.driver_name) || '-'}
                             </Text>
                         </View>
-                        <View style={st.gridDivider} />
-                        <View style={st.gridCol}>
-                            <View style={st.gridLabelRow}>
-                                <Icon name="file-document-outline" size={12} color="#3B82F6" />
-                                <Text style={[st.gridLabel, { color: '#3B82F6' }]}>MADDE / YER</Text>
-                            </View>
-                            <Text style={[st.gridValue, { color: '#2563EB' }]} numberOfLines={1}>
-                                {item.article?.toUpperCase() || '-'}
+                        <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={[st.amountText, isPaid && { color: '#34D399' }]}>
+                                {fmtMoney(isPaid && item.paid_amount ? item.paid_amount : item.amount)}
                             </Text>
-                            <Text style={[st.gridSubValue, { color: '#60A5FA' }]} numberOfLines={1}>
-                                {toTitleCase(item.location) || '-'}
-                            </Text>
-                        </View>
-                    </View>
-                    
-                    <View style={st.gridHorizontalDivider} />
-                    
-                    <View style={st.gridRow}>
-                        <View style={st.gridCol}>
-                            <View style={st.gridLabelRow}>
-                                <Icon name="credit-card-outline" size={12} color={isPaid ? '#10B981' : '#EF4444'} />
-                                <Text style={[st.gridLabel, { color: isPaid ? '#10B981' : '#EF4444' }]}>ÖDEME DURUMU</Text>
-                            </View>
-                            <Text style={[st.gridValue, { color: isPaid ? '#059669' : '#DC2626' }]}>
-                                {paymentStatusText}
-                            </Text>
-                            {isPaid && (
-                                <Text style={[st.gridSubValue, { color: '#34D399' }]}>
-                                    Tarih: {new Date(item.payment_date).toLocaleDateString('tr-TR')}
+                            {!isPaid && !isDiscountExpired && (
+                                <Text style={st.discountText}>
+                                    İndirimli: {fmtMoney(item.amount * 0.75)}
                                 </Text>
                             )}
                         </View>
-                        <View style={st.gridDivider} />
-                        <View style={[st.gridCol, { justifyContent: 'center' }]}>
-                            {/* Documents replacing Delete Button */}
-                            <View style={st.docsRow}>
-                                {item.traffic_penalty_document ? (
-                                    <TouchableOpacity style={st.docBtn} onPress={() => Linking.openURL(item.traffic_penalty_document)}>
-                                        <Icon name="file-document-outline" size={12} color="#6366F1" />
-                                        <Text style={st.docText}>Ceza</Text>
-                                    </TouchableOpacity>
-                                ) : null}
-                                {item.payment_receipt ? (
-                                    <TouchableOpacity style={st.docBtn} onPress={() => Linking.openURL(item.payment_receipt)}>
-                                        <Icon name="receipt" size={12} color="#10B981" />
-                                        <Text style={st.docText}>Dekont</Text>
-                                    </TouchableOpacity>
-                                ) : null}
-                                {!item.traffic_penalty_document && !item.payment_receipt && (
-                                    <Text style={[st.gridSubValue, { color: '#94A3B8', fontStyle: 'italic' }]}>Belge yok</Text>
+                    </View>
+
+                    {/* Grid Structure - Compact */}
+                    <View style={st.cardGrid}>
+                        <View style={st.gridRow}>
+                            <View style={st.gridCol}>
+                                <View style={st.gridLabelRow}>
+                                    <Icon name="calendar-blank-outline" size={12} color="#FBBF24" />
+                                    <Text style={[st.gridLabel, { color: '#FBBF24' }]}>TARİH</Text>
+                                </View>
+                                <Text style={[st.gridValue, { color: '#FDE68A' }]}>
+                                    {item.date ? new Date(item.date).toLocaleDateString('tr-TR') : '-'} 
+                                    {item.time ? ` ${item.time}` : ''}
+                                </Text>
+                            </View>
+                            <View style={st.gridDivider} />
+                            <View style={st.gridCol}>
+                                <View style={st.gridLabelRow}>
+                                    <Icon name="file-document-outline" size={12} color="#60A5FA" />
+                                    <Text style={[st.gridLabel, { color: '#60A5FA' }]}>MADDE / YER</Text>
+                                </View>
+                                <Text style={[st.gridValue, { color: '#93C5FD' }]} numberOfLines={1}>
+                                    {item.article?.toUpperCase() || '-'}
+                                </Text>
+                                <Text style={[st.gridSubValue, { color: '#BFDBFE' }]} numberOfLines={1}>
+                                    {toTitleCase(item.location) || '-'}
+                                </Text>
+                            </View>
+                        </View>
+                        
+                        <View style={st.gridHorizontalDivider} />
+                        
+                        <View style={st.gridRow}>
+                            <View style={st.gridCol}>
+                                <View style={st.gridLabelRow}>
+                                    <Icon name="credit-card-outline" size={12} color={isPaid ? '#34D399' : '#F87171'} />
+                                    <Text style={[st.gridLabel, { color: isPaid ? '#34D399' : '#F87171' }]}>ÖDEME DURUMU</Text>
+                                </View>
+                                <Text style={[st.gridValue, { color: isPaid ? '#10B981' : '#EF4444' }]}>
+                                    {paymentStatusText}
+                                </Text>
+                                {isPaid && (
+                                    <Text style={[st.gridSubValue, { color: '#6EE7B7' }]}>
+                                        Tarih: {new Date(item.payment_date).toLocaleDateString('tr-TR')}
+                                    </Text>
                                 )}
+                            </View>
+                            <View style={st.gridDivider} />
+                            <View style={[st.gridCol, { justifyContent: 'center' }]}>
+                                {/* Documents replacing Delete Button */}
+                                <View style={st.docsRow}>
+                                    {item.traffic_penalty_document ? (
+                                        <TouchableOpacity style={st.docBtn} onPress={() => Linking.openURL(item.traffic_penalty_document)}>
+                                            <Icon name="file-document-outline" size={12} color="#818CF8" />
+                                            <Text style={st.docText}>Ceza</Text>
+                                        </TouchableOpacity>
+                                    ) : null}
+                                    {item.payment_receipt ? (
+                                        <TouchableOpacity style={st.docBtn} onPress={() => Linking.openURL(item.payment_receipt)}>
+                                            <Icon name="receipt" size={12} color="#34D399" />
+                                            <Text style={st.docText}>Dekont</Text>
+                                        </TouchableOpacity>
+                                    ) : null}
+                                    {!item.traffic_penalty_document && !item.payment_receipt && (
+                                        <Text style={[st.gridSubValue, { color: '#94A3B8', fontStyle: 'italic' }]}>Belge yok</Text>
+                                    )}
+                                </View>
                             </View>
                         </View>
                     </View>
-                </View>
 
-                {item.notes ? (
-                    <View style={st.notesBox}>
-                        <Icon name="information-outline" size={12} color="#64748B" />
-                        <Text style={st.notesText}>Not: {toTitleCase(item.notes)}</Text>
+                    {item.notes ? (
+                        <View style={st.notesBox}>
+                            <Icon name="information-outline" size={12} color="#94A3B8" />
+                            <Text style={st.notesText}>Not: {toTitleCase(item.notes)}</Text>
+                        </View>
+                    ) : null}
+
+                    {/* ── ACTION BUTTONS ── */}
+                    <View style={[st.actionRow, { marginTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 16, flexDirection: 'row' }]}>
+                        <TouchableOpacity style={[{ flex: 1, marginRight: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 12, backgroundColor: 'rgba(59, 130, 246, 0.15)', borderWidth: 1, borderColor: 'rgba(59, 130, 246, 0.3)' }]} onPress={() => openEdit(item)}>
+                            <Icon name="pencil-outline" size={16} color="#60A5FA" />
+                            <Text style={[{ color: '#60A5FA', fontSize: 12, fontWeight: '800', marginLeft: 4 }]}>Düzenle</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 12, backgroundColor: 'rgba(239, 68, 68, 0.15)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.3)' }]} onPress={() => confirmDelete(item.id)}>
+                            <Icon name="trash-can-outline" size={16} color="#F87171" />
+                            <Text style={[{ color: '#F87171', fontSize: 12, fontWeight: '800', marginLeft: 4 }]}>Sil</Text>
+                        </TouchableOpacity>
                     </View>
-                ) : null}
-
-                {/* ── ACTION BUTTONS ── */}
-                <View style={[st.actionRow, { marginTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 16, flexDirection: 'row' }]}>
-                    <TouchableOpacity style={[{ flex: 1, marginRight: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 12, backgroundColor: '#EFF6FF' }]} onPress={() => openEdit(item)}>
-                        <Icon name="pencil-outline" size={16} color="#3B82F6" />
-                        <Text style={[{ color: '#3B82F6', fontSize: 12, fontWeight: '800', marginLeft: 4 }]}>Düzenle</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 12, backgroundColor: '#FEF2F2' }]} onPress={() => confirmDelete(item.id)}>
-                        <Icon name="trash-can-outline" size={16} color="#EF4444" />
-                        <Text style={[{ color: '#EF4444', fontSize: 12, fontWeight: '800', marginLeft: 4 }]}>Sil</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
+                </BlurView>
+            </Animated.View>
         );
     };
 
+    const renderItem = ({ item, index }) => <AnimatedPenaltyRow item={item} index={index} />;
+
     return (
         <SafeAreaView style={st.container} edges={['top']}>
-            <View style={{ backgroundColor: '#fff', zIndex: 10, paddingBottom: 12 }}>
+            <View style={{ backgroundColor: 'transparent', zIndex: 10, paddingBottom: 12 }}>
                 <View style={st.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-                        <Icon name="chevron-left" size={26} color="#0F172A" />
+                        <Icon name="chevron-left" size={26} color="#F8FAFC" />
                     </TouchableOpacity>
                     <View style={st.headerCenter}>
                         <Text style={st.headerTitle}>Trafik Cezaları</Text>
                         <Text style={st.headerSubtitle}>{vehicle?.plate || 'Ceza Takibi'}</Text>
                     </View>
                     <TouchableOpacity style={st.addHeaderBtn} onPress={openAdd}>
-                        <Icon name="plus" size={24} color="#fff" />
+                        <Icon name="plus" size={24} color="#fff" style={{ textShadowColor: 'rgba(255,255,255,0.5)', textShadowRadius: 8 }} />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -379,7 +394,7 @@ export default function VehiclePenaltiesScreen({ route, navigation }) {
 
             {/* Modal Form */}
             <Modal visible={modalVisible} animationType="slide" transparent>
-                <View style={st.modalOverlay}>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={st.modalOverlay}>
                     <View style={st.modalContent}>
                         <View style={st.modalHeader}>
                             <Text style={st.modalTitle}>Yeni Ceza Kaydı Ekle</Text>
@@ -516,66 +531,66 @@ export default function VehiclePenaltiesScreen({ route, navigation }) {
                             <View style={{ height: 40 }} />
                         </ScrollView>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </SafeAreaView>
     );
 }
 
 const st = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F8FAFC' },
+    container: { flex: 1, backgroundColor: '#020617' },
     loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     
     // Header
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 44 : 24 },
-    backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
+    backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
     headerCenter: { flex: 1, alignItems: 'center' },
-    headerTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
-    headerSubtitle: { fontSize: 13, color: '#64748B', marginTop: 2, fontWeight: '500' },
-    addHeaderBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center', shadowColor: '#EF4444', shadowOffset: { width: 0, height: 4 }, shadowopacity: 1, shadowRadius: 8, elevation: 4 },
+    headerTitle: { fontSize: 18, fontWeight: '800', color: '#F8FAFC', textShadowColor: 'rgba(255,255,255,0.2)', textShadowRadius: 10 },
+    headerSubtitle: { fontSize: 13, color: '#94A3B8', marginTop: 2, fontWeight: '500' },
+    addHeaderBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(239, 68, 68, 0.2)', borderWidth: 1, borderColor: '#EF4444', alignItems: 'center', justifyContent: 'center', shadowColor: '#EF4444', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.8, shadowRadius: 10, elevation: 8 },
 
     filterBar: { flexDirection: 'row', paddingHorizontal: 16, marginVertical: 12, gap: 8 },
-    filterChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: '#fff', borderWidth: 1, borderColor: '#E2E8F0', flex: 1, alignItems: 'center' },
-    filterChipActive: { backgroundColor: '#EF4444', borderColor: '#EF4444' },
+    filterChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', flex: 1, alignItems: 'center' },
+    filterChipActive: { backgroundColor: 'rgba(239, 68, 68, 0.2)', borderColor: 'rgba(239, 68, 68, 0.4)' },
     filterChipText: { fontSize: 13, fontWeight: '700', color: '#64748B' },
-    filterChipTextActive: { color: '#fff' },
+    filterChipTextActive: { color: '#F87171', textShadowColor: 'rgba(248, 113, 113, 0.5)', textShadowRadius: 8 },
 
     listContent: { padding: 16, paddingBottom: 100 },
     
     // Card Styles Matches Soft Premium UI
-    card: { backgroundColor: '#fff', borderRadius: 24, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#94A3B8', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 4 },
+    card: { borderRadius: 24, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', overflow: 'hidden', borderLeftWidth: 5 },
     cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
     iconBox: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-    cardTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A', letterSpacing: 0.2 },
-    cardDesc: { fontSize: 13, color: '#64748B', marginTop: 2, fontWeight: '500' },
-    amountText: { fontSize: 17, fontWeight: '900', color: '#0F172A' },
-    discountText: { fontSize: 10, color: '#10B981', fontWeight: '700', marginTop: 2 },
+    cardTitle: { fontSize: 16, fontWeight: '800', color: '#F8FAFC', letterSpacing: 0.2 },
+    cardDesc: { fontSize: 13, color: '#94A3B8', marginTop: 2, fontWeight: '500' },
+    amountText: { fontSize: 17, fontWeight: '900', color: '#F8FAFC' },
+    discountText: { fontSize: 10, color: '#34D399', fontWeight: '700', marginTop: 2 },
 
     // Card Grid Area
-    cardGrid: { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: '#F1F5F9' },
+    cardGrid: { backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
     gridRow: { flexDirection: 'row', alignItems: 'center' },
     gridCol: { flex: 1, paddingVertical: 4, paddingHorizontal: 6 },
-    gridDivider: { width: 1, height: '100%', backgroundColor: '#E2E8F0', marginHorizontal: 8 },
-    gridHorizontalDivider: { height: 1, backgroundColor: '#E2E8F0', marginVertical: 8 },
+    gridDivider: { width: 1, height: '100%', backgroundColor: 'rgba(255,255,255,0.1)', marginHorizontal: 8 },
+    gridHorizontalDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 8 },
     
     gridLabelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 4 },
     gridLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
-    gridValue: { fontSize: 13, fontWeight: '700', color: '#1E293B', marginBottom: 2 },
+    gridValue: { fontSize: 13, fontWeight: '700', color: '#E2E8F0', marginBottom: 2 },
     gridSubValue: { fontSize: 11, fontWeight: '600' },
 
     deleteActionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: '#FEE2E2', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, gap: 4 },
     deleteActionText: { color: '#EF4444', fontSize: 12, fontWeight: '700' },
 
     // Documents & Notes
-    docsSection: { marginTop: 16, backgroundColor: '#F8FAFC', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#F1F5F9' },
+    docsSection: { marginTop: 16, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
     docsHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 },
-    docsTitle: { fontSize: 11, fontWeight: '800', color: '#8B5CF6', letterSpacing: 0.5 },
+    docsTitle: { fontSize: 11, fontWeight: '800', color: '#A78BFA', letterSpacing: 0.5 },
     docsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-    docBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 6, gap: 4, borderWidth: 1, borderColor: '#E2E8F0' },
-    docText: { fontSize: 10, fontWeight: '700', color: '#475569' },
+    docBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 6, gap: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    docText: { fontSize: 10, fontWeight: '700', color: '#94A3B8' },
     
     notesBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 12, paddingHorizontal: 4 },
-    notesText: { fontSize: 12, color: '#64748B', fontStyle: 'italic', flex: 1, lineHeight: 18 },
+    notesText: { fontSize: 12, color: '#94A3B8', fontStyle: 'italic', flex: 1, lineHeight: 18 },
 
     // Modal Form Styles
     modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'flex-end' },

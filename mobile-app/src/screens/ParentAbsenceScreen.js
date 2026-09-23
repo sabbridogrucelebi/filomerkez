@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Platform, SafeAreaView, ScrollView } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Platform, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AuthContext } from '../context/AuthContext';
 import SpaceWaves from '../components/SpaceWaves';
 import api from '../api/axios';
@@ -118,9 +119,9 @@ export default function ParentAbsenceScreen() {
     const absenceCount = absenceDates.size;
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['top']}>
             <SpaceWaves />
-            <ScrollView style={{ flex: 1, zIndex: 10 }} contentContainerStyle={{ paddingBottom: 40 }}>
+            <ScrollView style={{ flex: 1, zIndex: 10 }} contentContainerStyle={{ paddingBottom: 120 }}>
                 {/* Header */}
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Gelmeyecek</Text>
@@ -245,7 +246,7 @@ export default function ParentAbsenceScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#020617' },
-    header: { paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 10 : 40, paddingBottom: 10, alignItems: 'center' },
+    header: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10, alignItems: 'center' },
     headerTitle: { fontSize: 24, fontWeight: '900', color: '#FFF', letterSpacing: 0.5 },
     headerSub: { fontSize: 14, color: '#A78BFA', fontWeight: '700', marginTop: 4 },
 
@@ -283,6 +284,6 @@ const styles = StyleSheet.create({
     legendDot: { width: 10, height: 10, borderRadius: 5 },
     legendText: { color: '#94A3B8', fontSize: 11, fontWeight: '600' },
 
-    savingOverlay: { position: 'absolute', top: Platform.OS === 'ios' ? 60 : 50, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(139, 92, 246, 0.9)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, gap: 8 },
+    savingOverlay: { position: 'absolute', top: 12, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(139, 92, 246, 0.9)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, gap: 8 },
     savingText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
 });

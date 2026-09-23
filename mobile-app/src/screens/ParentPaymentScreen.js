@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../api/axios';
 import SpaceWaves from '../components/SpaceWaves';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from '@react-navigation/native';
 
 export default function ParentPaymentScreen() {
@@ -39,7 +40,7 @@ export default function ParentPaymentScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={styles.container} edges={['top']}>
                 <SpaceWaves />
                 <View style={styles.centerContent}>
                     <ActivityIndicator size="large" color="#8B5CF6" />
@@ -51,7 +52,7 @@ export default function ParentPaymentScreen() {
 
     if (!data || !data.debts) {
         return (
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={styles.container} edges={['top']}>
                 <SpaceWaves />
                 <View style={styles.centerContent}>
                     <Icon name="alert-circle-outline" size={48} color="#EF4444" />
@@ -64,7 +65,7 @@ export default function ParentPaymentScreen() {
     const { totals, debts } = data;
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['top']}>
             <SpaceWaves />
             
             <View style={styles.header}>
@@ -156,7 +157,7 @@ const styles = StyleSheet.create({
     headerTitle: { color: '#fff', fontSize: 24, fontWeight: '900', letterSpacing: 0.5 },
     headerSubtitle: { color: '#8B5CF6', fontSize: 13, fontWeight: '600', marginTop: 2 },
     
-    scrollContent: { padding: 20, zIndex: 10 },
+    scrollContent: { padding: 20, paddingBottom: 120, zIndex: 10 },
     
     summaryCard: { backgroundColor: 'rgba(15, 23, 42, 0.8)', borderRadius: 24, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', marginBottom: 24 },
     summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },

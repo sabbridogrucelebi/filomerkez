@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Dimensions, Linking, Share, Platform, Modal, ScrollView, Image } from 'react-native';
+import React, { useState, useEffect, useContext, useRef } from 'react';
+import { KeyboardAvoidingView, View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Dimensions, Linking, Share, Platform, Modal, ScrollView, Image, Animated } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import { EmptyState, FormField } from '../components';
@@ -193,76 +194,91 @@ export default function VehicleDocumentsScreen({ route, navigation }) {
         return { color: '#10B981', bg: '#ECFDF5', text: `${diff} gün kaldı` };
     };
 
-    const renderItem = ({ item }) => {
+    const AnimatedDocRow = ({ item, index }) => {
+        const slideAnim = useRef(new Animated.Value(50)).current;
+        const opacityAnim = useRef(new Animated.Value(0)).current;
+
+        useEffect(() => {
+            Animated.parallel([
+                Animated.timing(opacityAnim, { toValue: 1, duration: 400, delay: index * 100, useNativeDriver: true }),
+                Animated.spring(slideAnim, { toValue: 0, friction: 6, tension: 40, delay: index * 100, useNativeDriver: true })
+            ]).start();
+        }, []);
+
         const status = getStatusInfo(item.end_date, item.is_expired);
+        
         return (
-            <View style={st.card}>
-                <View style={st.cardTop}>
-                    <View style={st.iconBox}>
-                        <Icon name="file-document-outline" size={24} color="#3B82F6" />
-                    </View>
-                    <View style={st.cardInfo}>
-                        <Text style={st.docType}>{item.type || 'BELGE'}</Text>
-                        <Text style={st.docName}>{item.title || 'İsimsiz Belge'}</Text>
-                    </View>
-                    <View style={{ flexDirection: 'row' }}>
-                        <TouchableOpacity onPress={() => openEdit(item)} style={{ padding: 6 }}>
-                            <Icon name="pencil-outline" size={20} color="#3B82F6" />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => confirmDelete(item.id)} style={{ padding: 6 }}>
-                            <Icon name="trash-can-outline" size={20} color="#EF4444" />
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-                <View style={{ alignItems: 'flex-start', marginTop: 4, marginBottom: 16 }}>
-                    <View style={[st.statusBadge, { backgroundColor: status.bg }]}>
-                        <Text style={[st.statusText, { color: status.color }]}>{status.text}</Text>
-                    </View>
-                </View>
-
-                <View style={st.cardDates}>
-                    <View style={st.dateGroup}>
-                        <Icon name="calendar-start" size={14} color="#94A3B8" />
-                        <View style={{ marginLeft: 6 }}>
-                            <Text style={st.dateLabel}>Başlangıç</Text>
-                            <Text style={st.dateValue}>{item.start_date ? new Date(item.start_date).toLocaleDateString('tr-TR') : '-'}</Text>
+            <Animated.View style={{ opacity: opacityAnim, transform: [{ translateY: slideAnim }], marginBottom: 16 }}>
+                <BlurView intensity={30} tint="dark" style={st.card}>
+                    <View style={st.cardTop}>
+                        <View style={st.iconBox}>
+                            <Icon name="file-document-outline" size={26} color="#60A5FA" style={{ textShadowColor: '#60A5FA', textShadowRadius: 10 }} />
+                        </View>
+                        <View style={st.cardInfo}>
+                            <Text style={st.docType}>{item.type || 'BELGE'}</Text>
+                            <Text style={st.docName}>{item.title || 'İsimsiz Belge'}</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row' }}>
+                            <TouchableOpacity onPress={() => openEdit(item)} style={{ padding: 6 }}>
+                                <Icon name="pencil-outline" size={20} color="#60A5FA" />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => confirmDelete(item.id)} style={{ padding: 6 }}>
+                                <Icon name="trash-can-outline" size={20} color="#F87171" />
+                            </TouchableOpacity>
                         </View>
                     </View>
-                    <View style={st.dateDivider} />
-                    <View style={st.dateGroup}>
-                        <Icon name="calendar-end" size={14} color="#94A3B8" />
-                        <View style={{ marginLeft: 6 }}>
-                            <Text style={st.dateLabel}>Bitiş</Text>
-                            <Text style={st.dateValue}>{item.end_date ? new Date(item.end_date).toLocaleDateString('tr-TR') : '-'}</Text>
+
+                    <View style={{ alignItems: 'flex-start', marginTop: 4, marginBottom: 16 }}>
+                        <View style={[st.statusBadge, { backgroundColor: status.bg }]}>
+                            <Text style={[st.statusText, { color: status.color }]}>{status.text}</Text>
                         </View>
                     </View>
-                </View>
 
-                <View style={st.actionRow}>
-                    <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#EFF6FF' }]} onPress={() => handleView(item.file_url)}>
-                        <Icon name="eye-outline" size={16} color="#3B82F6" />
-                        <Text style={[st.actionText, { color: '#3B82F6' }]}>Görüntüle</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#ECFDF5' }]} onPress={() => handleView(item.file_url)}>
-                        <Icon name="cloud-download-outline" size={16} color="#10B981" />
-                        <Text style={[st.actionText, { color: '#10B981' }]}>İndir</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#FFFBEB' }]} onPress={() => handleShare(item)}>
-                        <Icon name="share-variant-outline" size={16} color="#F59E0B" />
-                        <Text style={[st.actionText, { color: '#F59E0B' }]}>Paylaş</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
+                    <View style={st.cardDates}>
+                        <View style={st.dateGroup}>
+                            <Icon name="calendar-start" size={14} color="#64748B" />
+                            <View style={{ marginLeft: 6 }}>
+                                <Text style={st.dateLabel}>Başlangıç</Text>
+                                <Text style={st.dateValue}>{item.start_date ? new Date(item.start_date).toLocaleDateString('tr-TR') : '-'}</Text>
+                            </View>
+                        </View>
+                        <View style={st.dateDivider} />
+                        <View style={st.dateGroup}>
+                            <Icon name="calendar-end" size={14} color="#64748B" />
+                            <View style={{ marginLeft: 6 }}>
+                                <Text style={st.dateLabel}>Bitiş</Text>
+                                <Text style={st.dateValue}>{item.end_date ? new Date(item.end_date).toLocaleDateString('tr-TR') : '-'}</Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    <View style={st.actionRow}>
+                        <TouchableOpacity style={[st.actionBtn, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]} onPress={() => handleView(item.file_url)}>
+                            <Icon name="eye-outline" size={16} color="#60A5FA" />
+                            <Text style={[st.actionText, { color: '#60A5FA' }]}>Görüntüle</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[st.actionBtn, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]} onPress={() => handleView(item.file_url)}>
+                            <Icon name="cloud-download-outline" size={16} color="#34D399" />
+                            <Text style={[st.actionText, { color: '#34D399' }]}>İndir</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[st.actionBtn, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]} onPress={() => handleShare(item)}>
+                            <Icon name="share-variant-outline" size={16} color="#FBBF24" />
+                            <Text style={[st.actionText, { color: '#FBBF24' }]}>Paylaş</Text>
+                        </TouchableOpacity>
+                    </View>
+                </BlurView>
+            </Animated.View>
         );
     };
 
+    const renderItem = ({ item, index }) => <AnimatedDocRow item={item} index={index} />;
+
     return (
         <View style={st.container}>
-            <View style={{ backgroundColor: '#fff', zIndex: 10, paddingTop: Platform.OS === 'android' ? 44 : 54 }}>
+            <View style={{ backgroundColor: 'transparent', zIndex: 10, paddingTop: Platform.OS === 'android' ? 44 : 54 }}>
                 <View style={st.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-                        <Icon name="chevron-left" size={26} color="#0F172A" />
+                        <Icon name="chevron-left" size={26} color="#F8FAFC" />
                     </TouchableOpacity>
                     <View style={st.headerCenter}>
                         <Text style={st.headerTitle}>Belge ve Dökümanlar</Text>
@@ -278,7 +294,7 @@ export default function VehicleDocumentsScreen({ route, navigation }) {
                             setModalVisible(true);
                         }}
                     >
-                        <Icon name="plus" size={24} color="#fff" />
+                        <Icon name="plus" size={24} color="#fff" style={{ textShadowColor: 'rgba(255,255,255,0.5)', textShadowRadius: 8 }} />
                     </TouchableOpacity>
                 </View>
                 
@@ -308,7 +324,7 @@ export default function VehicleDocumentsScreen({ route, navigation }) {
 
             {/* Modal */}
             <Modal visible={modalVisible} animationType="slide" transparent>
-                <View style={st.modalOverlay}>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={st.modalOverlay}>
                     <View style={st.modalContent}>
                         <View style={st.modalHeader}>
                             <Text style={st.modalTitle}>Yeni Belge Yükle</Text>
@@ -349,7 +365,7 @@ export default function VehicleDocumentsScreen({ route, navigation }) {
                             <View style={{ height: 40 }} />
                         </ScrollView>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
 
 
@@ -358,35 +374,35 @@ export default function VehicleDocumentsScreen({ route, navigation }) {
 }
 
 const st = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F8FAFC' },
+    container: { flex: 1, backgroundColor: '#020617' },
     loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12 },
-    backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center' },
+    backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
     headerCenter: { flex: 1, alignItems: 'center' },
-    headerTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A', marginTop: 8 },
-    headerSubtitle: { fontSize: 12, fontWeight: '600', color: '#64748B', marginTop: 2 },
-    addHeaderBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#3B82F6', alignItems: 'center', justifyContent: 'center', shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 4 }, shadowopacity: 1, shadowRadius: 6, elevation: 4 },
-    tabsWrapper: { flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', marginTop: 8 },
-    tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 12, backgroundColor: '#F1F5F9', marginHorizontal: 4 },
-    tabBtnActive: { backgroundColor: '#EFF6FF' },
+    headerTitle: { fontSize: 18, fontWeight: '800', color: '#F8FAFC', marginTop: 8, textShadowColor: 'rgba(255,255,255,0.2)', textShadowRadius: 10 },
+    headerSubtitle: { fontSize: 12, fontWeight: '600', color: '#94A3B8', marginTop: 2 },
+    addHeaderBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(59, 130, 246, 0.2)', borderWidth: 1, borderColor: '#3B82F6', alignItems: 'center', justifyContent: 'center', shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.8, shadowRadius: 10, elevation: 8 },
+    tabsWrapper: { flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)', marginTop: 8 },
+    tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.05)', marginHorizontal: 4 },
+    tabBtnActive: { backgroundColor: 'rgba(59, 130, 246, 0.2)', borderWidth: 1, borderColor: 'rgba(59, 130, 246, 0.4)' },
     tabText: { fontSize: 13, fontWeight: '700', color: '#64748B' },
-    tabTextActive: { color: '#3B82F6' },
+    tabTextActive: { color: '#60A5FA', textShadowColor: 'rgba(96, 165, 250, 0.5)', textShadowRadius: 8 },
     listContent: { padding: 16, paddingBottom: 120 },
-    card: { backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
+    card: { borderRadius: 20, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', overflow: 'hidden' },
     cardTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
-    iconBox: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center' },
+    iconBox: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 1, borderColor: 'rgba(59, 130, 246, 0.3)', alignItems: 'center', justifyContent: 'center' },
     cardInfo: { flex: 1, marginLeft: 12, justifyContent: 'center' },
-    docType: { fontSize: 11, fontWeight: '800', color: '#3B82F6', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
-    docName: { fontSize: 15, fontWeight: '800', color: '#1E293B', letterSpacing: -0.2 },
-    cardDates: { flexDirection: 'row', alignItems: 'center', marginTop: 4, padding: 12, backgroundColor: '#F8FAFC', borderRadius: 12 },
+    docType: { fontSize: 11, fontWeight: '800', color: '#60A5FA', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+    docName: { fontSize: 15, fontWeight: '800', color: '#F8FAFC', letterSpacing: -0.2 },
+    cardDates: { flexDirection: 'row', alignItems: 'center', marginTop: 4, padding: 12, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)' },
     dateGroup: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-    dateDivider: { width: 1, height: 24, backgroundColor: '#E2E8F0', marginHorizontal: 12 },
-    dateLabel: { fontSize: 10, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
-    dateValue: { fontSize: 13, fontWeight: '800', color: '#334155' },
+    dateDivider: { width: 1, height: 24, backgroundColor: 'rgba(255,255,255,0.1)', marginHorizontal: 12 },
+    dateLabel: { fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+    dateValue: { fontSize: 13, fontWeight: '800', color: '#E2E8F0' },
     statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
     statusText: { fontSize: 11, fontWeight: '800' },
-    actionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 16, gap: 8 },
-    actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 6, paddingVertical: 10, borderRadius: 12 },
+    actionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 16, gap: 8 },
+    actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 6, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
     actionText: { fontSize: 12, fontWeight: '800' },
 
     // Modal

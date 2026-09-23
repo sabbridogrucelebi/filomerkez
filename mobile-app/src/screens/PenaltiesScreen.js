@@ -1,15 +1,21 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { View, StyleSheet, FlatList, ActivityIndicator, Alert, Text, Platform, TouchableOpacity, RefreshControl, ScrollView, Linking, TextInput } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Animated, Dimensions, TextInput, Modal, Easing, Linking, Alert, RefreshControl, ScrollView } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { BlurView } from 'expo-blur';
+import { Image } from 'expo-image';
+import dayjs from 'dayjs';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import * as WebBrowser from 'expo-web-browser';
 import api from '../api/axios';
+import { emoji } from '../emoji';
 import { AuthContext } from '../context/AuthContext';
-import { EmptyState } from '../components';
-import DatePickerInput from '../components/DatePickerInput';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const fmtMoney = (v) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', minimumFractionDigits: 2 }).format(v || 0);
 
 const toTitleCase = (str) => {
@@ -24,41 +30,71 @@ const toTitleCase = (str) => {
 
 export default function PenaltiesScreen({ navigation }) {
     const { hasPermission } = useContext(AuthContext);
+    const insets = useSafeAreaInsets();
+    
     const [penalties, setPenalties] = useState([]);
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     
-    // Filters
     const [filter, setFilter] = useState('all');
-    const [search, setSearch] = useState('');
-    const [dateFrom, setDateFrom] = useState('');
-    const [dateTo, setDateTo] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [startDate, setStartDate] = useState(null);
+    const [endDate, setEndDate] = useState(null);
+    
     const [showFilters, setShowFilters] = useState(false);
+    const [showStartPicker, setShowStartPicker] = useState(false);
+    const [showEndPicker, setShowEndPicker] = useState(false);
 
-    const fetchData = async (isRefreshing = false) => {
-        if (!isRefreshing) setLoading(true);
+    // Animations
+    const scrollY = useRef(new Animated.Value(0)).current;
+    const blob1Anim = useRef(new Animated.Value(0)).current;
+    const blob2Anim = useRef(new Animated.Value(0)).current;
+    const flipAnims = useRef([...Array(100)].map(() => new Animated.Value(0))).current;
+
+    useEffect(() => {
+        const loop = Animated.loop(
+            Animated.sequence([
+                Animated.timing(blob1Anim, { toValue: 1, duration: 9000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+                Animated.timing(blob1Anim, { toValue: 0, duration: 9000, easing: Easing.inOut(Easing.sin), useNativeDriver: true })
+            ])
+        );
+        const loop2 = Animated.loop(
+            Animated.sequence([
+                Animated.timing(blob2Anim, { toValue: 1, duration: 11000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+                Animated.timing(blob2Anim, { toValue: 0, duration: 11000, easing: Easing.inOut(Easing.sin), useNativeDriver: true })
+            ])
+        );
+        loop.start(); loop2.start();
+        return () => { loop.stop(); loop2.stop(); };
+    }, []);
+
+    const fetchData = async (hideLoader = false) => {
+        if (!hideLoader) setLoading(true);
         try {
-            // İstatistikleri çek
             const statsRes = await api.get('/v1/penalties/statistics');
-            if (statsRes.data && statsRes.data.success) {
-                setStats(statsRes.data.data);
-            }
+            if (statsRes.data?.success) setStats(statsRes.data.data);
 
-            // Cezaları çek
             const listRes = await api.get('/v1/penalties', {
                 params: {
-                    search,
-                    date_from: dateFrom,
-                    date_to: dateTo
+                    search: searchQuery,
+                    date_from: startDate ? dayjs(startDate).format('YYYY-MM-DD') : '',
+                    date_to: endDate ? dayjs(endDate).format('YYYY-MM-DD') : ''
                 }
             });
             
-            if (listRes.data && listRes.data.success && listRes.data.data) {
-                setPenalties(listRes.data.data);
+            if (listRes.data?.success) {
+                setPenalties(listRes.data.data || []);
             } else {
                 setPenalties([]);
             }
+
+            // Stagger animation
+            flipAnims.forEach(a => a.setValue(0));
+            Animated.stagger(60, flipAnims.map((anim) => 
+                Animated.spring(anim, { toValue: 1, friction: 8, tension: 50, useNativeDriver: true })
+            )).start();
+
         } catch (e) {
             console.error('Fetch penalties error:', e);
         } finally {
@@ -67,28 +103,18 @@ export default function PenaltiesScreen({ navigation }) {
         }
     };
 
-    useEffect(() => { 
-        const unsubscribe = navigation.addListener('focus', () => {
-            fetchData();
-        });
-        return unsubscribe;
-    }, [navigation]);
+    useFocusEffect(useCallback(() => { fetchData(true); }, []));
 
-    // Handle search triggers explicitly
-    useEffect(() => {
-        // Debounce search slightly to avoid excessive calls
-        const delayDebounceFn = setTimeout(() => {
-            fetchData();
-        }, 500);
-        return () => clearTimeout(delayDebounceFn);
-    }, [search, dateFrom, dateTo]);
+    const handleFilterSubmit = () => {
+        fetchData();
+        setShowFilters(false);
+    };
 
-    const openAdd = () => {
-        if (!hasPermission('penalties.create')) {
-            Alert.alert('Yetki Yok', 'Ceza kaydı ekleme yetkiniz bulunmuyor.');
-            return;
-        }
-        navigation.navigate('PenaltyForm');
+    const handleClearFilters = () => {
+        setSearchQuery('');
+        setStartDate(null);
+        setEndDate(null);
+        setFilter('all');
     };
 
     const confirmDelete = (id) => {
@@ -102,26 +128,21 @@ export default function PenaltiesScreen({ navigation }) {
                 try { 
                     await api.delete(`/v1/penalties/${id}`); 
                     fetchData(true); 
-                }
-                catch (e) { Alert.alert('Hata', 'Silinemedi.'); }
+                } catch (e) {}
             }}
         ]);
     };
 
     const handleShare = async (path, prefix) => {
         try {
-            // Encode URI to handle spaces or special characters in file paths
             const encodedPath = encodeURI(path);
             const url = api.defaults.baseURL.replace('/api', '') + '/storage/' + encodedPath;
-            
             const ext = path.split('.').pop() || 'pdf';
             const filename = `${prefix}_Belgesi.${ext}`;
             const fileUri = FileSystem.cacheDirectory + filename;
             
-            // Download the file
             const downloadRes = await FileSystem.downloadAsync(url, fileUri);
             
-            // Proceed to share
             if (await Sharing.isAvailableAsync()) {
                 await Sharing.shareAsync(downloadRes.uri, {
                     dialogTitle: 'Belgeyi Paylaş',
@@ -133,7 +154,16 @@ export default function PenaltiesScreen({ navigation }) {
             }
         } catch (e) {
             console.error('Share error:', e);
-            Alert.alert('Hata', `Paylaşım hatası: ${e.message || 'Bilinmeyen bir hata oluştu'}`);
+        }
+    };
+
+    const openDocument = async (path) => {
+        try {
+            const encodedPath = encodeURI(path);
+            const url = api.defaults.baseURL.replace('/api', '') + '/storage/' + encodedPath;
+            Linking.openURL(url);
+        } catch (e) {
+            console.error('Open doc error:', e);
         }
     };
 
@@ -143,422 +173,404 @@ export default function PenaltiesScreen({ navigation }) {
         return true;
     }) : [];
 
-    // İstatistik Kartı Bileşeni (3D Premium)
-    const StatCard = ({ title, value, subValue, colors, icon }) => (
-        <View style={st.statCardContainer}>
-            <LinearGradient 
-                colors={colors} 
-                start={{ x: 0, y: 0 }} 
-                end={{ x: 1, y: 1 }} 
-                style={st.statCard}
-            >
-                {/* 3D Background Icon for Depth */}
-                <Icon name={icon} size={90} color="rgba(255,255,255,0.15)" style={st.statCardBgIcon} />
-                
-                <View style={st.statCardInner}>
-                    <View style={st.statCardHeader}>
-                        <Text style={st.statCardTitle}>{title}</Text>
-                        <View style={st.statCardIconWrapper}>
-                            <Icon name={icon} size={18} color={colors[0]} />
-                        </View>
+    const renderHeader = () => (
+        <View style={{ marginBottom: 20 }}>
+            <View style={s.actionsRow}>
+                <TouchableOpacity style={[s.actionBtn, { flex: 2, backgroundColor: showFilters ? 'rgba(225,29,72,0.3)' : 'transparent', borderColor: 'rgba(255,255,255,0.1)' }]} onPress={() => setShowFilters(true)}>
+                    <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFillObject} />
+                    <Icon name="filter-variant" size={20} color="#F8FAFC" />
+                    <Text style={{ color: '#F8FAFC', fontWeight: '800', marginLeft: 8 }}>Cezaları Filtrele</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[s.actionBtn, { borderColor: 'rgba(255,255,255,0.1)' }]} onPress={() => { setFilter('all'); fetchData(true); }}>
+                    <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFillObject} />
+                    <Icon name="refresh" size={20} color="#38BDF8" />
+                    <Text style={{ color: '#38BDF8', fontWeight: '800', marginLeft: 8 }}>Yenile</Text>
+                </TouchableOpacity>
+            </View>
+
+            {/* Filter Chips */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterBar}>
+                {[
+                    { label: 'Tümü', value: 'all' },
+                    { label: 'Ödenenler', value: 'paid' },
+                    { label: 'Ödenmeyenler', value: 'unpaid' },
+                ].map(chip => (
+                    <TouchableOpacity 
+                        key={chip.value} 
+                        style={[s.filterChip, filter === chip.value && { backgroundColor: 'rgba(225,29,72,0.3)', borderColor: '#E11D48' }]}
+                        onPress={() => setFilter(chip.value)}
+                    >
+                        <Text style={[s.filterChipText, filter === chip.value && { color: '#FDA4AF' }]}>{chip.label}</Text>
+                    </TouchableOpacity>
+                ))}
+            </ScrollView>
+
+            {stats && (
+                <Animated.ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false} 
+                    contentContainerStyle={s.kpiScrollContent}
+                    decelerationRate="fast"
+                    snapToInterval={SCREEN_WIDTH * 0.45 + 12}
+                >
+                    <View style={s.statCardContainer}>
+                        <BlurView intensity={25} tint="dark" style={[s.statCard, { borderColor: 'rgba(236,72,153,0.3)' }]}>
+                            <View style={s.kpiTopRow}>
+                                <View style={[s.kpiIconWrap, { backgroundColor: 'rgba(236,72,153,0.15)' }]}><Icon name="file-document-multiple-outline" size={20} color="#F472B6" /></View>
+                            </View>
+                            <Text style={s.kpiValue} numberOfLines={1} adjustsFontSizeToFit>{stats.totalCount}</Text>
+                            <Text style={s.kpiLabel}>Toplam Ceza</Text>
+                        </BlurView>
                     </View>
-                    <Text style={st.statCardValue}>{value}</Text>
-                    <Text style={st.statCardSub}>{subValue}</Text>
-                </View>
-            </LinearGradient>
+                    <View style={s.statCardContainer}>
+                        <BlurView intensity={25} tint="dark" style={[s.statCard, { borderColor: 'rgba(249,115,22,0.3)' }]}>
+                            <View style={s.kpiTopRow}>
+                                <View style={[s.kpiIconWrap, { backgroundColor: 'rgba(249,115,22,0.15)' }]}><Icon name="alert-octagon-outline" size={20} color="#FB923C" /></View>
+                            </View>
+                            <Text style={s.kpiValue} numberOfLines={1} adjustsFontSizeToFit>{stats.unpaidCount}</Text>
+                            <Text style={s.kpiLabel}>Ödenmemiş</Text>
+                        </BlurView>
+                    </View>
+                    <View style={s.statCardContainer}>
+                        <BlurView intensity={25} tint="dark" style={[s.statCard, { borderColor: 'rgba(139,92,246,0.3)' }]}>
+                            <View style={s.kpiTopRow}>
+                                <View style={[s.kpiIconWrap, { backgroundColor: 'rgba(139,92,246,0.15)' }]}><Icon name="cash-multiple" size={20} color="#A78BFA" /></View>
+                            </View>
+                            <Text style={s.kpiValue} numberOfLines={1} adjustsFontSizeToFit>{fmtMoney(stats.totalAmount)}</Text>
+                            <Text style={s.kpiLabel}>Toplam Tutar</Text>
+                        </BlurView>
+                    </View>
+                    <View style={s.statCardContainer}>
+                        <BlurView intensity={25} tint="dark" style={[s.statCard, { borderColor: 'rgba(16,185,129,0.3)' }]}>
+                            <View style={s.kpiTopRow}>
+                                <View style={[s.kpiIconWrap, { backgroundColor: 'rgba(16,185,129,0.15)' }]}><Icon name="cash-check" size={20} color="#34D399" /></View>
+                            </View>
+                            <Text style={s.kpiValue} numberOfLines={1} adjustsFontSizeToFit>{fmtMoney(stats.collectableAmount)}</Text>
+                            <Text style={s.kpiLabel}>Tahsil Edilebilir</Text>
+                        </BlurView>
+                    </View>
+                </Animated.ScrollView>
+            )}
         </View>
     );
 
-    const renderItem = ({ item }) => {
+    const renderCard = ({ item, index }) => {
+        const animIndex = index % 100;
+        const flipAnim = flipAnims[animIndex] || new Animated.Value(1);
+        
         const isPaid = item.payment_status === 'paid';
         const discountDeadline = item.penalty_date ? new Date(new Date(item.penalty_date).getTime() + 30 * 24 * 60 * 60 * 1000) : new Date();
-        
         const now = new Date();
         const isDiscountExpired = now > discountDeadline;
         
         let paymentStatusText = isPaid ? 'İndirimsiz Ödendi' : 'Ödenmedi';
-        let paymentStatusColor = isPaid ? '#E11D48' : '#DC2626'; // İndirimsiz ödenenler KIRMIZI olacak
-        let paymentIconColor = isPaid ? '#E11D48' : '#EF4444';
+        let statusColor = isPaid ? '#F43F5E' : '#EF4444'; 
 
         if (isPaid && item.paid_amount && item.discounted_amount && parseFloat(item.paid_amount) == parseFloat(item.discounted_amount)) {
             paymentStatusText = '%25 İndirimli Ödendi';
-            paymentStatusColor = '#059669'; // İndirimli ise YEŞİL
-            paymentIconColor = '#10B981';
+            statusColor = '#10B981';
         }
 
-        return (
-            <View style={st.card}>
-                <View style={st.cardHeader}>
-                    <View style={[st.iconBox, { backgroundColor: isPaid ? '#ECFDF5' : '#FEF2F2' }]}>
-                        <Icon name={isPaid ? "check-circle-outline" : "alert-circle-outline"} size={20} color={isPaid ? '#10B981' : '#EF4444'} />
-                    </View>
-                    <View style={{ flex: 1, paddingLeft: 10, paddingRight: 8 }}>
-                        <Text style={st.cardTitle}>{item.penalty_no?.toUpperCase() || '-'}</Text>
-                        <Text style={st.cardDesc}>
-                            {item.vehicle?.plate || 'Plaka Yok'} • Şoför: {toTitleCase(item.driver_name) || '-'}
-                        </Text>
-                    </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={[st.amountText, isPaid && { color: '#059669' }]}>
-                            {fmtMoney(isPaid && item.paid_amount ? item.paid_amount : item.penalty_amount)}
-                        </Text>
-                        {!isPaid && !isDiscountExpired && (
-                            <Text style={st.discountText}>
-                                İndirimli: {fmtMoney(item.discounted_amount)}
-                            </Text>
-                        )}
-                    </View>
-                </View>
+        const animatedStyle = {
+            opacity: flipAnim,
+            transform: [
+                { perspective: 1000 },
+                { rotateX: flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['-90deg', '0deg'] }) },
+                { translateY: flipAnim.interpolate({ inputRange: [0, 1], outputRange: [50, 0] }) },
+                { scale: flipAnim.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0.8, 1.05, 1] }) }
+            ]
+        };
 
-                {/* Grid Structure */}
-                <View style={st.cardGrid}>
-                    <View style={st.gridRow}>
-                        <View style={st.gridCol}>
-                            <View style={st.gridLabelRow}>
-                                <Icon name="calendar-blank-outline" size={12} color="#F59E0B" />
-                                <Text style={[st.gridLabel, { color: '#F59E0B' }]}>TARİH</Text>
+        return (
+            <Animated.View style={[s.cardWrapper, animatedStyle]}>
+                <BlurView intensity={25} tint="dark" style={[s.card, { borderLeftWidth: 4, borderLeftColor: statusColor }]}>
+                    <View style={s.cardHeader}>
+                        {/* Top Row */}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                            <View style={s.plateBadge}>
+                                <Text style={s.plateText}>{item.vehicle?.plate || 'Plaka Yok'}</Text>
                             </View>
-                            <Text style={[st.gridValue, { color: '#D97706' }]}>
-                                {item.penalty_date ? new Date(item.penalty_date).toLocaleDateString('tr-TR') : '-'} 
-                                {item.penalty_time ? ` ${item.penalty_time.substring(0,5)}` : ''}
-                            </Text>
-                        </View>
-                        <View style={st.gridDivider} />
-                        <View style={st.gridCol}>
-                            <View style={st.gridLabelRow}>
-                                <Icon name="file-document-outline" size={12} color="#3B82F6" />
-                                <Text style={[st.gridLabel, { color: '#3B82F6' }]}>MADDE / YER</Text>
-                            </View>
-                            <Text style={[st.gridValue, { color: '#2563EB', flexWrap: 'wrap' }]}>
-                                {item.penalty_article?.toUpperCase() || '-'}
-                            </Text>
-                            <Text style={[st.gridSubValue, { color: '#60A5FA', flexWrap: 'wrap', marginTop: 2 }]}>
-                                {toTitleCase(item.penalty_location) || '-'}
-                            </Text>
-                        </View>
-                    </View>
-                    
-                    <View style={st.gridHorizontalDivider} />
-                    
-                    <View style={st.gridRow}>
-                        <View style={st.gridCol}>
-                            <View style={st.gridLabelRow}>
-                                <Icon name="credit-card-outline" size={12} color={paymentIconColor} />
-                                <Text style={[st.gridLabel, { color: paymentIconColor }]}>ÖDEME DURUMU</Text>
-                            </View>
-                            <Text style={[st.gridValue, { color: paymentStatusColor }]}>
-                                {paymentStatusText}
-                            </Text>
-                            {isPaid && item.payment_date && (
-                                <Text style={[st.gridSubValue, { color: '#34D399' }]}>
-                                    Tarih: {new Date(item.payment_date).toLocaleDateString('tr-TR')}
+                            <View style={{ alignItems: 'flex-end' }}>
+                                <Text style={[s.amountText, { color: statusColor }]}>
+                                    {fmtMoney(isPaid && item.paid_amount ? item.paid_amount : item.penalty_amount)}
                                 </Text>
-                            )}
+                                {!isPaid && !isDiscountExpired && (
+                                    <Text style={s.discountText}>İndirimli: {fmtMoney(item.discounted_amount)}</Text>
+                                )}
+                            </View>
                         </View>
-                        <View style={st.gridDivider} />
-                        <View style={[st.gridCol, { justifyContent: 'center' }]}>
-                            <View style={st.docsRow}>
-                                {item.traffic_penalty_document ? (
-                                    <View style={st.docGroup}>
-                                        <TouchableOpacity style={st.docBtn} onPress={() => Linking.openURL(api.defaults.baseURL.replace('/api', '') + '/storage/' + item.traffic_penalty_document)}>
-                                            <Icon name="file-document-outline" size={12} color="#6366F1" />
-                                            <Text style={st.docText}>Ceza</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity style={st.shareBtn} onPress={() => handleShare(item.traffic_penalty_document, 'Trafik_Cezasi')}>
-                                            <Icon name="share-variant" size={12} color="#64748B" />
-                                        </TouchableOpacity>
-                                    </View>
-                                ) : null}
-                                {item.payment_receipt ? (
-                                    <View style={st.docGroup}>
-                                        <TouchableOpacity style={st.docBtn} onPress={() => Linking.openURL(api.defaults.baseURL.replace('/api', '') + '/storage/' + item.payment_receipt)}>
-                                            <Icon name="receipt" size={12} color="#10B981" />
-                                            <Text style={st.docText}>Dekont</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity style={st.shareBtn} onPress={() => handleShare(item.payment_receipt, 'Odeme_Dekontu')}>
-                                            <Icon name="share-variant" size={12} color="#64748B" />
-                                        </TouchableOpacity>
-                                    </View>
-                                ) : null}
-                                {!item.traffic_penalty_document && !item.payment_receipt && (
-                                    <Text style={[st.gridSubValue, { color: '#94A3B8', fontStyle: 'italic' }]}>Belge yok</Text>
+                        
+                        {/* Driver & Number */}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                            <View style={s.cardInfo}>
+                                <Text style={s.cardTitle} numberOfLines={1}>{toTitleCase(item.driver_name) || 'Şoför Belirtilmemiş'}</Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                                    <Icon name="barcode" size={14} color="#94A3B8" />
+                                    <Text style={s.cardDesc}>No: {item.penalty_no?.toUpperCase() || '-'}</Text>
+                                </View>
+                            </View>
+                            <View style={{ flexDirection: 'row', gap: 12, paddingBottom: 4 }}>
+                                {hasPermission('penalties.edit') && (
+                                    <TouchableOpacity onPress={() => navigation.navigate('PenaltyForm', { penaltyId: item.id, penalty: item })}>
+                                        <Icon name="pencil" size={22} color="#60A5FA" />
+                                    </TouchableOpacity>
+                                )}
+                                {hasPermission('penalties.delete') && (
+                                    <TouchableOpacity onPress={() => confirmDelete(item.id)}>
+                                        <Icon name="trash-can" size={22} color="#F87171" />
+                                    </TouchableOpacity>
                                 )}
                             </View>
                         </View>
                     </View>
-                </View>
 
-                {item.notes ? (
-                    <View style={st.notesBox}>
-                        <Icon name="information-outline" size={12} color="#64748B" />
-                        <Text style={st.notesText}>Not: {toTitleCase(item.notes)}</Text>
+                    <View style={s.cardGrid}>
+                        <View style={s.gridRow}>
+                            <View style={s.gridCol}>
+                                <Text style={s.gridLabel}>TARİH / SAAT</Text>
+                                <Text style={s.gridValue}>{item.penalty_date ? dayjs(item.penalty_date).format('DD.MM.YYYY') : '-'}{item.penalty_time ? ` ${item.penalty_time.substring(0,5)}` : ''}</Text>
+                            </View>
+                            <View style={s.gridDivider} />
+                            <View style={[s.gridCol, { flex: 1.5 }]}>
+                                <Text style={[s.gridLabel, { color: '#60A5FA' }]}>MADDE / YER</Text>
+                                <Text style={[s.gridValue, { color: '#93C5FD' }]}>{item.penalty_article?.toUpperCase() || '-'}</Text>
+                                <Text style={s.gridSubValue} numberOfLines={1}>{toTitleCase(item.penalty_location) || '-'}</Text>
+                            </View>
+                        </View>
+                        <View style={s.gridHDivider} />
+                        <View style={s.gridRow}>
+                            <View style={s.gridCol}>
+                                <Text style={[s.gridLabel, { color: statusColor }]}>ÖDEME DURUMU</Text>
+                                <Text style={[s.gridValue, { color: statusColor }]}>{paymentStatusText}</Text>
+                                {isPaid && item.payment_date && (
+                                    <Text style={[s.gridSubValue, { color: '#34D399' }]}>{dayjs(item.payment_date).format('DD.MM.YYYY')}</Text>
+                                )}
+                            </View>
+                            <View style={s.gridDivider} />
+                            <View style={[s.gridCol, { flex: 1.5, justifyContent: 'center' }]}>
+                                <View style={s.docsRow}>
+                                    {item.traffic_penalty_document && (
+                                        <View style={s.docGroup}>
+                                            <TouchableOpacity style={s.docBtn} onPress={() => openDocument(item.traffic_penalty_document)}>
+                                                <Icon name="file-document-outline" size={14} color="#60A5FA" />
+                                                <Text style={s.docText}>Ceza</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity style={s.shareBtn} onPress={() => handleShare(item.traffic_penalty_document, 'Ceza')}>
+                                                <Icon name="share-variant" size={14} color="#94A3B8" />
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
+                                    {item.payment_receipt && (
+                                        <View style={[s.docGroup, { marginTop: 6 }]}>
+                                            <TouchableOpacity style={s.docBtn} onPress={() => openDocument(item.payment_receipt)}>
+                                                <Icon name="receipt" size={14} color="#34D399" />
+                                                <Text style={s.docText}>Dekont</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity style={s.shareBtn} onPress={() => handleShare(item.payment_receipt, 'Dekont')}>
+                                                <Icon name="share-variant" size={14} color="#94A3B8" />
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
+                                    {!item.traffic_penalty_document && !item.payment_receipt && (
+                                        <Text style={[s.gridSubValue, { color: '#64748B', fontStyle: 'italic' }]}>Belge yüklenmemiş</Text>
+                                    )}
+                                </View>
+                            </View>
+                        </View>
                     </View>
-                ) : null}
 
-                {/* Actions */}
-                {hasPermission('penalties.edit') && (
-                    <View style={st.actionsRow}>
-                        <TouchableOpacity style={st.actionBtnEdit} onPress={() => navigation.navigate('PenaltyForm', { penaltyId: item.id, penalty: item })}>
-                            <Icon name="pencil" size={14} color="#3B82F6" />
-                            <Text style={st.actionBtnTextEdit}>Düzenle</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={st.actionBtnDelete} onPress={() => confirmDelete(item.id)}>
-                            <Icon name="trash-can-outline" size={14} color="#EF4444" />
-                            <Text style={st.actionBtnTextDelete}>Sil</Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
-            </View>
+                    {item.notes && (
+                        <View style={s.notesBox}>
+                            <Icon name="information-outline" size={14} color="#FCD34D" />
+                            <Text style={s.notesText} numberOfLines={2}>{toTitleCase(item.notes)}</Text>
+                        </View>
+                    )}
+                </BlurView>
+            </Animated.View>
         );
     };
 
     return (
-        <SafeAreaView style={st.container} edges={['top']}>
-            <View style={{ backgroundColor: '#fff', zIndex: 10, paddingBottom: 12 }}>
-                <View style={st.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-                        <Icon name="chevron-left" size={26} color="#0F172A" />
-                    </TouchableOpacity>
-                    <View style={st.headerCenter}>
-                        <Text style={st.headerTitle}>Trafik Cezaları</Text>
-                        <Text style={st.headerSubtitle}>Araç ceza takip yönetimi</Text>
-                    </View>
-                    <TouchableOpacity style={st.addHeaderBtn} onPress={openAdd}>
-                        <Icon name="plus" size={24} color="#fff" />
-                    </TouchableOpacity>
-                </View>
-            </View>
+        <View style={s.container}>
+            {/* 3D Animated Background */}
+            <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateY: scrollY.interpolate({ inputRange: [-100, 0, 500], outputRange: [-20, 0, 100], extrapolate: 'clamp' }) }] }]}>
+                <LinearGradient colors={['#020617', '#0F172A', '#1E1B4B']} style={StyleSheet.absoluteFillObject} />
+                <Animated.View style={[s.bgBlob1, { transform: [{ translateY: blob1Anim.interpolate({ inputRange:[0,1], outputRange:[0, 60] }) }, { scale: blob1Anim.interpolate({ inputRange:[0,1], outputRange:[1, 1.25] }) }] }]} />
+                <Animated.View style={[s.bgBlob2, { transform: [{ translateX: blob2Anim.interpolate({ inputRange:[0,1], outputRange:[0, -60] }) }, { scale: blob2Anim.interpolate({ inputRange:[0,1], outputRange:[1, 1.3] }) }] }]} />
+            </Animated.View>
 
-            <ScrollView 
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchData(true)} tintColor="#E11D48" />}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ flexGrow: 1 }}
-                keyboardShouldPersistTaps="handled"
-            >
-                {/* İstatistikler */}
-                {stats && (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.statsContainer}>
-                        <StatCard 
-                            title="Toplam Ceza Kaydı" 
-                            value={stats.totalCount} 
-                            subValue="Sistemdeki kayıt sayısı"
-                            colors={['#EC4899', '#BE185D']} 
-                            icon="file-document-multiple-outline" 
-                        />
-                        <StatCard 
-                            title="Ödenmemiş Ceza" 
-                            value={stats.unpaidCount} 
-                            subValue="Kapatılmamış kayıt"
-                            colors={['#F97316', '#C2410C']} 
-                            icon="alert-octagon-outline" 
-                        />
-                        <StatCard 
-                            title="Toplam Ceza Tutarı" 
-                            value={fmtMoney(stats.totalAmount)} 
-                            subValue="Tüm kayıtların maliyeti"
-                            colors={['#8B5CF6', '#6D28D9']} 
-                            icon="cash-multiple" 
-                        />
-                        <StatCard 
-                            title="Tahsil Edilebilir" 
-                            value={fmtMoney(stats.collectableAmount)} 
-                            subValue="Bugün ödenecek tutar"
-                            colors={['#10B981', '#047857']} 
-                            icon="cash-check" 
-                        />
-                        <StatCard 
-                            title="Bu Ay Kesilen" 
-                            value={stats.thisMonthCount} 
-                            subValue="Bu ay açılan ceza kaydı"
-                            colors={['#0EA5E9', '#0369A1']} 
-                            icon="calendar-alert" 
-                        />
-                    </ScrollView>
-                )}
-
-                {/* Filtre ve Arama Alanı */}
-                <View style={st.searchContainer}>
-                    <View style={st.searchInputWrapper}>
-                        <Icon name="magnify" size={20} color="#94A3B8" />
-                        <TextInput 
-                            style={st.searchInput}
-                            placeholder="Ceza no, şoför, madde, yer..."
-                            placeholderTextColor="#94A3B8"
-                            value={search}
-                            onChangeText={setSearch}
-                        />
-                        {search ? (
-                            <TouchableOpacity onPress={() => setSearch('')}>
-                                <Icon name="close-circle" size={18} color="#94A3B8" />
-                            </TouchableOpacity>
-                        ) : null}
-                    </View>
-                    <TouchableOpacity 
-                        style={[st.filterToggleBtn, showFilters && { backgroundColor: '#E11D48', borderColor: '#E11D48' }]}
-                        onPress={() => setShowFilters(!showFilters)}
-                    >
-                        <Icon name="filter-variant" size={20} color={showFilters ? '#fff' : '#64748B'} />
+            <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
+                <View style={s.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={s.headerIconBtn}>
+                        <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFillObject} />
+                        <Icon name="chevron-left" size={26} color="#FFF" />
                     </TouchableOpacity>
+                    <View style={{ flex: 1, paddingLeft: 16 }}>
+                        <Text style={s.headerTitle}>Trafik Cezaları</Text>
+                    </View>
                 </View>
 
-                {showFilters && (
-                    <View style={st.expandedFilters}>
-                        <View style={{ flexDirection: 'row', gap: 10 }}>
-                            <View style={{ flex: 1 }}>
-                                <DatePickerInput 
-                                    label="BAŞLANGIÇ" 
-                                    value={dateFrom} 
-                                    onChange={(d) => setDateFrom(d)} 
-                                />
+                {/* Filter Modal Overlay */}
+                <Modal visible={showFilters} transparent animationType="slide">
+                    <BlurView intensity={40} tint="dark" style={s.modalOverlay}>
+                        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setShowFilters(false)} />
+                        <BlurView intensity={50} tint="dark" style={[s.bottomSheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+                            <View style={s.sheetHandle} />
+                            <Text style={s.sheetTitle}>Cezaları Filtrele</Text>
+                            
+                            <View style={s.fieldWrap}>
+                                <Icon name="magnify" size={20} color="#94A3B8" style={{ marginRight: 10 }} />
+                                <TextInput style={s.fieldInput} placeholderTextColor="#64748B" placeholder="Ceza no, şoför, plaka..." value={searchQuery} onChangeText={setSearchQuery} />
                             </View>
-                            <View style={{ flex: 1 }}>
-                                <DatePickerInput 
-                                    label="BİTİŞ" 
-                                    value={dateTo} 
-                                    onChange={(d) => setDateTo(d)} 
-                                />
-                            </View>
-                        </View>
-                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10 }}>
-                            <TouchableOpacity 
-                                style={st.clearDatesBtn} 
-                                onPress={() => { setDateFrom(''); setDateTo(''); }}
-                            >
-                                <Text style={st.clearDatesText}>Tarihleri Temizle</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                )}
 
-                <View style={st.filterBar}>
-                    {[
-                        { label: 'Tümü', value: 'all' },
-                        { label: 'Ödenenler', value: 'paid' },
-                        { label: 'Ödenmeyenler', value: 'unpaid' },
-                    ].map(chip => (
-                        <TouchableOpacity 
-                            key={chip.value} 
-                            style={[st.filterChip, filter === chip.value && st.filterChipActive]}
-                            onPress={() => setFilter(chip.value)}
-                        >
-                            <Text style={[st.filterChipText, filter === chip.value && st.filterChipTextActive]}>{chip.label}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
+                            <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+                                <TouchableOpacity style={[s.fieldWrap, { flex: 1 }]} onPress={() => setShowStartPicker(true)}>
+                                    <Icon name="calendar-start" size={20} color="#94A3B8" style={{ marginRight: 10 }} />
+                                    <Text style={[s.fieldInput, !startDate && { color: '#64748B' }, { paddingTop: 16 }]}>{startDate ? dayjs(startDate).format('DD.MM.YY') : 'Başlangıç'}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={[s.fieldWrap, { flex: 1 }]} onPress={() => setShowEndPicker(true)}>
+                                    <Icon name="calendar-end" size={20} color="#94A3B8" style={{ marginRight: 10 }} />
+                                    <Text style={[s.fieldInput, !endDate && { color: '#64748B' }, { paddingTop: 16 }]}>{endDate ? dayjs(endDate).format('DD.MM.YY') : 'Bitiş'}</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <View style={s.formActions}>
+                                <TouchableOpacity style={s.cancelBtn} onPress={handleClearFilters}>
+                                    <Text style={s.cancelBtnText}>Temizle</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={s.saveBtn} onPress={handleFilterSubmit}>
+                                    <LinearGradient colors={['#E11D48', '#BE185D']} style={StyleSheet.absoluteFillObject} />
+                                    <Text style={s.saveBtnText}>Uygula</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </BlurView>
+                    </BlurView>
+                </Modal>
+
+                {(showStartPicker || showEndPicker) && (
+                    <DateTimePicker 
+                        value={showStartPicker ? (startDate || new Date()) : (endDate || new Date())} 
+                        mode="date" display="default" themeVariant="dark"
+                        onChange={(e, selected) => {
+                            setShowStartPicker(false); setShowEndPicker(false);
+                            if (selected) {
+                                if (showStartPicker) setStartDate(selected);
+                                else setEndDate(selected);
+                            }
+                        }} 
+                    />
+                )}
 
                 {loading ? (
-                    <View style={st.loader}><ActivityIndicator size="large" color="#E11D48" /></View>
+                    <View style={s.loader}><ActivityIndicator size="large" color="#E11D48" /></View>
                 ) : (
-                    <View style={st.listContent}>
-                        {filteredData.length > 0 ? (
-                            filteredData.map((item, index) => <React.Fragment key={index}>{renderItem({item})}</React.Fragment>)
-                        ) : (
-                            <EmptyState title="Kayıt Bulunamadı" message="Arama kriterlerinize uygun trafik cezası bulunmuyor." icon="alert-octagon-outline" />
-                        )}
-                        <View style={{height: 100}} />
-                    </View>
+                    <Animated.FlatList
+                        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+                        scrollEventThrottle={16}
+                        data={filteredData}
+                        keyExtractor={item => item.id.toString()}
+                        renderItem={renderCard}
+                        ListHeaderComponent={renderHeader}
+                        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100, paddingTop: 10 }}
+                        showsVerticalScrollIndicator={false}
+                        initialNumToRender={6}
+                        maxToRenderPerBatch={6}
+                        windowSize={5}
+                        removeClippedSubviews={true}
+                        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchData(true)} tintColor="#E11D48" />}
+                        ListEmptyComponent={
+                            <View style={s.empty}>
+                                <Image source={emoji('Travel and places/Police Car Light')} style={{width: 64, height: 64, opacity: 0.8}} resizeMode="contain" />
+                                <Text style={s.emptyText}>Kriterlere uygun trafik cezası bulunamadı.</Text>
+                            </View>
+                        }
+                    />
                 )}
-            </ScrollView>
-        </SafeAreaView>
+            </SafeAreaView>
+
+            {hasPermission('penalties.create') && (
+                <TouchableOpacity style={[s.fab, { bottom: Math.max(insets.bottom, 24) }]} onPress={() => navigation.navigate('PenaltyForm')}>
+                    <LinearGradient colors={['#E11D48', '#9F1239']} style={s.fabGradient} start={{x:0, y:0}} end={{x:1, y:1}}>
+                        <Icon name="ticket-confirmation-outline" size={24} color="#FFF" />
+                        <Icon name="plus" size={14} color="#FFF" style={{ position: 'absolute', top: 12, right: 12 }} />
+                    </LinearGradient>
+                </TouchableOpacity>
+            )}
+        </View>
     );
 }
 
-const st = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F8FAFC' },
-    loader: { marginTop: 50, justifyContent: 'center', alignItems: 'center' },
+const s = StyleSheet.create({
+    container: { flex: 1, backgroundColor: '#020617' },
+    bgBlob1: { position: 'absolute', top: -100, left: -50, width: 350, height: 350, borderRadius: 175, backgroundColor: 'rgba(225, 29, 72, 0.15)', filter: 'blur(40px)' },
+    bgBlob2: { position: 'absolute', bottom: -50, right: -100, width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(59, 130, 246, 0.12)', filter: 'blur(40px)' },
     
-    // Header
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 44 : 24 },
-    backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
-    headerCenter: { flex: 1, alignItems: 'center' },
-    headerTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
-    headerSubtitle: { fontSize: 13, color: '#64748B', marginTop: 2, fontWeight: '500' },
-    addHeaderBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#E11D48', alignItems: 'center', justifyContent: 'center', shadowColor: '#E11D48', shadowOffset: { width: 0, height: 4 }, shadowopacity: 1, shadowRadius: 8, elevation: 4 },
-
-    // Stats (3D Premium)
-    statsContainer: { paddingHorizontal: 12, paddingTop: 16, paddingBottom: 16 },
-    statCardContainer: { 
-        width: 175, 
-        height: 120, 
-        marginHorizontal: 6, 
-        borderRadius: 24,
-        shadowColor: '#000', 
-        shadowOffset: { width: 0, height: 8 }, 
-        shadowOpacity: 0.25, 
-        shadowRadius: 12, 
-        elevation: 10,
-        backgroundColor: '#fff' 
-    },
-    statCard: { 
-        flex: 1, 
-        borderRadius: 24, 
-        overflow: 'hidden',
-        borderTopWidth: 1.5,
-        borderTopColor: 'rgba(255,255,255,0.4)',
-        borderBottomWidth: 4,
-        borderBottomColor: 'rgba(0,0,0,0.2)',
-        borderLeftWidth: 0.5,
-        borderRightWidth: 0.5,
-        borderColor: 'rgba(0,0,0,0.1)'
-    },
-    statCardBgIcon: { position: 'absolute', right: -15, bottom: -15, transform: [{ rotate: '-15deg' }] },
-    statCardInner: { flex: 1, padding: 16, justifyContent: 'space-between', backgroundColor: 'rgba(255,255,255,0.05)' },
-    statCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-    statCardTitle: { fontSize: 13, fontWeight: '800', color: '#fff', flex: 1, marginRight: 8, letterSpacing: 0.5, textShadowColor: 'rgba(0,0,0,0.2)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
-    statCardIconWrapper: { width: 32, height: 32, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
-    statCardValue: { fontSize: 24, fontWeight: '900', color: '#fff', marginTop: 8, textShadowColor: 'rgba(0,0,0,0.2)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
-    statCardSub: { fontSize: 10, fontWeight: '600', color: 'rgba(255,255,255,0.85)', marginTop: 4, letterSpacing: 0.5 },
-
-    // Search and Filters
-    searchContainer: { flexDirection: 'row', paddingHorizontal: 16, marginTop: 12, gap: 10 },
-    searchInputWrapper: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 12, height: 48, borderWidth: 1, borderColor: '#E2E8F0' },
-    searchInput: { flex: 1, height: '100%', paddingHorizontal: 8, fontSize: 14, color: '#0F172A' },
-    filterToggleBtn: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
+    header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16 },
+    headerIconBtn: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+    headerTitle: { fontSize: 26, fontWeight: '900', color: '#F8FAFC', letterSpacing: -0.5, textShadowColor: 'rgba(255,255,255,0.3)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10 },
     
-    expandedFilters: { backgroundColor: '#fff', marginHorizontal: 16, marginTop: 10, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0' },
-    clearDatesBtn: { backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-    clearDatesText: { fontSize: 12, fontWeight: '700', color: '#64748B' },
+    actionsRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+    actionBtn: { flex: 1, height: 44, borderRadius: 14, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1, flexDirection: 'row' },
 
-    filterBar: { flexDirection: 'row', paddingHorizontal: 16, marginVertical: 12, gap: 6 },
-    filterChip: { paddingHorizontal: 4, paddingVertical: 10, borderRadius: 12, backgroundColor: '#fff', borderWidth: 1, borderColor: '#E2E8F0', flex: 1, alignItems: 'center', justifyContent: 'center' },
-    filterChipActive: { backgroundColor: '#10B981', borderColor: '#10B981' },
-    filterChipText: { fontSize: 11, fontWeight: '800', color: '#64748B', textAlign: 'center' },
-    filterChipTextActive: { color: '#fff' },
+    filterBar: { flexDirection: 'row', gap: 10, paddingBottom: 16 },
+    filterChip: { paddingHorizontal: 16, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
+    filterChipText: { fontSize: 13, fontWeight: '800', color: '#94A3B8' },
 
-    listContent: { padding: 16 },
-    
-    // Card Styles
-    card: { backgroundColor: '#fff', borderRadius: 24, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#94A3B8', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 4 },
-    cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-    iconBox: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-    cardTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A', letterSpacing: 0.2 },
-    cardDesc: { fontSize: 13, color: '#64748B', marginTop: 2, fontWeight: '500' },
-    amountText: { fontSize: 17, fontWeight: '900', color: '#0F172A' },
-    discountText: { fontSize: 10, color: '#10B981', fontWeight: '700', marginTop: 2 },
+    kpiScrollContent: { paddingBottom: 16, gap: 12 },
+    statCardContainer: { width: SCREEN_WIDTH * 0.45 },
+    statCard: { padding: 16, borderRadius: 20, overflow: 'hidden', borderWidth: 1 },
+    kpiTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
+    kpiIconWrap: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+    kpiValue: { fontSize: 18, fontWeight: '900', color: '#F8FAFC', letterSpacing: -0.5, marginBottom: 4 },
+    kpiLabel: { fontSize: 12, color: '#94A3B8', fontWeight: '600' },
 
-    cardGrid: { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: '#F1F5F9' },
-    gridRow: { flexDirection: 'row', alignItems: 'center' },
-    gridCol: { flex: 1, paddingVertical: 4, paddingHorizontal: 6 },
-    gridDivider: { width: 1, height: '100%', backgroundColor: '#E2E8F0', marginHorizontal: 8 },
-    gridHorizontalDivider: { height: 1, backgroundColor: '#E2E8F0', marginVertical: 8 },
-    
-    gridLabelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 4 },
-    gridLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
-    gridValue: { fontSize: 13, fontWeight: '700', color: '#1E293B', marginBottom: 2 },
-    gridSubValue: { fontSize: 11, fontWeight: '600' },
+    loader: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 100 },
+    empty: { alignItems: 'center', marginTop: 80 },
+    emptyText: { fontSize: 15, color: '#94A3B8', fontWeight: '600', marginTop: 12 },
 
-    docsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+    cardWrapper: { marginBottom: 16 },
+    card: { borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
+    cardHeader: { padding: 20, paddingBottom: 16 },
+    plateBadge: { backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+    plateText: { fontSize: 15, fontWeight: '900', color: '#F8FAFC', letterSpacing: 1 },
+    cardInfo: { flex: 1, paddingRight: 16 },
+    cardTitle: { fontSize: 16, fontWeight: '800', color: '#F8FAFC', letterSpacing: -0.2, lineHeight: 22 },
+    cardDesc: { fontSize: 13, color: '#94A3B8', fontWeight: '600' },
+    amountText: { fontSize: 20, fontWeight: '900' },
+    discountText: { fontSize: 10, color: '#FCD34D', fontWeight: '800', marginTop: 4 },
+
+    cardGrid: { backgroundColor: 'rgba(0,0,0,0.2)', padding: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
+    gridRow: { flexDirection: 'row' },
+    gridCol: { flex: 1 },
+    gridDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginHorizontal: 12 },
+    gridHDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 12 },
+    gridLabel: { fontSize: 10, fontWeight: '800', color: '#64748B', letterSpacing: 0.5, marginBottom: 4 },
+    gridValue: { fontSize: 13, fontWeight: '800', color: '#CBD5E1' },
+    gridSubValue: { fontSize: 11, fontWeight: '600', color: '#94A3B8', marginTop: 2 },
+
+    docsRow: { gap: 6 },
     docGroup: { flexDirection: 'row', alignItems: 'center' },
-    docBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', paddingHorizontal: 8, paddingVertical: 6, borderTopLeftRadius: 6, borderBottomLeftRadius: 6, gap: 4, borderWidth: 1, borderColor: '#E2E8F0', borderRightWidth: 0 },
-    docText: { fontSize: 10, fontWeight: '700', color: '#475569' },
-    shareBtn: { backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 6, justifyContent: 'center', borderTopRightRadius: 6, borderBottomRightRadius: 6, borderWidth: 1, borderColor: '#E2E8F0' },
-    
-    notesBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 12, paddingHorizontal: 4 },
-    notesText: { fontSize: 12, color: '#64748B', fontStyle: 'italic', flex: 1, lineHeight: 18 },
+    docBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 8, paddingVertical: 6, borderTopLeftRadius: 8, borderBottomLeftRadius: 8, gap: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderRightWidth: 0 },
+    docText: { fontSize: 11, fontWeight: '700', color: '#F8FAFC' },
+    shareBtn: { backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 10, paddingVertical: 6, justifyContent: 'center', borderTopRightRadius: 8, borderBottomRightRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
 
-    actionsRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16, gap: 8, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 12 },
-    actionBtnEdit: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, gap: 4 },
-    actionBtnTextEdit: { color: '#3B82F6', fontSize: 12, fontWeight: '700' },
-    actionBtnDelete: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF2F2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, gap: 4 },
-    actionBtnTextDelete: { color: '#E11D48', fontSize: 12, fontWeight: '700' },
+    notesBox: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: 'rgba(0,0,0,0.3)', padding: 12, gap: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
+    notesText: { flex: 1, fontSize: 12, color: '#94A3B8', fontWeight: '500', fontStyle: 'italic', lineHeight: 18 },
+
+    modalOverlay: { flex: 1, justifyContent: 'flex-end' },
+    bottomSheet: { borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
+    sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginBottom: 20 },
+    sheetTitle: { fontSize: 22, fontWeight: '900', color: '#F8FAFC', marginBottom: 24 },
+    
+    fieldWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderRadius: 14, paddingHorizontal: 16, height: 54 },
+    fieldInput: { flex: 1, fontSize: 15, color: '#F8FAFC', fontWeight: '600', height: '100%' },
+    
+    formActions: { flexDirection: 'row', marginTop: 24 },
+    cancelBtn: { flex: 1, paddingVertical: 16, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', marginRight: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    cancelBtnText: { color: '#94A3B8', fontSize: 15, fontWeight: '800' },
+    saveBtn: { flex: 2, borderRadius: 16, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+    saveBtnText: { color: '#FFF', fontSize: 15, fontWeight: '900' },
+
+    fab: { position: 'absolute', right: 20, borderRadius: 28, shadowColor: '#E11D48', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 8 },
+    fabGradient: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
 });

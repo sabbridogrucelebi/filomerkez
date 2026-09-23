@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, Modal, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as WebBrowser from 'expo-web-browser';
 import * as Haptics from 'expo-haptics';
-import { Audio } from 'expo-av';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api/axios';
 import echo from '../utils/echo';
+import useStatusBarStyle from '../hooks/useStatusBarStyle';
 
 const EMOJIS = [
     '😀', '😂', '🤣', '😍', '😘', '🥰', '😊', '😉', '😎', '🤩',
@@ -21,6 +21,7 @@ const EMOJIS = [
 ];
 
 export default function PilotChatScreen({ navigation }) {
+    useStatusBarStyle('dark-content');
     const { userInfo } = useContext(AuthContext);
     const [conversations, setConversations] = useState([]);
     const [activeChat, setActiveChat] = useState(null);

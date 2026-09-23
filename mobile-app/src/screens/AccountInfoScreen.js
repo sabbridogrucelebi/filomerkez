@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import axios from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
@@ -145,7 +145,7 @@ export default function AccountInfoScreen({ navigation }) {
                             </LinearGradient>
                         </TouchableOpacity>
 
-                        <View style={{ height: 40 }} />
+                        <View style={{ height: 120 }} />
                     </ScrollView>
 
                     {/* Premium Success Modal */}

@@ -1,8 +1,7 @@
 {
   "CFBundleDisplayName": "FiloMERKEZ",
-  "NSLocationWhenInUseUsageDescription": "FiloMERKEZ, filo takibi ve rota planlaması için konumunuza erişim izni ister.",
-  "NSLocationAlwaysAndWhenInUseUsageDescription": "FiloMERKEZ, filo takibi ve rota planlaması için konumunuza erişim izni ister.",
-  "NSCameraUsageDescription": "FiloMERKEZ, araç fotoğrafları ve belge çekimi için kameranıza erişim izni ister.",
-  "NSPhotoLibraryUsageDescription": "FiloMERKEZ, araç belgeleri ve fiş yükleme işlemleri için fotoğraflarınıza erişim izni ister.",
-  "NSPhotoLibraryAddUsageDescription": "FiloMERKEZ, fotoğraf kaydetme işlemi için izin ister."
+  "NSLocationWhenInUseUsageDescription": "FiloMERKEZ, anlık seferinizi izleyebilmek, hızınızı hesaplamak ve öğrenci/personel taşıma rotalarını haritada çizebilmek için konumunuza erişim izni gerektirir.",
+  "NSCameraUsageDescription": "FiloMERKEZ, araç fotoğrafları, belge ve yakıt fişlerini çekebilmeniz için kameranıza erişim izni gerektirir.",
+  "NSPhotoLibraryUsageDescription": "FiloMERKEZ, galerinizdeki araç belgelerini ve fişleri yükleyebilmeniz için fotoğraflarınıza erişim izni gerektirir.",
+  "NSPhotoLibraryAddUsageDescription": "FiloMERKEZ, fotoğrafları cihazınıza kaydetmek için izin gerektirir."
 }

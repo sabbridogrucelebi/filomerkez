@@ -1,6 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, StyleSheet } from 'react-native';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, spacing, shadow } from '../theme';
 
 export default function Fab({ onPress, icon = 'plus', accent = 'info', visible = true, style }) {

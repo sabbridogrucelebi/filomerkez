@@ -8,3 +8,5 @@ npm-debug.*
 *.key
 *.mobileprovision
 *.orig.*
+/android
+/ios

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Platform, Modal, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import dayjs from 'dayjs';
@@ -323,7 +323,7 @@ const s = StyleSheet.create({
     backBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
     headerTitle: { fontSize: 18, fontWeight: '900', color: '#0F172A' },
     
-    scrollContent: { padding: 20, paddingBottom: 60 },
+    scrollContent: { padding: 20, paddingBottom: 120 },
     
     liveCalcCard: { padding: 24, borderRadius: 24, marginBottom: 24, shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 8 },
     liveCalcLabel: { fontSize: 12, color: '#94A3B8', fontWeight: '800', letterSpacing: 1.5, marginBottom: 8 },

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import SpaceWaves from '../components/SpaceWaves';
 
@@ -107,7 +107,7 @@ export default function NotificationSettingsScreen({ navigation }) {
                         </LinearGradient>
                     </TouchableOpacity>
 
-                    <View style={{ height: 40 }} />
+                    <View style={{ height: 120 }} />
                 </ScrollView>
             </SafeAreaView>
         </View>
