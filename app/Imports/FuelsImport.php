@@ -96,6 +96,9 @@ class FuelsImport implements ToCollection, WithHeadingRow
                 'liters'           => $liters,
                 'price_per_liter'  => $pricePerLiter,
                 'gross_total_cost' => $pricing['gross_total_cost'],
+                'vat_rate'         => $pricing['vat_rate'],
+                'vat_amount'       => $pricing['vat_amount'],
+                'net_cost'         => $pricing['net_cost'],
                 'discount_amount'  => $pricing['discount_amount'],
                 'total_cost'       => $pricing['total_cost'],
                 'km'               => !empty($row['km']) ? (int) str_replace(['.', ','], '', $row['km']) : null,
@@ -106,31 +109,49 @@ class FuelsImport implements ToCollection, WithHeadingRow
 
     protected function calculatePricing(float $liters, float $pricePerLiter, ?int $stationId = null): array
     {
-        $grossTotal = round($liters * $pricePerLiter, 2);
-        $discountAmount = 0;
+        $vatRate = 0;
+        $discountType = null;
+        $discountValue = 0;
 
         if ($stationId) {
             $station = FuelStation::find($stationId);
-
-            if ($station && (float) $station->discount_value > 0) {
-                if ($station->discount_type === 'percentage') {
-                    $discountAmount = round($grossTotal * ((float) $station->discount_value / 100), 2);
-                }
-
-                if ($station->discount_type === 'fixed') {
-                    $discountAmount = round((float) $station->discount_value, 2);
-                }
+            if ($station) {
+                $vatRate = (float) $station->vat_rate;
+                $discountType = $station->discount_type;
+                $discountValue = (float) $station->discount_value;
             }
         }
 
-        if ($discountAmount > $grossTotal) {
-            $discountAmount = $grossTotal;
+        $kdvDahilGross = round($liters * $pricePerLiter, 2);
+        
+        $kdvDahilDiscount = 0;
+        if ($discountValue > 0) {
+            if ($discountType === 'percentage') {
+                $kdvDahilDiscount = round($kdvDahilGross * ($discountValue / 100), 2);
+            } elseif ($discountType === 'fixed') {
+                $kdvDahilDiscount = round($discountValue, 2);
+            }
         }
 
+        if ($kdvDahilDiscount > $kdvDahilGross) {
+            $kdvDahilDiscount = $kdvDahilGross;
+        }
+
+        $kdvDahilTotal = $kdvDahilGross - $kdvDahilDiscount;
+        $vatMultiplier = 1 + ($vatRate / 100);
+
+        $kdvHaricGross = round($kdvDahilGross / $vatMultiplier, 2);
+        $kdvHaricTotal = round($kdvDahilTotal / $vatMultiplier, 2);
+        $kdvHaricDiscount = round($kdvDahilDiscount / $vatMultiplier, 2);
+        $vatAmount = round($kdvDahilTotal - $kdvHaricTotal, 2);
+
         return [
-            'gross_total_cost' => $grossTotal,
-            'discount_amount'  => $discountAmount,
-            'total_cost'       => round($grossTotal - $discountAmount, 2),
+            'gross_total_cost' => $kdvHaricGross,
+            'vat_rate'         => $vatRate,
+            'vat_amount'       => $vatAmount,
+            'net_cost'         => $kdvHaricGross,
+            'discount_amount'  => $kdvHaricDiscount,
+            'total_cost'       => $kdvDahilTotal,
         ];
     }
 }

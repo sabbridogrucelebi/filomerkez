@@ -110,7 +110,7 @@ class FuelStationController extends Controller
         return redirect()->route('fuel-stations.index')->with('success', 'Petrol istasyonu/Cari başarıyla güncellendi.');
     }
 
-    private function recalculateStationFuels(FuelStation $station)
+    public function recalculateStationFuels(FuelStation $station)
     {
         // 1. Reset all fuels for this station
         \App\Models\Fuel::where('fuel_station_id', $station->id)->update([

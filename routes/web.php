@@ -144,46 +144,62 @@ Route::get('/run-migrations', function () {
     try {
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
 
-        // Fix existing fuels
+        // Fix existing fuels (Re-calculating KDV Dahil correctly from liters and price_per_liter)
         $fuels = \App\Models\Fuel::with('fuelStation')->get();
         foreach($fuels as $fuel) {
             $station = $fuel->fuelStation;
             if (!$station) continue;
 
-            $grossTotal = $fuel->gross_total_cost;
+            $liters = (float) $fuel->liters;
+            $pricePerLiter = (float) $fuel->price_per_liter;
+
             $vatRate = (float) $station->vat_rate;
             $discountValue = (float) $station->discount_value;
             $discountType = $station->discount_type;
             
-            $discountAmount = 0;
+            // Pump price includes VAT! (KDV Dahil)
+            $kdvDahilGross = round($liters * $pricePerLiter, 2);
+            
+            $kdvDahilDiscount = 0;
             if ($discountValue > 0) {
                 if ($discountType === 'percentage') {
-                    $discountAmount = round($grossTotal * ($discountValue / 100), 2);
+                    $kdvDahilDiscount = round($kdvDahilGross * ($discountValue / 100), 2);
                 } elseif ($discountType === 'fixed') {
-                    $discountAmount = round($discountValue, 2);
+                    $kdvDahilDiscount = round($discountValue, 2);
                 }
             }
-            if ($discountAmount > $grossTotal) $discountAmount = $grossTotal;
 
-            $discountedAmount = $grossTotal - $discountAmount;
-            
-            $vatAmount = 0;
-            if ($vatRate > 0) {
-                $vatAmount = round($discountedAmount * ($vatRate / 100), 2);
+            if ($kdvDahilDiscount > $kdvDahilGross) {
+                $kdvDahilDiscount = $kdvDahilGross;
             }
-            
-            $totalCost = round($discountedAmount + $vatAmount, 2);
+
+            $kdvDahilTotal = $kdvDahilGross - $kdvDahilDiscount;
+
+            $vatMultiplier = 1 + ($vatRate / 100);
+
+            $kdvHaricGross = round($kdvDahilGross / $vatMultiplier, 2);
+            $kdvHaricTotal = round($kdvDahilTotal / $vatMultiplier, 2);
+            $kdvHaricDiscount = round($kdvDahilDiscount / $vatMultiplier, 2);
+
+            $vatAmount = round($kdvDahilTotal - $kdvHaricTotal, 2);
             
             $fuel->update([
+                'gross_total_cost' => $kdvHaricGross,
                 'vat_rate' => $vatRate,
                 'vat_amount' => $vatAmount,
-                'net_cost' => $grossTotal, // This is KDV haric ana tutar based on new logic
-                'discount_amount' => $discountAmount,
-                'total_cost' => $totalCost
+                'net_cost' => $kdvHaricGross,
+                'discount_amount' => $kdvHaricDiscount,
+                'total_cost' => $kdvDahilTotal
             ]);
         }
 
-        return 'Veritabanı güncellemeleri (migrations) ve eski yakıt fişlerinin yeni kurala göre hesaplanması başarıyla tamamlandı! <br><br> Çıktı: <br><pre>' . \Illuminate\Support\Facades\Artisan::output() . '</pre>';
+        $controller = app(\App\Http\Controllers\FuelStationController::class);
+        $stations = \App\Models\FuelStation::all();
+        foreach ($stations as $st) {
+            $controller->recalculateStationFuels($st);
+        }
+
+        return 'Veritabanı güncellemeleri (migrations) ve eski yakıt fişlerinin yeni KDV DAHİL kuralına göre hesaplanması başarıyla tamamlandı! <br><br> Çıktı: <br><pre>' . \Illuminate\Support\Facades\Artisan::output() . '</pre>';
     } catch (\Exception $e) {
         return 'Hata oluştu: ' . $e->getMessage();
     }

@@ -221,51 +221,54 @@ class FuelController extends Controller
 
     protected function calculatePricing(float $liters, float $pricePerLiter, ?int $stationId = null): array
     {
-        $grossTotal = round($liters * $pricePerLiter, 2);
-        $discountAmount = 0;
         $vatRate = 0;
+        $discountType = null;
+        $discountValue = 0;
 
         if ($stationId) {
             $station = FuelStation::find($stationId);
-
             if ($station) {
                 $vatRate = (float) $station->vat_rate;
-                
-                if ((float) $station->discount_value > 0) {
-                    if ($station->discount_type === 'percentage') {
-                        $discountAmount = round($grossTotal * ((float) $station->discount_value / 100), 2);
-                    }
-
-                    if ($station->discount_type === 'fixed') {
-                        $discountAmount = round((float) $station->discount_value, 2);
-                    }
-                }
+                $discountType = $station->discount_type;
+                $discountValue = (float) $station->discount_value;
             }
         }
 
-        if ($discountAmount > $grossTotal) {
-            $discountAmount = $grossTotal;
-        }
-
-        $netCost = $grossTotal; // İskontosuz Brüt Tutar (KDV Hariç)
-        $discountedAmount = $grossTotal - $discountAmount; // İskontolu Tutar (KDV Matrahı)
+        // Pump price includes VAT! (KDV Dahil)
+        $kdvDahilGross = round($liters * $pricePerLiter, 2);
         
-        $vatAmount = 0;
-        if ($vatRate > 0) {
-            // KDV, İskonto düşüldükten sonra kalan tutar üzerinden (%20) eklenir
-            $vatAmount = round($discountedAmount * ($vatRate / 100), 2);
+        $kdvDahilDiscount = 0;
+        if ($discountValue > 0) {
+            if ($discountType === 'percentage') {
+                $kdvDahilDiscount = round($kdvDahilGross * ($discountValue / 100), 2);
+            } elseif ($discountType === 'fixed') {
+                $kdvDahilDiscount = round($discountValue, 2);
+            }
         }
 
-        // Toplam Borç = (İskontosuz Tutar - İskonto) + KDV
-        $totalCost = round($discountedAmount + $vatAmount, 2);
+        if ($kdvDahilDiscount > $kdvDahilGross) {
+            $kdvDahilDiscount = $kdvDahilGross;
+        }
+
+        $kdvDahilTotal = $kdvDahilGross - $kdvDahilDiscount; // Odenecek Tutar (KDV Dahil)
+
+        $vatMultiplier = 1 + ($vatRate / 100);
+
+        // KDV Hariç Tutar calculations
+        $kdvHaricGross = round($kdvDahilGross / $vatMultiplier, 2);
+        $kdvHaricTotal = round($kdvDahilTotal / $vatMultiplier, 2);
+        $kdvHaricDiscount = round($kdvDahilDiscount / $vatMultiplier, 2);
+
+        // KDV Tutarı
+        $vatAmount = round($kdvDahilTotal - $kdvHaricTotal, 2);
 
         return [
-            'gross_total_cost' => $grossTotal,
+            'gross_total_cost' => $kdvHaricGross,      // İskontosuz Brüt Tutar (KDV Hariç)
             'vat_rate' => $vatRate,
-            'vat_amount' => $vatAmount,
-            'net_cost' => $netCost,
-            'discount_amount' => $discountAmount,
-            'total_cost' => $totalCost,
+            'vat_amount' => $vatAmount,                // KDV Tutarı
+            'net_cost' => $kdvHaricGross,              // KDV Hariç Ana Tutar
+            'discount_amount' => $kdvHaricDiscount,    // İskonto Tutarı (KDV Hariç)
+            'total_cost' => $kdvDahilTotal,            // Net Kalan Borç (KDV Dahil)
         ];
     }
 }
