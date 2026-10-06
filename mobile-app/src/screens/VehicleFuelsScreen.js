@@ -144,7 +144,7 @@ export default function VehicleFuelsScreen({ route, navigation }) {
                             </View>
                         </View>
                         <View style={{ alignItems: 'flex-end' }}>
-                            <Text style={st.amountText}>{fmtMoney(item.gross_total_cost || item.total_cost || item.total_amount)}</Text>
+                            <Text style={st.amountText}>{fmtMoney(item.total_cost || item.total_amount)}</Text>
                             <View style={[st.paidBadge, isPaid ? {backgroundColor: 'rgba(16, 185, 129, 0.2)'} : {backgroundColor: 'rgba(239, 68, 68, 0.2)'}]}>
                                 <Text style={[st.paidText, isPaid ? {color: '#34D399'} : {color: '#F87171'}]}>
                                     {isPaid ? 'Ödendi' : 'Bekliyor'}

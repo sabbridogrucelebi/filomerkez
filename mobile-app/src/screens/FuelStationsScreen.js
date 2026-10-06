@@ -65,10 +65,10 @@ export default function FuelStationsScreen({ navigation }) {
                 <View style={s.rowMid}>
                     <View style={s.dataCell}><Text style={s.cellLabel}>İskonto</Text><Text style={s.cellVal}>{item.discount_type === 'percentage' ? `%${item.discount_value}` : `${item.discount_value} ₺`}</Text></View>
                     <View style={s.dataCell}><Text style={s.cellLabel}>Toplam Litre</Text><Text style={s.cellVal}>{parseFloat(item.total_liters).toFixed(2)} L</Text></View>
-                    <View style={s.dataCell}><Text style={s.cellLabel}>Brüt Tutar</Text><Text style={s.cellVal}>₺{formatCurrency(item.gross_total)}</Text></View>
+                    <View style={s.dataCell}><Text style={s.cellLabel}>Brüt (KDV Hariç)</Text><Text style={s.cellVal}>₺{formatCurrency(item.gross_total)}</Text></View>
                     
                     <View style={s.dataCell}><Text style={s.cellLabel}>İskonto Top.</Text><Text style={s.cellVal}>₺{formatCurrency(item.discount_total)}</Text></View>
-                    <View style={s.dataCell}><Text style={s.cellLabel}>Net Borç</Text><Text style={s.cellVal}>₺{formatCurrency(item.net_debt)}</Text></View>
+                    <View style={s.dataCell}><Text style={s.cellLabel}>Net Borç (KDV Dahil)</Text><Text style={s.cellVal}>₺{formatCurrency(item.net_debt)}</Text></View>
                     <View style={s.dataCell}><Text style={s.cellLabel}>Ödenen</Text><Text style={[s.cellVal, { color: '#10B981' }]}>₺{formatCurrency(item.total_paid)}</Text></View>
                 </View>
 

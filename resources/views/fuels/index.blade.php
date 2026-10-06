@@ -73,7 +73,7 @@
         ->values();
 
     $totalLiters = (float) $displayRows->sum(fn ($row) => (float) ($row->liters ?? 0));
-    $totalAmount = (float) $displayRows->sum(fn ($row) => (float) ($row->gross_total_cost ?? $row->total_cost ?? 0));
+    $totalAmount = (float) $displayRows->sum(fn ($row) => (float) ($row->total_cost ?? 0));
     $totalReceiptCount = (int) $displayRows->count();
 
     $stationCards = $stationSummaries->values()->map(function ($station) {
@@ -282,9 +282,9 @@
             <div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
                 <div class="rounded-[26px] relative overflow-hidden bg-gradient-to-br from-sky-500 to-blue-600 p-5 text-white shadow-xl flex items-center justify-between">
                     <div class="relative z-10">
-                        <div class="text-sm font-medium text-white/90">Toplam Yakıt Tutarı</div>
+                        <div class="text-sm font-medium text-white/90">Ödenecek Yakıt Tutarı (KDV Dahil)</div>
                         <div class="mt-3 text-2xl xl:text-3xl font-extrabold tracking-tight truncate">{{ number_format($totalAmount, 2, ',', '.') }} ₺</div>
-                        <div class="mt-2 text-xs text-white/80">Kayıtlı toplam yakıt maliyeti</div>
+                        <div class="mt-2 text-xs text-white/80">İskonto düşülmüş, KDV dahil maliyet</div>
                     </div>
                     <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Money%20Bag.png" alt="Tutar" class="relative z-10 w-16 h-16 drop-shadow-xl select-none pointer-events-none flex-shrink-0 ml-2" />
                 </div>
@@ -429,7 +429,7 @@
                                 <th class="px-4 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">KM Farkı</th>
                                 <th class="px-4 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Litre</th>
                                 <th class="px-4 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Birim Fiyat</th>
-                                <th class="px-4 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Toplam</th>
+                                <th class="px-4 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Ödenecek (KDV Dahil)</th>
                                 <th class="px-4 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">KM / Litre</th>
                                 <th class="px-4 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Not</th>
                                 <th class="px-4 py-4 text-right text-xs font-bold uppercase tracking-[0.12em] text-slate-500">İşlem</th>
@@ -479,7 +479,7 @@
                                     </td>
 
                                     <td class="px-4 py-4 font-semibold {{ $fuel->is_paid ? 'text-emerald-600' : 'text-rose-600' }}">
-                                        {{ number_format((float) ($fuel->gross_total_cost ?? $fuel->total_cost ?? 0), 2, ',', '.') }} ₺
+                                        {{ number_format((float) ($fuel->total_cost ?? 0), 2, ',', '.') }} ₺
                                     </td>
 
                                     <td class="px-4 py-4 text-slate-700">

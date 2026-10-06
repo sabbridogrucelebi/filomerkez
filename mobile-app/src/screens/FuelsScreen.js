@@ -138,7 +138,7 @@ export default function FuelsScreen({ navigation }) {
 
         setDisplayedFuels(filtered);
         
-        const cost = filtered.reduce((sum, item) => sum + parseFloat(item.gross_total_cost || item.total_cost || 0), 0);
+        const cost = filtered.reduce((sum, item) => sum + parseFloat(item.total_cost || 0), 0);
         const liters = filtered.reduce((sum, item) => sum + parseFloat(item.liters || 0), 0);
         
         setKpi(prev => ({ 
@@ -272,7 +272,7 @@ export default function FuelsScreen({ navigation }) {
                             <View style={s.plateBadge}>
                                 <Text style={s.plateText}>{item.vehicle?.plate || '?'}</Text>
                             </View>
-                            <Text style={[s.amountText, { color: item.is_paid ? '#34D399' : '#F87171' }]}>₺{fmtKm(item.gross_total_cost || item.total_cost)}</Text>
+                            <Text style={[s.amountText, { color: item.is_paid ? '#34D399' : '#F87171' }]}>₺{fmtKm(item.total_cost)}</Text>
                         </View>
                         
                         {/* Bottom Row: Station Name, Date and Actions */}

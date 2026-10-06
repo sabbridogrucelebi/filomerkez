@@ -249,10 +249,10 @@
                                 <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Adres</th>
                                 <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">İskonto</th>
                                 <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Toplam Litre</th>
-                                <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Brüt Tutar</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Brüt (KDV Hariç)</th>
                                 <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">İskonto Toplamı</th>
                                 <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">KDV Toplamı</th>
-                                <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Net Borç</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Net Borç (KDV Dahil)</th>
                                 <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Toplam Ödeme</th>
                                 <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Anlık Cari Borç</th>
                                 <th class="px-6 py-4 text-right text-xs font-bold uppercase tracking-[0.12em] text-slate-500">İşlem</th>
@@ -357,7 +357,7 @@
                                                         </div>
 
                                                         <div class="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
-                                                            <span class="text-sm text-slate-500">Brüt Tutar</span>
+                                                            <span class="text-sm text-slate-500">Brüt (KDV Hariç)</span>
                                                             <span class="font-bold text-slate-800">{{ number_format((float) $station->summary->gross_total, 2, ',', '.') }} ₺</span>
                                                         </div>
 
@@ -575,6 +575,7 @@
                                 <div>
                                     <label class="mb-2 block text-sm font-semibold text-slate-700">KDV Oranı (%)</label>
                                     <input type="number" step="0.01" min="0" max="100" name="vat_rate" value="{{ old('vat_rate', 0) }}" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 shadow-sm outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100">
+                                    <p class="mt-2 text-xs text-slate-500">Pompa fiyatı KDV dahildir. Oran sadece KDV'yi ayırmak için kullanılır; borç tutarına tekrar eklenmez. Yakıt için 20 yazın.</p>
                                 </div>
                             </div>
                         </div>
@@ -670,6 +671,7 @@
                                 <div>
                                     <label class="mb-2 block text-sm font-semibold text-slate-700">KDV Oranı (%)</label>
                                     <input type="number" step="0.01" min="0" max="100" name="vat_rate" x-model="editForm.vat_rate" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 shadow-sm outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100">
+                                    <p class="mt-2 text-xs text-slate-500">Pompa fiyatı KDV dahildir. Oran sadece KDV'yi ayırmak için kullanılır; borç tutarına tekrar eklenmez. Yakıt için 20 yazın. Kayıt, bu istasyonun fişlerini yeniden hesaplar.</p>
                                 </div>
                             </div>
                         </div>
@@ -770,6 +772,7 @@
 
                                         <div class="bg-slate-50 px-4 py-3 border-b border-slate-100">
                                             <h4 class="text-sm font-bold text-slate-800">Seçili Tarihler Arası Borç Özeti</h4>
+                                            <p class="mt-1 text-xs text-slate-500">Birim fiyat KDV dahildir. Brüt, KDV ayrılmış tutardır. Net borç, iskonto düşülmüş KDV dahil ödenecek tutardır. KDV bu tutarın içindedir, üzerine eklenmez.</p>
                                         </div>
                                         
                                         <div class="overflow-x-auto">
@@ -777,11 +780,11 @@
                                                 <thead>
                                                     <tr class="bg-slate-50/50 text-slate-500">
                                                         <th class="px-4 py-2 font-medium">Toplam Alınan (Litre)</th>
-                                                        <th class="px-4 py-2 font-medium">İskontosuz Brüt Tutar</th>
+                                                        <th class="px-4 py-2 font-medium">İskontosuz Brüt (KDV Hariç)</th>
                                                         <th class="px-4 py-2 font-medium">İskonto</th>
                                                         <th class="px-4 py-2 font-medium">KDV Tutarı</th>
                                                         <th class="px-4 py-2 font-medium text-emerald-600">Ödenen Toplam</th>
-                                                        <th class="px-4 py-2 font-bold text-blue-600">Net Kalan Borç</th>
+                                                        <th class="px-4 py-2 font-bold text-blue-600">Net Kalan Borç (KDV Dahil)</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody class="divide-y divide-slate-100">

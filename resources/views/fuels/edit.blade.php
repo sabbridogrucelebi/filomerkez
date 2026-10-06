@@ -92,7 +92,7 @@
                 </div>
 
                 <div>
-                    <label class="mb-2 block text-sm font-semibold text-slate-700">Toplam Tutar</label>
+                    <label class="mb-2 block text-sm font-semibold text-slate-700">Pompa Tutarı (KDV Dahil)</label>
                     <input type="number"
                            step="0.01"
                            min="0"

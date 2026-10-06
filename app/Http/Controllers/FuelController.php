@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Fuel;
 use App\Models\FuelStation;
 use App\Models\Fleet\Vehicle;
+use App\Services\FuelPricingService;
 use Illuminate\Http\Request;
 
 class FuelController extends Controller
@@ -221,54 +222,8 @@ class FuelController extends Controller
 
     protected function calculatePricing(float $liters, float $pricePerLiter, ?int $stationId = null): array
     {
-        $vatRate = 0;
-        $discountType = null;
-        $discountValue = 0;
+        $station = $stationId ? FuelStation::find($stationId) : null;
 
-        if ($stationId) {
-            $station = FuelStation::find($stationId);
-            if ($station) {
-                $vatRate = (float) $station->vat_rate;
-                $discountType = $station->discount_type;
-                $discountValue = (float) $station->discount_value;
-            }
-        }
-
-        // Pump price includes VAT! (KDV Dahil)
-        $kdvDahilGross = round($liters * $pricePerLiter, 2);
-        
-        $kdvDahilDiscount = 0;
-        if ($discountValue > 0) {
-            if ($discountType === 'percentage') {
-                $kdvDahilDiscount = round($kdvDahilGross * ($discountValue / 100), 2);
-            } elseif ($discountType === 'fixed') {
-                $kdvDahilDiscount = round($discountValue, 2);
-            }
-        }
-
-        if ($kdvDahilDiscount > $kdvDahilGross) {
-            $kdvDahilDiscount = $kdvDahilGross;
-        }
-
-        $kdvDahilTotal = $kdvDahilGross - $kdvDahilDiscount; // Odenecek Tutar (KDV Dahil)
-
-        $vatMultiplier = 1 + ($vatRate / 100);
-
-        // KDV Hariç Tutar calculations
-        $kdvHaricGross = round($kdvDahilGross / $vatMultiplier, 2);
-        $kdvHaricTotal = round($kdvDahilTotal / $vatMultiplier, 2);
-        $kdvHaricDiscount = round($kdvDahilDiscount / $vatMultiplier, 2);
-
-        // KDV Tutarı
-        $vatAmount = round($kdvDahilTotal - $kdvHaricTotal, 2);
-
-        return [
-            'gross_total_cost' => $kdvHaricGross,      // İskontosuz Brüt Tutar (KDV Hariç)
-            'vat_rate' => $vatRate,
-            'vat_amount' => $vatAmount,                // KDV Tutarı
-            'net_cost' => $kdvHaricGross,              // KDV Hariç Ana Tutar
-            'discount_amount' => $kdvHaricDiscount,    // İskonto Tutarı (KDV Hariç)
-            'total_cost' => $kdvDahilTotal,            // Net Kalan Borç (KDV Dahil)
-        ];
+        return app(FuelPricingService::class)->forStation($liters, $pricePerLiter, $station);
     }
 }

@@ -6,6 +6,7 @@ use App\Models\FuelStation;
 use App\Models\FuelStationPayment;
 use Illuminate\Http\Request;
 use App\Services\ActivityLogger;
+use App\Services\FuelPricingService;
 
 class FuelStationController extends Controller
 {
@@ -106,6 +107,11 @@ class FuelStationController extends Controller
         }
 
         $station->update($validated);
+
+        \App\Models\Fuel::withoutEvents(function () use ($station) {
+            app(FuelPricingService::class)->repriceStation($station);
+            $this->recalculateStationFuels($station);
+        });
 
         return redirect()->route('fuel-stations.index')->with('success', 'Petrol istasyonu/Cari başarıyla güncellendi.');
     }

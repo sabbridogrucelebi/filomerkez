@@ -5,6 +5,7 @@ namespace App\Imports;
 use App\Models\Fuel;
 use App\Models\FuelStation;
 use App\Models\Fleet\Vehicle;
+use App\Services\FuelPricingService;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -109,49 +110,8 @@ class FuelsImport implements ToCollection, WithHeadingRow
 
     protected function calculatePricing(float $liters, float $pricePerLiter, ?int $stationId = null): array
     {
-        $vatRate = 0;
-        $discountType = null;
-        $discountValue = 0;
+        $station = $stationId ? FuelStation::find($stationId) : null;
 
-        if ($stationId) {
-            $station = FuelStation::find($stationId);
-            if ($station) {
-                $vatRate = (float) $station->vat_rate;
-                $discountType = $station->discount_type;
-                $discountValue = (float) $station->discount_value;
-            }
-        }
-
-        $kdvDahilGross = round($liters * $pricePerLiter, 2);
-        
-        $kdvDahilDiscount = 0;
-        if ($discountValue > 0) {
-            if ($discountType === 'percentage') {
-                $kdvDahilDiscount = round($kdvDahilGross * ($discountValue / 100), 2);
-            } elseif ($discountType === 'fixed') {
-                $kdvDahilDiscount = round($discountValue, 2);
-            }
-        }
-
-        if ($kdvDahilDiscount > $kdvDahilGross) {
-            $kdvDahilDiscount = $kdvDahilGross;
-        }
-
-        $kdvDahilTotal = $kdvDahilGross - $kdvDahilDiscount;
-        $vatMultiplier = 1 + ($vatRate / 100);
-
-        $kdvHaricGross = round($kdvDahilGross / $vatMultiplier, 2);
-        $kdvHaricTotal = round($kdvDahilTotal / $vatMultiplier, 2);
-        $kdvHaricDiscount = round($kdvDahilDiscount / $vatMultiplier, 2);
-        $vatAmount = round($kdvDahilTotal - $kdvHaricTotal, 2);
-
-        return [
-            'gross_total_cost' => $kdvHaricGross,
-            'vat_rate'         => $vatRate,
-            'vat_amount'       => $vatAmount,
-            'net_cost'         => $kdvHaricGross,
-            'discount_amount'  => $kdvHaricDiscount,
-            'total_cost'       => $kdvDahilTotal,
-        ];
+        return app(FuelPricingService::class)->forStation($liters, $pricePerLiter, $station);
     }
 }

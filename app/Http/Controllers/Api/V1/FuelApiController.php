@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Models\Fuel;
 use App\Models\FuelStation;
+use App\Services\FuelPricingService;
 use Illuminate\Http\Request;
 
 class FuelApiController extends BaseApiController
@@ -135,49 +136,15 @@ class FuelApiController extends BaseApiController
         ]);
 
         $validated['company_id'] = $this->getCompanyId();
-        $vatRate = 0;
-        $discountType = null;
-        $discountValue = 0;
-        
-        if (!empty($validated['fuel_station_id'])) {
-            $station = FuelStation::find($validated['fuel_station_id']);
-            if ($station) {
-                $vatRate = (float) $station->vat_rate;
-                $discountType = $station->discount_type;
-                $discountValue = (float) $station->discount_value;
-            }
-        }
-        
-        // Pump price includes VAT (KDV Dahil)
-        $kdvDahilGross = round($validated['liters'] * $validated['price_per_liter'], 2);
-        
-        $kdvDahilDiscount = 0;
-        if ($discountValue > 0) {
-            if ($discountType === 'percentage') {
-                $kdvDahilDiscount = round($kdvDahilGross * ($discountValue / 100), 2);
-            } elseif ($discountType === 'fixed') {
-                $kdvDahilDiscount = round($discountValue, 2);
-            }
-        }
+        $station = !empty($validated['fuel_station_id'])
+            ? FuelStation::find($validated['fuel_station_id'])
+            : null;
 
-        if ($kdvDahilDiscount > $kdvDahilGross) {
-            $kdvDahilDiscount = $kdvDahilGross;
-        }
-
-        $kdvDahilTotal = $kdvDahilGross - $kdvDahilDiscount;
-        $vatMultiplier = 1 + ($vatRate / 100);
-
-        $kdvHaricGross = round($kdvDahilGross / $vatMultiplier, 2);
-        $kdvHaricTotal = round($kdvDahilTotal / $vatMultiplier, 2);
-        $kdvHaricDiscount = round($kdvDahilDiscount / $vatMultiplier, 2);
-        $vatAmount = round($kdvDahilTotal - $kdvHaricTotal, 2);
-
-        $validated['gross_total_cost'] = $kdvHaricGross;
-        $validated['vat_rate'] = $vatRate;
-        $validated['vat_amount'] = $vatAmount;
-        $validated['net_cost'] = $kdvHaricGross;
-        $validated['discount_amount'] = $kdvHaricDiscount;
-        $validated['total_cost'] = $kdvDahilTotal;
+        $validated = array_merge($validated, app(FuelPricingService::class)->forStation(
+            (float) $validated['liters'],
+            (float) $validated['price_per_liter'],
+            $station
+        ));
 
         $fuel = Fuel::create($validated);
 
@@ -211,48 +178,15 @@ class FuelApiController extends BaseApiController
             'notes' => 'nullable|string',
         ]);
 
-        $vatRate = 0;
-        $discountType = null;
-        $discountValue = 0;
-        
-        if (!empty($validated['fuel_station_id'])) {
-            $station = FuelStation::find($validated['fuel_station_id']);
-            if ($station) {
-                $vatRate = (float) $station->vat_rate;
-                $discountType = $station->discount_type;
-                $discountValue = (float) $station->discount_value;
-            }
-        }
-        
-        $kdvDahilGross = round($validated['liters'] * $validated['price_per_liter'], 2);
-        
-        $kdvDahilDiscount = 0;
-        if ($discountValue > 0) {
-            if ($discountType === 'percentage') {
-                $kdvDahilDiscount = round($kdvDahilGross * ($discountValue / 100), 2);
-            } elseif ($discountType === 'fixed') {
-                $kdvDahilDiscount = round($discountValue, 2);
-            }
-        }
+        $station = !empty($validated['fuel_station_id'])
+            ? FuelStation::find($validated['fuel_station_id'])
+            : null;
 
-        if ($kdvDahilDiscount > $kdvDahilGross) {
-            $kdvDahilDiscount = $kdvDahilGross;
-        }
-
-        $kdvDahilTotal = $kdvDahilGross - $kdvDahilDiscount;
-        $vatMultiplier = 1 + ($vatRate / 100);
-
-        $kdvHaricGross = round($kdvDahilGross / $vatMultiplier, 2);
-        $kdvHaricTotal = round($kdvDahilTotal / $vatMultiplier, 2);
-        $kdvHaricDiscount = round($kdvDahilDiscount / $vatMultiplier, 2);
-        $vatAmount = round($kdvDahilTotal - $kdvHaricTotal, 2);
-
-        $validated['gross_total_cost'] = $kdvHaricGross;
-        $validated['vat_rate'] = $vatRate;
-        $validated['vat_amount'] = $vatAmount;
-        $validated['net_cost'] = $kdvHaricGross;
-        $validated['discount_amount'] = $kdvHaricDiscount;
-        $validated['total_cost'] = $kdvDahilTotal;
+        $validated = array_merge($validated, app(FuelPricingService::class)->forStation(
+            (float) $validated['liters'],
+            (float) $validated['price_per_liter'],
+            $station
+        ));
 
         $fuel->update($validated);
 

@@ -189,7 +189,7 @@ export default function FuelFormScreen({ navigation, route }) {
                     {/* Live Calculation Card */}
                     <LinearGradient colors={['#0F172A', '#1E293B']} style={s.liveCalcCard}>
                         <Icon name="calculator-variant" size={24} color="#64748B" style={{ position: 'absolute', top: 16, right: 16 }} />
-                        <Text style={s.liveCalcLabel}>TOPLAM TUTAR</Text>
+                        <Text style={s.liveCalcLabel}>POMPA TUTARI (KDV DAHİL)</Text>
                         <Text style={s.liveCalcValue}>₺{calculateTotal()}</Text>
                     </LinearGradient>
 
