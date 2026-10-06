@@ -23,22 +23,17 @@ class FuelStationController extends Controller
             ->orderBy('name')
             ->get()
             ->map(function ($station) {
-                $totalLiters = (float) $station->fuels->sum('liters');
-                $grossTotal = (float) $station->fuels->sum('gross_total_cost');
-                $discountTotal = (float) $station->fuels->sum('discount_amount');
-                $vatTotal = (float) $station->fuels->sum('vat_amount');
-                $netTotal = (float) $station->fuels->sum('total_cost');
+                $priced = app(FuelPricingService::class)->summarizeFuels($station->fuels, $station);
                 $totalPaid = (float) $station->payments->sum('amount');
-                $currentDebt = $netTotal - $totalPaid;
 
                 $station->summary = (object) [
-                    'total_liters' => $totalLiters,
-                    'gross_total' => $grossTotal,
-                    'discount_total' => $discountTotal,
-                    'vat_total' => $vatTotal,
-                    'net_total' => $netTotal,
+                    'total_liters' => $priced['total_liters'],
+                    'gross_total' => $priced['gross_total'],
+                    'discount_total' => $priced['discount_total'],
+                    'vat_total' => $priced['vat_total'],
+                    'net_total' => $priced['net_total'],
                     'total_paid' => $totalPaid,
-                    'current_debt' => $currentDebt,
+                    'current_debt' => $priced['net_total'] - $totalPaid,
                     'payment_count' => $station->payments->count(),
                 ];
 
@@ -403,23 +398,16 @@ class FuelStationController extends Controller
             ->whereDate('date', '<=', $request->end_date)
             ->get();
 
-        $grossTotal = (float) $fuels->sum('gross_total_cost');
-        $discountTotal = (float) $fuels->sum('discount_amount');
-        $vatTotal = (float) $fuels->sum('vat_amount');
-        $netTotal = (float) $fuels->sum('total_cost');
-        $totalLiters = (float) $fuels->sum('liters');
-
-        $paidTotal = (float) $fuels->sum('paid_amount');
-        $netPayable = max(0, $netTotal - $paidTotal);
+        $priced = app(FuelPricingService::class)->summarizeFuels($fuels, $station);
 
         return response()->json([
-            'gross_total' => $grossTotal,
-            'discount_total' => $discountTotal,
-            'vat_total' => $vatTotal,
-            'net_total' => $netTotal,
-            'paid_total' => $paidTotal,
-            'net_payable' => $netPayable,
-            'total_liters' => $totalLiters,
+            'gross_total' => $priced['gross_total'],
+            'discount_total' => $priced['discount_total'],
+            'vat_total' => $priced['vat_total'],
+            'net_total' => $priced['net_total'],
+            'paid_total' => $priced['paid_total'],
+            'net_payable' => $priced['net_payable'],
+            'total_liters' => $priced['total_liters'],
         ]);
     }
 }

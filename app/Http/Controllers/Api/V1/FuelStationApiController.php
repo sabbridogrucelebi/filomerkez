@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Models\FuelStation;
+use App\Services\FuelPricingService;
 use Illuminate\Http\Request;
 
 class FuelStationApiController extends BaseApiController
@@ -23,10 +24,11 @@ class FuelStationApiController extends BaseApiController
             ->orderBy('name')
             ->get()
             ->map(function ($station) {
-                $station->total_liters = (float) $station->fuels->sum('liters');
-                $station->gross_total = (float) $station->fuels->sum('gross_total_cost');
-                $station->discount_total = (float) $station->fuels->sum('discount_amount');
-                $station->net_debt = (float) $station->fuels->sum('total_cost');
+                $priced = app(FuelPricingService::class)->summarizeFuels($station->fuels, $station);
+                $station->total_liters = $priced['total_liters'];
+                $station->gross_total = $priced['gross_total'];
+                $station->discount_total = $priced['discount_total'];
+                $station->net_debt = $priced['net_total'];
                 $station->total_paid = (float) $station->payments->sum('amount');
                 $station->current_debt = $station->net_debt - $station->total_paid;
                 

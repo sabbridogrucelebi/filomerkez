@@ -56,6 +56,42 @@ class FuelPricingService
         ];
     }
 
+    /**
+     * Kayıtlı kolonlar eski formülde kalmış olsa bile özeti litre ve pompa fiyatından hesaplar.
+     */
+    public function summarizeFuels(iterable $fuels, ?FuelStation $station): array
+    {
+        $gross = 0.0;
+        $discount = 0.0;
+        $vat = 0.0;
+        $net = 0.0;
+        $liters = 0.0;
+        $paid = 0.0;
+
+        foreach ($fuels as $fuel) {
+            $pricing = $this->forStation((float) $fuel->liters, (float) $fuel->price_per_liter, $station);
+            $gross += $pricing['gross_total_cost'];
+            $discount += $pricing['discount_amount'];
+            $vat += $pricing['vat_amount'];
+            $net += $pricing['total_cost'];
+            $liters += (float) $fuel->liters;
+            $paid += (float) $fuel->paid_amount;
+        }
+
+        $net = round($net, 2);
+        $paid = round($paid, 2);
+
+        return [
+            'gross_total' => round($gross, 2),
+            'discount_total' => round($discount, 2),
+            'vat_total' => round($vat, 2),
+            'net_total' => $net,
+            'paid_total' => $paid,
+            'net_payable' => round(max(0, $net - $paid), 2),
+            'total_liters' => round($liters, 2),
+        ];
+    }
+
     public function forStation(float $liters, float $pricePerLiter, ?FuelStation $station): array
     {
         return $this->calculate(
