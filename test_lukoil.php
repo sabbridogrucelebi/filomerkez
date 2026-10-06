@@ -29,7 +29,7 @@ foreach($fuels as $fuel) {
 }
 
 foreach($payments as $payment) {
-    $month = Carbon::parse($payment->date)->format('Y-m');
+    $month = Carbon::parse($payment->payment_date)->format('Y-m');
     if(!isset($monthlyData[$month])) {
         $monthlyData[$month] = ['fuel' => 0, 'payment' => 0];
     }

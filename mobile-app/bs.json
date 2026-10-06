@@ -1,0 +1,214 @@
+[
+  {
+    "id": "0738da0f-ff11-45bd-b809-cf9b6f3fceec",
+    "status": "FINISHED",
+    "platform": "IOS",
+    "artifacts": {
+      "buildUrl": "https://expo.dev/artifacts/eas/pYgFoRWpsgytB40aBBkQB3hJii2-C610PEOil1Ga9EU.ipa",
+      "xcodeBuildLogsUrl": "https://storage.googleapis.com/eas-workflows-production/logs/dbfb1961-a8bc-494d-9e16-ecf0469bef2c/0738da0f-ff11-45bd-b809-cf9b6f3fceec/2026-09-23T07%3A00%3A10Z-0738da0f-ff11-45bd-b809-cf9b6f3fceec-xcode.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260923%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260923T070758Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=02904b7fd026cd4033333af83408354f1905ba00a8faedfc707f171027312c24e3689e537d1c2ac8edee52fede14199c0644a6ac9325efbb256a2e546c57ba262822593c818edf0ac0579ad3c17ba21d1d5dd6347830b64fbd96e402d53ed40076a4d2f0b939f7ab97fae16893f490e33c8db9a6a9b6ffd67d2502c295a23c4d71f57b800fd900d8042b0af49ebed7867f9ce41e05e1e3889d7956a280af3f170372b24428f4ec9ce0bbe0a4f2448852ddadb56dc14098be452a185d97d937df9fbb119a146fd7c5584adc338fac8436b5628046746821fba3ada324cfb669b77a9e08edfc270e4b48504722071d7aecc7a017f2ec4dcb7ed4719d86f9332dec",
+      "applicationArchiveUrl": "https://expo.dev/artifacts/eas/pYgFoRWpsgytB40aBBkQB3hJii2-C610PEOil1Ga9EU.ipa"
+    },
+    "fingerprint": {
+      "id": "01a0cd10-7d9e-7568-97d6-57341ada1ec9",
+      "hash": "e50ff6c1761e3f2656fed2e760ca9b0417cff61f"
+    },
+    "initiatingActor": {
+      "id": "0c980b05-b114-4cd6-83f2-0078cb33cc92",
+      "displayName": "sabbridogru"
+    },
+    "logFiles": [
+      "https://storage.googleapis.com/eas-workflows-production/logs/dbfb1961-a8bc-494d-9e16-ecf0469bef2c/0738da0f-ff11-45bd-b809-cf9b6f3fceec/2026-09-23T07%3A00%3A10Z-0738da0f-ff11-45bd-b809-cf9b6f3fceec-xcode.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260923%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260923T070758Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=02904b7fd026cd4033333af83408354f1905ba00a8faedfc707f171027312c24e3689e537d1c2ac8edee52fede14199c0644a6ac9325efbb256a2e546c57ba262822593c818edf0ac0579ad3c17ba21d1d5dd6347830b64fbd96e402d53ed40076a4d2f0b939f7ab97fae16893f490e33c8db9a6a9b6ffd67d2502c295a23c4d71f57b800fd900d8042b0af49ebed7867f9ce41e05e1e3889d7956a280af3f170372b24428f4ec9ce0bbe0a4f2448852ddadb56dc14098be452a185d97d937df9fbb119a146fd7c5584adc338fac8436b5628046746821fba3ada324cfb669b77a9e08edfc270e4b48504722071d7aecc7a017f2ec4dcb7ed4719d86f9332dec",
+      "https://storage.googleapis.com/eas-workflows-production/logs/dbfb1961-a8bc-494d-9e16-ecf0469bef2c/0738da0f-ff11-45bd-b809-cf9b6f3fceec/2026-09-23T07%3A00%3A10Z-8f998c6c-33e2-4cfe-8bb2-608d334c93ae.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260923%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260923T070758Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=0b9a2534695cdd2dd33588a21ca8e3b145fb0de15f0cac3739b7488898d7a6f2a68287cc92168cf672c70b06088da884d4fc707a55b5d89a08756fe2d4bad3ab72c5bc5b1cbdb3dfa49a18a7d43de5fc74bdda324e0b6b5735715cf9e279a721436be173ecdc3b683536aa02ba674f73d67645862e4db4802777b61ee61a73fdd0eb410f53d4d44c8bb6de9192a35c8a77259386b19a7e37939b69b205bc8a2bf502d26ccb8437b8d5fd3ac9b31fc1d4a2caeeb3481235ce10a92e035c3308bb86d34de4bc48eae9724cf66b1215164a4ac6e244c67e4073cc1275d871829a56522bddc48d97cd8bb617be17fd7c7efa30db70654420de7a0b3016a0f9b0dcc6"
+    ],
+    "app": {
+      "id": "dbfb1961-a8bc-494d-9e16-ecf0469bef2c",
+      "name": "mobile-app",
+      "slug": "mobile-app",
+      "ownerAccount": {
+        "id": "68f6d7e5-f830-42b3-b4fe-aab0ee015d69",
+        "name": "sabbridogru"
+      }
+    },
+    "updateChannel": {
+      "id": "01a0cd0e-a4bc-72fb-bc84-bdd3e66a0e64",
+      "name": "production"
+    },
+    "distribution": "STORE",
+    "buildProfile": "production",
+    "appIdentifier": "com.celebiturizm.filomerkez",
+    "sdkVersion": "57.0.0",
+    "appVersion": "1.0.14",
+    "appBuildVersion": "14",
+    "runtime": {
+      "id": "01a0cd0f-95a2-7453-bc41-de9136d16460",
+      "version": "1.0.14"
+    },
+    "gitCommitHash": "b60e3b99b6fd28a6ebc1945ea69d2271d3aba765",
+    "gitCommitMessage": "mobil: v1.0.14 magaza yayin hazirligi\n\n- Apple 2.1 ihlali olan 4 placeholder ekran ve 1 'yakinda' sayfasi kaldirildi\n- Uzak (raw.githubusercontent) emoji gorselleri yerel src/emoji.js kaydina tasindi\n- Gerekcesiz 8 Android izni blockedPermissions ile kaldirildi (SYSTEM_ALERT_WINDOW dahil)\n- app.json: gecersiz android.edgeToEdgeEnabled alani silindi (expo-doctor 21/21)\n- ios.supportsTablet=false, sadece iPhone olarak yayin\n- 9 acik zeminli ekranda status bar okunmuyordu: useStatusBarStyle hook'u eklendi\n- 12 ekranda icerik yuzen tab bar altinda kaliyordu, 120dp bosluk verildi\n- 7 form modalinda klavye inputlari kapatiyordu, KeyboardAvoidingView eklendi\n- 64 dosyada vector-icon importlari subpath'e cevrildi (font 4.5MB -> 1.7MB)\n- Gorsel boyutlari hedef olcuye indirildi (assets 18.1MB -> 6.8MB)\n- expo-constants eklendi, package-lock senkronlandi (npm ci dogrulandi)",
+    "priority": "NORMAL",
+    "createdAt": "2026-09-23T07:00:05.091Z",
+    "updatedAt": "2026-09-23T07:05:16.982Z",
+    "completedAt": "2026-09-23T07:05:16.638Z",
+    "expirationDate": "2026-10-23T07:00:05.136Z",
+    "isForIosSimulator": false,
+    "metrics": {
+      "buildWaitTime": 5019,
+      "buildQueueTime": 21590,
+      "buildDuration": 284938
+    }
+  },
+  {
+    "id": "65c537f0-343a-44c1-9f81-f8c882fd14f3",
+    "status": "IN_PROGRESS",
+    "platform": "ANDROID",
+    "artifacts": {},
+    "fingerprint": {
+      "id": "01a0cd0f-95b3-7c22-81bc-64ba77c1df39",
+      "hash": "5ddc8207c9f59309ad6e7264d76cd30aae4fe6d5"
+    },
+    "initiatingActor": {
+      "id": "0c980b05-b114-4cd6-83f2-0078cb33cc92",
+      "displayName": "sabbridogru"
+    },
+    "logFiles": [
+      "https://storage.googleapis.com/eas-workflows-production/logs/dbfb1961-a8bc-494d-9e16-ecf0469bef2c/65c537f0-343a-44c1-9f81-f8c882fd14f3/2026-09-23T06%3A59%3A13Z-821c0d40-385c-4d3e-ba0f-ae3aa5624abc.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260923%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260923T070758Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=35fd9bb50225ea8674a6ca9e87573a531c804edfb221e7461cf6cdbab363132f99c0d28255ea67d1e96f144e025fa64d34496f32f46977e3a1b3cbb7527d9fa2e9be5dfe1f18aa37c80d296ae9ee193ea526b514f4deedddd7a892c43b70b83236dd39299a9d1673346bcd6f079c0f260e860fe4b21e7823327831e5b6ff7ddbe2b569bcb5ce1c854c463c2e4fced385393b4d42bb1386807bab0258b18aa5d935e7dd59fa33d6c2a1da28db56ec3529eea791d06bee01ee177f48abb07a20503059282939696fc5b659becba42235bd136200d837724e0a61d302fe27c2eab7f30b493f4d2aae136a65d329e6b1f50fb8bbf6bb0a32f087dc297bc58a8e71ad"
+    ],
+    "app": {
+      "id": "dbfb1961-a8bc-494d-9e16-ecf0469bef2c",
+      "name": "mobile-app",
+      "slug": "mobile-app",
+      "ownerAccount": {
+        "id": "68f6d7e5-f830-42b3-b4fe-aab0ee015d69",
+        "name": "sabbridogru"
+      }
+    },
+    "updateChannel": {
+      "id": "01a0cd0e-a4bc-72fb-bc84-bdd3e66a0e64",
+      "name": "production"
+    },
+    "distribution": "STORE",
+    "buildProfile": "production",
+    "appIdentifier": "com.celebiturizm.filomerkez",
+    "sdkVersion": "57.0.0",
+    "appVersion": "1.0.14",
+    "appBuildVersion": "14",
+    "runtime": {
+      "id": "01a0cd0f-95a2-7453-bc41-de9136d16460",
+      "version": "1.0.14"
+    },
+    "gitCommitHash": "b60e3b99b6fd28a6ebc1945ea69d2271d3aba765",
+    "gitCommitMessage": "mobil: v1.0.14 magaza yayin hazirligi\n\n- Apple 2.1 ihlali olan 4 placeholder ekran ve 1 'yakinda' sayfasi kaldirildi\n- Uzak (raw.githubusercontent) emoji gorselleri yerel src/emoji.js kaydina tasindi\n- Gerekcesiz 8 Android izni blockedPermissions ile kaldirildi (SYSTEM_ALERT_WINDOW dahil)\n- app.json: gecersiz android.edgeToEdgeEnabled alani silindi (expo-doctor 21/21)\n- ios.supportsTablet=false, sadece iPhone olarak yayin\n- 9 acik zeminli ekranda status bar okunmuyordu: useStatusBarStyle hook'u eklendi\n- 12 ekranda icerik yuzen tab bar altinda kaliyordu, 120dp bosluk verildi\n- 7 form modalinda klavye inputlari kapatiyordu, KeyboardAvoidingView eklendi\n- 64 dosyada vector-icon importlari subpath'e cevrildi (font 4.5MB -> 1.7MB)\n- Gorsel boyutlari hedef olcuye indirildi (assets 18.1MB -> 6.8MB)\n- expo-constants eklendi, package-lock senkronlandi (npm ci dogrulandi)",
+    "priority": "NORMAL",
+    "createdAt": "2026-09-23T06:59:05.717Z",
+    "updatedAt": "2026-09-23T06:59:18.271Z",
+    "expirationDate": "2026-10-23T06:59:05.761Z",
+    "isForIosSimulator": false
+  },
+  {
+    "id": "e5f03b40-8065-4288-99a5-879837c6bbf5",
+    "status": "ERRORED",
+    "platform": "ANDROID",
+    "error": {
+      "errorCode": "EAS_BUILD_UNKNOWN_GRADLE_ERROR",
+      "message": "Gradle build failed with unknown error. See logs for the \"Run gradlew\" phase for more information."
+    },
+    "artifacts": {},
+    "fingerprint": {
+      "id": "01a0c859-bf13-7c38-a25f-ef199e396b48",
+      "hash": "dc5073a94bafef12c116768b0e823cca6ea1c07d"
+    },
+    "initiatingActor": {
+      "id": "0c980b05-b114-4cd6-83f2-0078cb33cc92",
+      "displayName": "sabbridogru"
+    },
+    "logFiles": [
+      "https://storage.googleapis.com/eas-workflows-production/logs/dbfb1961-a8bc-494d-9e16-ecf0469bef2c/e5f03b40-8065-4288-99a5-879837c6bbf5/2026-09-22T09%3A02%3A02Z-eb5f5f13-9464-4edf-8ba8-a6af47731c7a.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260923%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260923T070758Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=a295787e4a38b14e962043ce6f42f203c01434b95e1f85a2890b5cdb0cce0c3c2422b8711ec3c557759df56e595e8436e296b3516c0c2842a2373d031bcc1e89871de26693b7a4a5880f234c26c11dda0bbbc409dc274babbfc70260bc6379193ba0394c9fe502ba4afeb845d7b1841a7d3694ddb9bfd6a439d7bcac62250d135505b5531f3ddec0151138de51bbb81352fd228736a3e14ee14bf94935d35e9179ad2e804e74bd558cc63708853210b0183e7a79d92de3e5692580e5b1b1633178bb1ca8bd8463017ea9bd4001e01794b4f3c133d2d251ffd89d55884d6fa2f6d00d3075a0d5d6bb34ccd4e974fa97d5a0760df1dd7e0fa796ce56b6992fcdac"
+    ],
+    "app": {
+      "id": "dbfb1961-a8bc-494d-9e16-ecf0469bef2c",
+      "name": "mobile-app",
+      "slug": "mobile-app",
+      "ownerAccount": {
+        "id": "68f6d7e5-f830-42b3-b4fe-aab0ee015d69",
+        "name": "sabbridogru"
+      }
+    },
+    "distribution": "STORE",
+    "buildProfile": "production",
+    "appIdentifier": "com.celebiturizm.filomerkez",
+    "sdkVersion": "57.0.0",
+    "appVersion": "1.0.13",
+    "appBuildVersion": "13",
+    "runtime": {
+      "id": "01a0c28d-4e70-760e-9817-2bdb9682c320",
+      "version": "1.0.13"
+    },
+    "gitCommitHash": "436753b262a07f01a835c8d74f075ee34c208748",
+    "gitCommitMessage": "fix: undefined array key route hatas?? d??zeltildi",
+    "priority": "NORMAL",
+    "createdAt": "2026-09-22T09:01:59.911Z",
+    "updatedAt": "2026-09-22T09:21:01.859Z",
+    "completedAt": "2026-09-22T09:21:01.663Z",
+    "expirationDate": "2026-10-22T09:01:59.947Z",
+    "isForIosSimulator": false,
+    "metrics": {
+      "buildWaitTime": 2286,
+      "buildQueueTime": 5232,
+      "buildDuration": 1134234
+    }
+  },
+  {
+    "id": "848b2bc2-c90d-49e6-921d-18ff2b0c4767",
+    "status": "FINISHED",
+    "platform": "IOS",
+    "artifacts": {
+      "buildUrl": "https://expo.dev/artifacts/eas/emqhu0yaVlEOqRInq_KX8JI45Ax5NLMK0Hco0RPFuA4.ipa",
+      "xcodeBuildLogsUrl": "https://storage.googleapis.com/eas-workflows-production/logs/dbfb1961-a8bc-494d-9e16-ecf0469bef2c/848b2bc2-c90d-49e6-921d-18ff2b0c4767/2026-09-21T09%3A23%3A39Z-848b2bc2-c90d-49e6-921d-18ff2b0c4767-xcode.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260923%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260923T070758Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=218d6f6232e667ecf794339b5cbe5c74339b15ecedf27f3ab8d274f0920690aa2f38deff0a96874a1ba7e3d0accc47aaee34fddb164321c14f994c08df36b97c145b54b1b743ee40c882c876da1a20a6facc36b373fb1536cc740318e905580e6da5a8f14b08cecac437995e0f481d957760a1ce374f0891a1bf2df76b1172cec3504f04c9287e1255d28b3b222b528816457eee5ac9af105039691aafc0548268055b08fcdadb472e7379dbd6db7230fb7f4e9db8657e1dedca63a386d98218cd7177d2905e186225dee92ddb97b3790ca6acb076231da8e4e4b6cdc6018b74e84b2ac6c4e047c40d1a75e205fac96819eafa6d0ba1129617d47bfef49a506d",
+      "applicationArchiveUrl": "https://expo.dev/artifacts/eas/emqhu0yaVlEOqRInq_KX8JI45Ax5NLMK0Hco0RPFuA4.ipa"
+    },
+    "fingerprint": {
+      "id": "01a0c347-22b7-7fa1-81d3-55fca1e3e825",
+      "hash": "d1bd58e77c288277dee5c25422dfa55ec3c9a3f8"
+    },
+    "initiatingActor": {
+      "id": "0c980b05-b114-4cd6-83f2-0078cb33cc92",
+      "displayName": "sabbridogru"
+    },
+    "logFiles": [
+      "https://storage.googleapis.com/eas-workflows-production/logs/dbfb1961-a8bc-494d-9e16-ecf0469bef2c/848b2bc2-c90d-49e6-921d-18ff2b0c4767/2026-09-21T09%3A23%3A39Z-3bd1fb06-67b0-4ed7-82bd-d09d0cd9462c.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260923%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260923T070758Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=57bbddc5453a0f95fe71b2e7d8e5aded7749f6292def6eaa623f7711207fb4da14833b115b9e2b49fd860d985adbf521eb7eaa235fdf63d481c79a82792abc2af9c86e4fcbabcf3f99c5d3d2ba2db6f5cf6192a63fcf662ca7af85750d981bbe3380c21f2561fb3753b81beda30a0862e3cb31cb3c5476ee9ef44447ead2358fa6f76150f1d6a320f71d603398f21864bd16cda094fc71998f727a4672276a01a79b7f52b4b6ef2cf655fa87449e3f59f684f78a7f34db6629b02a1e09e896ab132e0a15be8c088f181fafe4a12936c94d7611308d3d8bb7a1f818887fd762a2d2c668518eecf5c220c517a4400609958eb4325ee39445cee3464528a4a2c1f2",
+      "https://storage.googleapis.com/eas-workflows-production/logs/dbfb1961-a8bc-494d-9e16-ecf0469bef2c/848b2bc2-c90d-49e6-921d-18ff2b0c4767/2026-09-21T09%3A23%3A39Z-848b2bc2-c90d-49e6-921d-18ff2b0c4767-xcode.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260923%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260923T070758Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=218d6f6232e667ecf794339b5cbe5c74339b15ecedf27f3ab8d274f0920690aa2f38deff0a96874a1ba7e3d0accc47aaee34fddb164321c14f994c08df36b97c145b54b1b743ee40c882c876da1a20a6facc36b373fb1536cc740318e905580e6da5a8f14b08cecac437995e0f481d957760a1ce374f0891a1bf2df76b1172cec3504f04c9287e1255d28b3b222b528816457eee5ac9af105039691aafc0548268055b08fcdadb472e7379dbd6db7230fb7f4e9db8657e1dedca63a386d98218cd7177d2905e186225dee92ddb97b3790ca6acb076231da8e4e4b6cdc6018b74e84b2ac6c4e047c40d1a75e205fac96819eafa6d0ba1129617d47bfef49a506d"
+    ],
+    "app": {
+      "id": "dbfb1961-a8bc-494d-9e16-ecf0469bef2c",
+      "name": "mobile-app",
+      "slug": "mobile-app",
+      "ownerAccount": {
+        "id": "68f6d7e5-f830-42b3-b4fe-aab0ee015d69",
+        "name": "sabbridogru"
+      }
+    },
+    "distribution": "STORE",
+    "buildProfile": "production",
+    "appIdentifier": "com.celebiturizm.filomerkez",
+    "sdkVersion": "57.0.0",
+    "appVersion": "1.0.13",
+    "appBuildVersion": "13",
+    "runtime": {
+      "id": "01a0c28d-4e70-760e-9817-2bdb9682c320",
+      "version": "1.0.13"
+    },
+    "gitCommitHash": "436753b262a07f01a835c8d74f075ee34c208748",
+    "gitCommitMessage": "fix: undefined array key route hatas?? d??zeltildi",
+    "priority": "NORMAL",
+    "createdAt": "2026-09-21T09:23:34.146Z",
+    "updatedAt": "2026-09-21T09:28:45.300Z",
+    "completedAt": "2026-09-21T09:28:45.041Z",
+    "expirationDate": "2026-10-21T09:23:34.190Z",
+    "isForIosSimulator": false,
+    "metrics": {
+      "buildWaitTime": 4916,
+      "buildQueueTime": 9231,
+      "buildDuration": 296748
+    }
+  }
+]

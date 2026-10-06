@@ -94,7 +94,7 @@ class DashboardService
             ->get();
 
         // Bakım Sağlığı (Maintenance Health)
-        // Son 200 KM'ye düşen veya gecikmiş (<= 200) yağ ve alt yağlama bakımlarını bul
+        // Son 500 KM'ye düşen veya gecikmiş (<= 500) yağ ve alt yağlama bakımlarını bul
         $vehiclesWithSettings = Vehicle::with(['maintenanceSetting', 'maintenances' => function($q) {
             $q->whereIn('maintenance_type', ['YAĞ BAKIMI', 'ALT YAĞLAMA'])->where('status', 'completed');
         }])->where('company_id', $companyId)->get();
@@ -105,7 +105,7 @@ class DashboardService
             $needsAttention = false;
             $alerts = [];
 
-            if ($status['has_oil_setting'] && $status['oil_remaining'] !== null && $status['oil_remaining'] <= 200) {
+            if ($status['has_oil_setting'] && $status['oil_remaining'] !== null && $status['oil_remaining'] <= 500) {
                 $needsAttention = true;
                 $alerts[] = [
                     'type' => 'YAĞ BAKIMI',
@@ -113,7 +113,7 @@ class DashboardService
                     'percent' => $status['oil_percent']
                 ];
             }
-            if ($status['has_lube_setting'] && $status['lube_remaining'] !== null && $status['lube_remaining'] <= 200) {
+            if ($status['has_lube_setting'] && $status['lube_remaining'] !== null && $status['lube_remaining'] <= 500) {
                 $needsAttention = true;
                 $alerts[] = [
                     'type' => 'ALT YAĞLAMA',

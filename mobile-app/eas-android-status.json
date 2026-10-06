@@ -1,0 +1,57 @@
+﻿{
+  "id": "96f0a166-629f-41e2-b246-f5f7caf0eedb",
+  "status": "ERRORED",
+  "platform": "ANDROID",
+  "error": {
+    "errorCode": "UNKNOWN_ERROR",
+    "message": "Unknown error. See logs of the Bundle JavaScript build phase for more information."
+  },
+  "artifacts": {},
+  "fingerprint": {
+    "id": "01a0cd2b-f04a-7126-abf6-d51e670b8cc8",
+    "hash": "04cb354542e6e99b552957e90141a0bac20e2618"
+  },
+  "initiatingActor": {
+    "id": "0c980b05-b114-4cd6-83f2-0078cb33cc92",
+    "displayName": "sabbridogru"
+  },
+  "logFiles": [
+    "https://storage.googleapis.com/eas-workflows-production/logs/dbfb1961-a8bc-494d-9e16-ecf0469bef2c/96f0a166-629f-41e2-b246-f5f7caf0eedb/2026-09-23T07%3A30%3A05Z-7642b6d7-0443-4247-97de-fc520a0aa985.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260923%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260923T074022Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=7e987bd4b474bdb483850d6f6cf07d71129eb14a1a5a36caafeefb4a73f9f179cbba640730f17ced05095453fd0609172a3a311d29772d3c1a07088c02eb3be4d86949a5d4325fc0614d65fac2d3795b02b8d9149243a601a6c2adf14ce9010c912403779370dad22ecb17e6dfe4f9b4f74bda848a17fdffc7b515956ebc33ae455fbe7416cce9ea5d8554e5b497ce413403218a20d54a4eb3a1d3f8eaefed90df57416b61c45677388654a8babf3d4419230711da82f29c7c9ae28bbba3cd188fbc97c81ecbad4879d3aeb667ae465a5418c44e77f20d051554e08addef4187bd758a0c036c24dbe329e4d212e0d6a827d99b5ba61e8358c22cf01afe63427b"
+  ],
+  "app": {
+    "id": "dbfb1961-a8bc-494d-9e16-ecf0469bef2c",
+    "name": "mobile-app",
+    "slug": "mobile-app",
+    "ownerAccount": {
+      "id": "68f6d7e5-f830-42b3-b4fe-aab0ee015d69",
+      "name": "sabbridogru"
+    }
+  },
+  "updateChannel": {
+    "id": "01a0cd0e-a4bc-72fb-bc84-bdd3e66a0e64",
+    "name": "production"
+  },
+  "distribution": "STORE",
+  "buildProfile": "production",
+  "appIdentifier": "com.celebiturizm.filomerkez",
+  "sdkVersion": "57.0.0",
+  "appVersion": "1.0.14",
+  "appBuildVersion": "14",
+  "runtime": {
+    "id": "01a0cd0f-95a2-7453-bc41-de9136d16460",
+    "version": "1.0.14"
+  },
+  "gitCommitHash": "b60e3b99b6fd28a6ebc1945ea69d2271d3aba765",
+  "gitCommitMessage": "mobil: v1.0.14 magaza yayin hazirligi\n\n- Apple 2.1 ihlali olan 4 placeholder ekran ve 1 'yakinda' sayfasi kaldirildi\n- Uzak (raw.githubusercontent) emoji gorselleri yerel src/emoji.js kaydina tasindi\n- Gerekcesiz 8 Android izni blockedPermissions ile kaldirildi (SYSTEM_ALERT_WINDOW dahil)\n- app.json: gecersiz android.edgeToEdgeEnabled alani silindi (expo-doctor 21/21)\n- ios.supportsTablet=false, sadece iPhone olarak yayin\n- 9 acik zeminli ekranda status bar okunmuyordu: useStatusBarStyle hook'u eklendi\n- 12 ekranda icerik yuzen tab bar altinda kaliyordu, 120dp bosluk verildi\n- 7 form modalinda klavye inputlari kapatiyordu, KeyboardAvoidingView eklendi\n- 64 dosyada vector-icon importlari subpath'e cevrildi (font 4.5MB -> 1.7MB)\n- Gorsel boyutlari hedef olcuye indirildi (assets 18.1MB -> 6.8MB)\n- expo-constants eklendi, package-lock senkronlandi (npm ci dogrulandi)",
+  "priority": "NORMAL",
+  "createdAt": "2026-09-23T07:30:03.934Z",
+  "updatedAt": "2026-09-23T07:30:57.997Z",
+  "completedAt": "2026-09-23T07:30:57.767Z",
+  "expirationDate": "2026-10-23T07:30:03.970Z",
+  "isForIosSimulator": false,
+  "metrics": {
+    "buildWaitTime": 1251,
+    "buildQueueTime": 4551,
+    "buildDuration": 48031
+  }
+}
