@@ -11,7 +11,7 @@ class VehicleReadService
 {
     public function getVehicles(int $companyId, array $filters, int $perPage = 20): array
     {
-        $query = Vehicle::with(['drivers', 'documents' => fn ($q) => $q->whereNull('archived_at')->latest()])
+        $query = Vehicle::with(['drivers', 'alertDocuments', 'documents' => fn ($q) => $q->whereNull('archived_at')->latest()])
             ->select('vehicles.*')
             ->where('company_id', $companyId)
             ->addSelect([
@@ -25,27 +25,14 @@ class VehicleReadService
                     ->limit(1)
             ]);
 
+        $upcomingInspectionIds = Vehicle::upcomingAlertIds('inspection', $companyId);
+        $upcomingInsuranceIds  = Vehicle::upcomingAlertIds('insurance', $companyId);
+
         if (isset($filters['filter'])) {
             if ($filters['filter'] === 'upcoming_inspection') {
-                $query->where('is_active', true)->where(function ($q) {
-                    $q->whereNotNull('inspection_date')->where('inspection_date', '<=', now()->addDays(15))
-                      ->orWhereHas('documents', function ($doc) {
-                          $doc->whereIn('document_type', ['Muayene', 'Muayene Raporu'])
-                              ->whereNotNull('end_date')
-                              ->where('end_date', '<=', now()->addDays(15))
-                              ->whereNull('archived_at');
-                      });
-                });
+                $query->whereIn('vehicles.id', $upcomingInspectionIds);
             } elseif ($filters['filter'] === 'upcoming_insurance') {
-                $query->where('is_active', true)->where(function ($q) {
-                    $q->whereNotNull('insurance_end_date')->where('insurance_end_date', '<=', now()->addDays(10))
-                      ->orWhereHas('documents', function ($doc) {
-                          $doc->whereIn('document_type', ['Sigorta', 'Sigorta Poliçesi'])
-                              ->whereNotNull('end_date')
-                              ->where('end_date', '<=', now()->addDays(10))
-                              ->whereNull('archived_at');
-                      });
-                });
+                $query->whereIn('vehicles.id', $upcomingInsuranceIds);
             }
         }
 
@@ -97,8 +84,8 @@ class VehicleReadService
                 'model_year' => $vehicle->model_year,
                 'status' => $vehicle->is_active ? 'active' : 'passive',
                 'current_km' => (int) $currentKm,
-                'inspection_date' => $inspectionDoc?->end_date?->toDateString() ?? ($vehicle->inspection_date ? $vehicle->inspection_date->toDateString() : null),
-                'insurance_end_date' => $insuranceDoc?->end_date?->toDateString() ?? ($vehicle->insurance_end_date ? $vehicle->insurance_end_date->toDateString() : null),
+                'inspection_date' => $vehicle->alertDate('inspection')?->toDateString(),
+                'insurance_end_date' => $vehicle->alertDate('insurance')?->toDateString(),
                 'engine_no' => $vehicle->engine_no,
                 'chassis_no' => $vehicle->chassis_no,
                 'fuel_type' => $vehicle->fuel_type,
@@ -113,28 +100,8 @@ class VehicleReadService
 
         $kpi = [
             'total' => Vehicle::where('company_id', $companyId)->count(),
-            'upcoming_inspection' => Vehicle::where('company_id', $companyId)
-                ->where('is_active', true)
-                ->where(function ($q) {
-                    $q->whereNotNull('inspection_date')->where('inspection_date', '<=', now()->addDays(15))
-                      ->orWhereHas('documents', function ($doc) {
-                          $doc->whereIn('document_type', ['Muayene', 'Muayene Raporu'])
-                              ->whereNotNull('end_date')
-                              ->where('end_date', '<=', now()->addDays(15))
-                              ->whereNull('archived_at');
-                      });
-                })->count(),
-            'upcoming_insurance' => Vehicle::where('company_id', $companyId)
-                ->where('is_active', true)
-                ->where(function ($q) {
-                    $q->whereNotNull('insurance_end_date')->where('insurance_end_date', '<=', now()->addDays(10))
-                      ->orWhereHas('documents', function ($doc) {
-                          $doc->whereIn('document_type', ['Sigorta', 'Sigorta Poliçesi'])
-                              ->whereNotNull('end_date')
-                              ->where('end_date', '<=', now()->addDays(10))
-                              ->whereNull('archived_at');
-                      });
-                })->count(),
+            'upcoming_inspection' => count($upcomingInspectionIds),
+            'upcoming_insurance' => count($upcomingInsuranceIds),
         ];
 
         return [

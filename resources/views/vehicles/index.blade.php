@@ -381,16 +381,7 @@
                                     
                                     @if(request('filter') === 'upcoming_inspection')
                                         @php
-                                            $inspectionDoc = $vehicle->documents->whereIn('document_type', ['Muayene', 'Muayene Raporu'])->whereNull('archived_at')->sortByDesc('end_date')->first();
-                                            $docDate = $inspectionDoc && $inspectionDoc->end_date ? \Carbon\Carbon::parse($inspectionDoc->end_date) : null;
-                                            $vehDate = $vehicle->inspection_date ? \Carbon\Carbon::parse($vehicle->inspection_date) : null;
-                                            
-                                            $inspectionDate = null;
-                                            if ($docDate && $vehDate) {
-                                                $inspectionDate = $docDate->gt($vehDate) ? $docDate : $vehDate;
-                                            } else {
-                                                $inspectionDate = $docDate ?: $vehDate;
-                                            }
+                                            $inspectionDate = $vehicle->alertDate('inspection');
                                         @endphp
                                         @if($inspectionDate)
                                             @php
@@ -436,16 +427,7 @@
 
                                     @if(request('filter') === 'upcoming_insurance')
                                         @php
-                                            $insuranceDoc = $vehicle->documents->whereIn('document_type', ['Sigorta', 'Sigorta Poliçesi'])->whereNull('archived_at')->sortByDesc('end_date')->first();
-                                            $docDate = $insuranceDoc && $insuranceDoc->end_date ? \Carbon\Carbon::parse($insuranceDoc->end_date) : null;
-                                            $vehDate = $vehicle->insurance_end_date ? \Carbon\Carbon::parse($vehicle->insurance_end_date) : null;
-                                            
-                                            $insuranceDate = null;
-                                            if ($docDate && $vehDate) {
-                                                $insuranceDate = $docDate->gt($vehDate) ? $docDate : $vehDate;
-                                            } else {
-                                                $insuranceDate = $docDate ?: $vehDate;
-                                            }
+                                            $insuranceDate = $vehicle->alertDate('insurance');
                                         @endphp
                                         @if($insuranceDate)
                                             @php

@@ -45,6 +45,10 @@ class VehicleController extends Controller
         $status = $filters['status'] ?? 'all';
         $specialFilter = $filters['filter'] ?? null;
 
+        // Muayene / Sigorta uyarıları: araç detayındaki "Kritik Takvim" ile aynı etkin tarih mantığı
+        $upcomingInspectionIds = Vehicle::upcomingAlertIds('inspection');
+        $upcomingInsuranceIds  = Vehicle::upcomingAlertIds('insurance');
+
         $vehicles = Vehicle::query()
             ->with([
                 'fuels' => fn ($q) => $q->latest('date')->latest('id')->limit(3),
@@ -52,6 +56,7 @@ class VehicleController extends Controller
                 'images' => fn ($q) => $q->orderByDesc('is_featured')->orderBy('sort_order')->limit(1),
                 'maintenanceSetting',
                 'documents' => fn ($q) => $q->whereNull('archived_at')->latest(),
+                'alertDocuments',
             ])
             ->withCount(['maintenances', 'fuels', 'trafficPenalties'])
             ->where(function($q) {
@@ -71,28 +76,8 @@ class VehicleController extends Controller
             ->when($type !== '', fn ($q) => $q->where('vehicle_type', $type))
             ->when($status === 'active', fn ($q) => $q->where('is_active', true))
             ->when($status === 'passive', fn ($q) => $q->where('is_active', false))
-            ->when($specialFilter === 'upcoming_inspection', function ($q) {
-                $q->where('is_active', true)->where(function ($sub) {
-                    $sub->whereNotNull('inspection_date')->where('inspection_date', '<=', now()->addDays(15))
-                        ->orWhereHas('documents', function ($doc) {
-                            $doc->whereIn('document_type', ['Muayene', 'Muayene Raporu'])
-                                ->whereNotNull('end_date')
-                                ->where('end_date', '<=', now()->addDays(15))
-                                ->whereNull('archived_at');
-                        });
-                });
-            })
-            ->when($specialFilter === 'upcoming_insurance', function ($q) {
-                $q->where('is_active', true)->where(function ($sub) {
-                    $sub->whereNotNull('insurance_end_date')->where('insurance_end_date', '<=', now()->addDays(10))
-                        ->orWhereHas('documents', function ($doc) {
-                            $doc->whereIn('document_type', ['Sigorta', 'Sigorta Poliçesi'])
-                                ->whereNotNull('end_date')
-                                ->where('end_date', '<=', now()->addDays(10))
-                                ->whereNull('archived_at');
-                        });
-                });
-            })
+            ->when($specialFilter === 'upcoming_inspection', fn ($q) => $q->whereIn('id', $upcomingInspectionIds))
+            ->when($specialFilter === 'upcoming_insurance', fn ($q) => $q->whereIn('id', $upcomingInsuranceIds))
             ->when($specialFilter === 'no_driver', fn ($q) => $q->where('is_active', true)->whereDoesntHave('drivers', fn($d) => $d->where('is_active', true)))
             ->orderByRaw("CASE WHEN plate REGEXP '^[0-9]{2} *C *[0-9]+.*$' THEN 0 ELSE 1 END")
             ->orderBy('plate', 'asc')
@@ -102,24 +87,8 @@ class VehicleController extends Controller
         // KPI İstatistikleri
         $kpi = [
             'total' => Vehicle::count(),
-            'upcoming_inspection' => Vehicle::where('is_active', true)->where(function ($q) {
-                $q->whereNotNull('inspection_date')->where('inspection_date', '<=', now()->addDays(15))
-                  ->orWhereHas('documents', function ($doc) {
-                      $doc->whereIn('document_type', ['Muayene', 'Muayene Raporu'])
-                          ->whereNotNull('end_date')
-                          ->where('end_date', '<=', now()->addDays(15))
-                          ->whereNull('archived_at');
-                  });
-            })->count(),
-            'upcoming_insurance' => Vehicle::where('is_active', true)->where(function ($q) {
-                $q->whereNotNull('insurance_end_date')->where('insurance_end_date', '<=', now()->addDays(10))
-                  ->orWhereHas('documents', function ($doc) {
-                      $doc->whereIn('document_type', ['Sigorta', 'Sigorta Poliçesi'])
-                          ->whereNotNull('end_date')
-                          ->where('end_date', '<=', now()->addDays(10))
-                          ->whereNull('archived_at');
-                  });
-            })->count(),
+            'upcoming_inspection' => count($upcomingInspectionIds),
+            'upcoming_insurance' => count($upcomingInsuranceIds),
             'no_driver' => Vehicle::where('is_active', true)->whereDoesntHave('drivers', fn($d) => $d->where('is_active', true))->count(),
             'types' => Vehicle::selectRaw('vehicle_type, count(*) as count')->groupBy('vehicle_type')->pluck('count', 'vehicle_type')->toArray(),
         ];

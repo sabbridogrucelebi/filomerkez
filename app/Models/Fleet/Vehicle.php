@@ -93,6 +93,91 @@ class Vehicle extends Model
         return $this->morphMany(Document::class, 'documentable');
     }
 
+    /**
+     * Muayene / Sigorta yaklaşan uyarıları (KPI kartları, liste filtresi, mobil KPI)
+     * Araç detay sayfasındaki "Kritik Takvim" ile birebir aynı mantık:
+     *  - İlgili türdeki (arşiv dahil) EN GÜNCEL bitiş tarihli belge esas alınır.
+     *  - Belge yoksa araç kartındaki tarih alanına düşülür.
+     *  - Etkin tarih bugün + ALERT_DAYS içinde (veya geçmişte) ise uyarı verilir.
+     */
+    public const ALERT_DAYS = [
+        'inspection' => 30,
+        'insurance'  => 30,
+    ];
+
+    public const ALERT_DOC_TYPES = [
+        'inspection' => ['Muayene', 'Muayene Raporu'],
+        'insurance'  => ['Sigorta', 'Sigorta Poliçesi'],
+    ];
+
+    public const ALERT_FALLBACK_FIELDS = [
+        'inspection' => 'inspection_date',
+        'insurance'  => 'insurance_end_date',
+    ];
+
+    /** Bitiş tarihi olan tüm belgeler (aktif + arşiv). */
+    public function alertDocuments(): MorphMany
+    {
+        return $this->morphMany(Document::class, 'documentable')->whereNotNull('end_date');
+    }
+
+    /** Verilen tür için etkin bitiş tarihi (inspection | insurance). */
+    public function alertDate(string $kind): ?\Carbon\Carbon
+    {
+        $types = self::ALERT_DOC_TYPES[$kind] ?? [];
+        $field = self::ALERT_FALLBACK_FIELDS[$kind] ?? null;
+
+        $latestDoc = $this->alertDocuments
+            ->whereIn('document_type', $types)
+            ->filter(fn ($d) => $d->end_date !== null)
+            ->sortByDesc(fn ($d) => $d->end_date->timestamp)
+            ->first();
+
+        if ($latestDoc) {
+            return $latestDoc->end_date->copy()->startOfDay();
+        }
+
+        if ($field && $this->{$field}) {
+            return \Carbon\Carbon::parse($this->{$field})->startOfDay();
+        }
+
+        return null;
+    }
+
+    /** Uyarı penceresine giren (veya süresi geçmiş) mi? */
+    public function hasUpcomingAlert(string $kind): bool
+    {
+        $date = $this->alertDate($kind);
+        if (!$date) {
+            return false;
+        }
+
+        return $date->lte(now()->startOfDay()->addDays(self::ALERT_DAYS[$kind] ?? 30));
+    }
+
+    /**
+     * Uyarı verilmesi gereken aktif araç ID'leri.
+     * BelongsToCompany global scope'u korunur; ayrıca $companyId verilirse ek filtre uygulanır.
+     */
+    public static function upcomingAlertIds(string $kind, ?int $companyId = null): array
+    {
+        $field = self::ALERT_FALLBACK_FIELDS[$kind];
+        $types = self::ALERT_DOC_TYPES[$kind];
+
+        return static::query()
+            ->where('is_active', true)
+            ->where(function ($q) {
+                $q->whereNull('vehicle_type')->orWhere('vehicle_type', '!=', 'TRACKING_ONLY');
+            })
+            ->when($companyId, fn ($q) => $q->where('company_id', $companyId))
+            ->with(['alertDocuments' => fn ($q) => $q->whereIn('document_type', $types)])
+            ->get(['id', 'company_id', $field])
+            ->filter(fn (Vehicle $v) => $v->hasUpcomingAlert($kind))
+            ->pluck('id')
+            ->values()
+            ->all();
+    }
+
     public function fuels(): HasMany
     {
         return $this->hasMany(Fuel::class)->orderByDesc('date');

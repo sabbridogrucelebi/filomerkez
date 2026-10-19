@@ -86,8 +86,7 @@ class CheckMaintenanceHealth extends Command
                 ->groupBy('document_type')
                 ->map(fn($g) => $g->sortByDesc('end_date')->first());
 
-            $inspectionDoc = $latestDocs->get('Muayene');
-            $inspectionDate = $inspectionDoc?->end_date ?? $vehicle->inspection_date;
+            $inspectionDate = $vehicle->alertDate('inspection');
             
             if ($inspectionDate) {
                 $inspectionDays = round(now()->diffInDays($inspectionDate, false));
@@ -105,8 +104,7 @@ class CheckMaintenanceHealth extends Command
             }
 
             // Sigorta Kontrolü (10 Gün)
-            $insuranceDoc = $latestDocs->get('Sigorta');
-            $insuranceDate = $insuranceDoc?->end_date ?? $vehicle->insurance_end_date;
+            $insuranceDate = $vehicle->alertDate('insurance');
 
             if ($insuranceDate) {
                 $insuranceDays = round(now()->diffInDays($insuranceDate, false));
