@@ -339,3 +339,6 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
 // Demo/Test Live Tracking (Auth Bypass for mobile app preview without password)
 Route::get('/v1/demo-live', [\App\Http\Controllers\Api\V1\VehicleTrackingApiController::class, 'live']);
+
+// Çelebi Maaş Sistemi entegrasyonu (salt-okunur, anahtar ile — config/maas.php)
+Route::middleware('throttle:120,1')->get('/entegrasyon/maas/araclar', [\App\Http\Controllers\Api\Integration\MaasVehicleController::class, 'index']);
