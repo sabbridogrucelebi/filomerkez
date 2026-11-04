@@ -2,7 +2,7 @@
 
 /*
  | Çelebi Maaş Sistemi entegrasyonu
- | Maaş sistemi araç listesini bu anahtarla, kullanıcı girişi olmadan (salt-okunur) çeker.
+ | Maaş sistemi araç/şoför listesini bu anahtarla, kullanıcı girişi olmadan çeker ve araca şoför atayabilir.
  | Canlı sunucuda .env içinden değiştirilebilir:
  |   MAAS_ENTEGRASYON_ANAHTARI=...
  |   MAAS_ENTEGRASYON_FIRMA_ID=2

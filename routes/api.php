@@ -340,5 +340,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 // Demo/Test Live Tracking (Auth Bypass for mobile app preview without password)
 Route::get('/v1/demo-live', [\App\Http\Controllers\Api\V1\VehicleTrackingApiController::class, 'live']);
 
-// Çelebi Maaş Sistemi entegrasyonu (salt-okunur, anahtar ile — config/maas.php)
+// Çelebi Maaş Sistemi entegrasyonu (anahtar ile — config/maas.php): araç/şoför listesi + araca şoför atama
 Route::middleware('throttle:120,1')->get('/entegrasyon/maas/araclar', [\App\Http\Controllers\Api\Integration\MaasVehicleController::class, 'index']);
+Route::middleware('throttle:120,1')->get('/entegrasyon/maas/soforler', [\App\Http\Controllers\Api\Integration\MaasVehicleController::class, 'drivers']);
+Route::middleware('throttle:30,1')->post('/entegrasyon/maas/arac-sofor', [\App\Http\Controllers\Api\Integration\MaasVehicleController::class, 'assignDriver']);
