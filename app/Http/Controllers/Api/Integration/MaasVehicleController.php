@@ -31,8 +31,13 @@ class MaasVehicleController extends Controller
             ->where('vehicles.company_id', $companyId)
             ->select('vehicles.*')
             ->addSelect([
-                'last_driver_name' => Driver::withoutGlobalScopes()
+                'last_driver_name' => Driver::withoutGlobalScope('company')
                     ->select('full_name')
+                    ->whereColumn('vehicle_id', 'vehicles.id')
+                    ->latest('id')
+                    ->limit(1),
+                'last_driver_phone' => Driver::withoutGlobalScope('company')
+                    ->select('phone')
                     ->whereColumn('vehicle_id', 'vehicles.id')
                     ->latest('id')
                     ->limit(1),
@@ -52,6 +57,7 @@ class MaasVehicleController extends Controller
                 'current_km'   => $v->current_km !== null ? (int) $v->current_km : null,
                 'status'       => $v->is_active ? 'active' : 'passive',
                 'driver'       => $v->last_driver_name,
+                'driver_phone' => $v->last_driver_phone,
                 'updated_at'   => optional($v->updated_at)->toDateTimeString(),
             ])
             ->values();
