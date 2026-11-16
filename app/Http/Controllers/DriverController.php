@@ -35,33 +35,41 @@ class DriverController extends Controller
             abort(403, 'Personel listesini görme yetkiniz yok.');
         }
         $query = Driver::with(['vehicle', 'documents'])
-            ->where('approval_status', '!=', 'pending')
-            ->latest();
+            ->leftJoin('vehicles', function ($join) {
+                $join->on('drivers.vehicle_id', '=', 'vehicles.id')
+                    ->whereNull('vehicles.deleted_at');
+            })
+            ->select('drivers.*')
+            ->where('drivers.approval_status', '!=', 'pending')
+            ->orderByRaw('CASE WHEN vehicles.plate IS NULL OR TRIM(vehicles.plate) = "" THEN 1 ELSE 0 END ASC')
+            ->orderByRaw("REPLACE(vehicles.plate, ' ', '') ASC")
+            ->orderBy('drivers.full_name', 'asc');
 
         if ($request->filled('search')) {
             $search = trim($request->search);
 
             $query->where(function ($q) use ($search) {
-                $q->where('full_name', 'like', '%' . $search . '%')
-                    ->orWhere('phone', 'like', '%' . $search . '%')
-                    ->orWhere('tc_no', 'like', '%' . $search . '%')
-                    ->orWhere('email', 'like', '%' . $search . '%')
-                    ->orWhere('license_class', 'like', '%' . $search . '%')
-                    ->orWhere('src_type', 'like', '%' . $search . '%');
+                $q->where('drivers.full_name', 'like', '%' . $search . '%')
+                    ->orWhere('drivers.phone', 'like', '%' . $search . '%')
+                    ->orWhere('drivers.tc_no', 'like', '%' . $search . '%')
+                    ->orWhere('drivers.email', 'like', '%' . $search . '%')
+                    ->orWhere('drivers.license_class', 'like', '%' . $search . '%')
+                    ->orWhere('drivers.src_type', 'like', '%' . $search . '%')
+                    ->orWhere('vehicles.plate', 'like', '%' . $search . '%');
             });
         }
 
         if ($request->filled('vehicle_id')) {
-            $query->where('vehicle_id', $request->vehicle_id);
+            $query->where('drivers.vehicle_id', $request->vehicle_id);
         }
 
         if ($request->filled('status')) {
             if ($request->status === 'active') {
-                $query->where('is_active', true);
+                $query->where('drivers.is_active', true);
             }
 
             if ($request->status === 'passive') {
-                $query->where('is_active', false);
+                $query->where('drivers.is_active', false);
             }
         }
 
@@ -89,7 +97,7 @@ class DriverController extends Controller
             });
         }
 
-        $drivers = $query->paginate(12)->through(function ($driver) {
+        $drivers = $query->get()->map(function ($driver) {
             $driver->resolved_document_status = $this->resolveDriverDocumentStatus($driver);
             return $driver;
         });

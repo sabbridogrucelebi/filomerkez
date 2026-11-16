@@ -113,6 +113,9 @@ class FuelStationController extends Controller
 
     public function recalculateStationFuels(FuelStation $station)
     {
+        // 0. Ensure fuels have current station pricing
+        app(FuelPricingService::class)->repriceStation($station);
+
         // 1. Reset all fuels for this station
         \App\Models\Fuel::where('fuel_station_id', $station->id)->update([
             'paid_amount' => 0,
@@ -366,11 +369,26 @@ class FuelStationController extends Controller
             ->orderBy('payment_date')
             ->get();
 
+        $pricingService = app(FuelPricingService::class);
+        $priced = $pricingService->summarizeFuels($fuels, $station);
+        $totalPaid = (float) $payments->sum('amount');
+        $currentDebt = round($priced['net_total'] - $totalPaid, 2);
+
+        // Her fişin iskonto uygulanmış net tutarını hesapla
+        $fuels->transform(function ($fuel) use ($pricingService, $station) {
+            $pricing = $pricingService->forStation((float) $fuel->liters, (float) $fuel->price_per_liter, $station);
+            $fuel->effective_cost = $pricing['total_cost'];
+            return $fuel;
+        });
+
         $summary = [
-            'total_liters' => (float) $fuels->sum('liters'),
-            'total_fuel_cost' => (float) $fuels->sum('total_cost'),
-            'total_paid' => (float) $payments->sum('amount'),
-            'current_debt' => (float) $fuels->sum('total_cost') - (float) $payments->sum('amount'),
+            'total_liters' => $priced['total_liters'],
+            'gross_total' => $priced['gross_total'],
+            'discount_total' => $priced['discount_total'],
+            'vat_total' => $priced['vat_total'],
+            'total_fuel_cost' => $priced['net_total'],
+            'total_paid' => $totalPaid,
+            'current_debt' => $currentDebt,
         ];
 
         return view('fuel-stations.statement', compact(
@@ -387,26 +405,53 @@ class FuelStationController extends Controller
     {
         $request->validate([
             'fuel_station_id' => 'required|exists:fuel_stations,id',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
         ]);
 
         $station = FuelStation::findOrFail($request->fuel_station_id);
-        
-        $fuels = $station->fuels()
-            ->whereDate('date', '>=', $request->start_date)
-            ->whereDate('date', '<=', $request->end_date)
-            ->get();
+
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        $fuelsQuery = $station->fuels();
+        if ($startDate) {
+            $fuelsQuery->whereDate('date', '>=', $startDate);
+        }
+        if ($endDate) {
+            $fuelsQuery->whereDate('date', '<=', $endDate);
+        }
+        $fuels = $fuelsQuery->get();
 
         $priced = app(FuelPricingService::class)->summarizeFuels($fuels, $station);
+
+        // İstasyona yapılmış ödemeleri topla (tarih filtresi varsa tarih aralığına göre)
+        $paymentsQuery = $station->payments();
+        if ($startDate && $endDate) {
+            $paymentsQuery->where(function ($q) use ($startDate, $endDate) {
+                $q->whereBetween('payment_date', [$startDate, $endDate])
+                  ->orWhere(function ($sq) use ($startDate, $endDate) {
+                      $sq->whereNotNull('start_date')
+                         ->where('start_date', '<=', $endDate)
+                         ->where('end_date', '>=', $startDate);
+                  });
+            });
+        } elseif ($startDate) {
+            $paymentsQuery->whereDate('payment_date', '>=', $startDate);
+        } elseif ($endDate) {
+            $paymentsQuery->whereDate('payment_date', '<=', $endDate);
+        }
+        $paidTotal = (float) $paymentsQuery->sum('amount');
+
+        $netPayable = max(0, round($priced['net_total'] - $paidTotal, 2));
 
         return response()->json([
             'gross_total' => $priced['gross_total'],
             'discount_total' => $priced['discount_total'],
             'vat_total' => $priced['vat_total'],
             'net_total' => $priced['net_total'],
-            'paid_total' => $priced['paid_total'],
-            'net_payable' => $priced['net_payable'],
+            'paid_total' => round($paidTotal, 2),
+            'net_payable' => $netPayable,
             'total_liters' => $priced['total_liters'],
         ]);
     }

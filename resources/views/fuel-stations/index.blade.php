@@ -69,12 +69,12 @@
         },
 
         async calculateDebt() {
-            if (!this.paymentForm.fuel_station_id || !this.paymentForm.start_date || !this.paymentForm.end_date) {
+            if (!this.paymentForm.fuel_station_id) {
                 this.calculatedDebt.show = false;
                 return;
             }
             
-            if (this.paymentForm.start_date > this.paymentForm.end_date) {
+            if (this.paymentForm.start_date && this.paymentForm.end_date && this.paymentForm.start_date > this.paymentForm.end_date) {
                 this.calculatedDebt.show = false;
                 return;
             }
@@ -84,7 +84,11 @@
             
             try {
                 const baseUrl = '{{ route('fuel-stations.calculate-debt') }}';
-                const response = await fetch(`${baseUrl}?fuel_station_id=${this.paymentForm.fuel_station_id}&start_date=${this.paymentForm.start_date}&end_date=${this.paymentForm.end_date}`);
+                let url = `${baseUrl}?fuel_station_id=${this.paymentForm.fuel_station_id}`;
+                if (this.paymentForm.start_date) url += `&start_date=${this.paymentForm.start_date}`;
+                if (this.paymentForm.end_date) url += `&end_date=${this.paymentForm.end_date}`;
+
+                const response = await fetch(url);
                 if (!response.ok) throw new Error('API Error');
                 
                 const data = await response.json();
@@ -771,7 +775,7 @@
                                         </div>
 
                                         <div class="bg-slate-50 px-4 py-3 border-b border-slate-100">
-                                            <h4 class="text-sm font-bold text-slate-800">Seçili Tarihler Arası Borç Özeti</h4>
+                                            <h4 class="text-sm font-bold text-slate-800" x-text="paymentForm.start_date && paymentForm.end_date ? 'Seçili Tarihler Arası Borç Özeti' : 'İstasyon Güncel Borç Özeti'"></h4>
                                             <p class="mt-1 text-xs text-slate-500">Birim fiyat KDV dahildir. Brüt, KDV ayrılmış tutardır. Net borç, iskonto düşülmüş KDV dahil ödenecek tutardır. KDV bu tutarın içindedir, üzerine eklenmez.</p>
                                         </div>
                                         

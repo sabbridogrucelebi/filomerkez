@@ -11,9 +11,16 @@ class PersonnelService
      */
     public function getPersonnelList($companyId)
     {
-        return Driver::where('company_id', $companyId)
+        return Driver::where('drivers.company_id', $companyId)
+            ->leftJoin('vehicles', function ($join) {
+                $join->on('drivers.vehicle_id', '=', 'vehicles.id')
+                    ->whereNull('vehicles.deleted_at');
+            })
+            ->select('drivers.*')
             ->with('vehicle:id,plate')
-            ->orderBy('full_name')
+            ->orderByRaw('CASE WHEN vehicles.plate IS NULL OR TRIM(vehicles.plate) = "" THEN 1 ELSE 0 END ASC')
+            ->orderByRaw("REPLACE(vehicles.plate, ' ', '') ASC")
+            ->orderBy('drivers.full_name', 'asc')
             ->get();
     }
 

@@ -48,7 +48,14 @@
                     <div class="mt-2 text-xl font-bold text-slate-800">{{ number_format($summary['total_liters'], 2, ',', '.') }}</div>
                 </div>
                 <div class="rounded-2xl bg-slate-50 border border-slate-200 p-4">
-                    <div class="text-xs uppercase tracking-[0.10em] text-slate-400 font-semibold">Yakıt Tutarı</div>
+                    <div class="flex items-center justify-between">
+                        <div class="text-xs uppercase tracking-[0.10em] text-slate-400 font-semibold">Yakıt Tutarı</div>
+                        @if(($summary['discount_total'] ?? 0) > 0)
+                            <span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200" title="İskonto Uygulandı">
+                                -{{ number_format($summary['discount_total'], 2, ',', '.') }} ₺ İskonto
+                            </span>
+                        @endif
+                    </div>
                     <div class="mt-2 text-xl font-bold text-slate-800">{{ number_format($summary['total_fuel_cost'], 2, ',', '.') }} ₺</div>
                 </div>
                 <div class="rounded-2xl bg-emerald-50 border border-emerald-200 p-4">
@@ -84,7 +91,7 @@
                                         <td class="px-4 py-3 text-sm text-slate-700">{{ optional($fuel->date)->format('d.m.Y') }}</td>
                                         <td class="px-4 py-3 text-sm text-slate-700">{{ $fuel->vehicle?->plate ?? '-' }}</td>
                                         <td class="px-4 py-3 text-sm text-slate-600">{{ number_format($fuel->liters, 2, ',', '.') }}</td>
-                                        <td class="px-4 py-3 text-sm text-right font-semibold text-slate-800">{{ number_format($fuel->total_cost, 2, ',', '.') }} ₺</td>
+                                        <td class="px-4 py-3 text-sm text-right font-semibold text-slate-800">{{ number_format($fuel->effective_cost ?? $fuel->total_cost, 2, ',', '.') }} ₺</td>
                                     </tr>
                                 @empty
                                     <tr>

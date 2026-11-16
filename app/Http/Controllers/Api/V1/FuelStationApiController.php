@@ -154,11 +154,17 @@ class FuelStationApiController extends BaseApiController
             ->orderByDesc('payment_date')
             ->get();
 
+        $priced = app(FuelPricingService::class)->summarizeFuels($fuels, $station);
+        $totalPaid = (float) $payments->sum('amount');
+
         $summary = [
-            'total_liters' => (float) $fuels->sum('liters'),
-            'total_fuel_cost' => (float) $fuels->sum('total_cost'),
-            'total_paid' => (float) $payments->sum('amount'),
-            'current_debt' => (float) $fuels->sum('total_cost') - (float) $payments->sum('amount'),
+            'total_liters' => $priced['total_liters'],
+            'total_fuel_cost' => $priced['net_total'],
+            'gross_total' => $priced['gross_total'],
+            'discount_total' => $priced['discount_total'],
+            'vat_total' => $priced['vat_total'],
+            'total_paid' => $totalPaid,
+            'current_debt' => round($priced['net_total'] - $totalPaid, 2),
         ];
 
         return $this->successResponse([
