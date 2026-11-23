@@ -104,8 +104,8 @@
                 <textarea id="message_template" name="message_template" rows="16" class="w-full rounded-2xl border-slate-200 bg-slate-50 px-4 py-4 font-mono text-sm leading-6 text-slate-800 focus:border-sky-500 focus:ring-sky-500">{{ old('message_template', $setting->message_template ?: \App\Models\TelegramKaskoNotificationSetting::defaultMessageTemplate()) }}</textarea>
                 @error('message_template')<p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>@enderror
                 <div class="mt-4 flex flex-wrap gap-2">
-                    @foreach(['{{company_name}}','{{days_left}}','{{kasko_status}}','{{plate}}','{{brand_model}}','{{model_year}}','{{license_serial_no}}','{{chassis_no}}','{{kasko_end_date}}'] as $placeholder)
-                        <code class="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600">{{ $placeholder }}</code>
+                    @foreach(['company_name','days_left','kasko_status','plate','brand_model','model_year','license_serial_no','chassis_no','kasko_end_date'] as $field)
+                        <code class="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600">&#123;&#123;{{ $field }}&#125;&#125;</code>
                     @endforeach
                 </div>
                 <p class="mt-3 text-xs font-medium text-slate-400">Telegram biçimi için <code>&lt;b&gt;kalın&lt;/b&gt;</code> ve <code>&lt;i&gt;italik&lt;/i&gt;</code> kullanabilirsiniz.</p>
@@ -126,7 +126,7 @@
                 </form>
                 <form method="POST" action="{{ route('telegram-kasko.connect') }}" class="mt-3">
                     @csrf
-                    <button class="w-full rounded-2xl bg-sky-700 px-4 py-3 text-sm font-black text-white">Grup yanıtlarını bağla</button>
+                    <button type="submit" class="w-full rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-black text-white">Grup yanıtlarını bağla</button>
                 </form>
             </div>
 

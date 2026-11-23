@@ -119,6 +119,36 @@ class TelegramKaskoFlowTest extends TestCase
         }
     }
 
+    public function test_cpanel_panel_and_mobile_register_the_same_https_callback_with_default_app_url(): void
+    {
+        config(['app.url' => 'http://localhost']);
+        foreach (['/app/telegram-kasko/connect', '/app/api/v1/telegram-kasko-settings/connect'] as $path) {
+            $this->app->instance('request', \Illuminate\Http\Request::create(
+                'https://mehmetcelebiturizm.com' . $path, 'POST', [], [], [],
+                ['SCRIPT_NAME' => '/app/index.php', 'SCRIPT_FILENAME' => '/var/www/app/index.php']
+            ));
+            app(TelegramKaskoChatService::class)->connectGroup($this->setting);
+        }
+        $registrations = Http::recorded(fn (Request $r) => str_ends_with($r->url(), '/setWebhook'));
+        $this->assertCount(2, $registrations);
+        foreach ($registrations as [$request]) {
+            $this->assertSame('https://mehmetcelebiturizm.com/app/api/telegram-kasko/incoming/' . $this->setting->id, $request['url']);
+        }
+    }
+
+    public function test_unconfigured_site_does_not_register_a_callback_from_the_request_host(): void
+    {
+        config(['app.url' => 'http://localhost']);
+        $this->app->instance('request', \Illuminate\Http\Request::create('https://other.example/app/telegram-kasko/connect'));
+        try {
+            app(TelegramKaskoChatService::class)->connectGroup($this->setting);
+            $this->fail('A callback must have a trusted public address.');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('APP_URL', $e->getMessage());
+        }
+        Http::assertNothingSent();
+    }
+
     public function test_calendar_uses_the_latest_kasko_record_then_falls_back_to_the_vehicle_field(): void
     {
         $fallback = today()->addDays(10)->toDateString();
