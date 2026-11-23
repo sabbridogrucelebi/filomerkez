@@ -16,6 +16,7 @@ class TelegramKaskoNotificationSetting extends Model
         'chat_id',
         'reminder_days',
         'message_template',
+        'last_telegram_update_id',
     ];
 
     protected $casts = [
@@ -23,6 +24,7 @@ class TelegramKaskoNotificationSetting extends Model
         'bot_token' => 'encrypted',
         'chat_id' => 'encrypted',
         'reminder_days' => 'array',
+        'last_telegram_update_id' => 'integer',
     ];
 
     protected $hidden = [

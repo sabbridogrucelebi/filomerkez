@@ -67,11 +67,11 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                 .split(/[\s,;]+/)
                 .filter(Boolean)
                 .map(value => Number(value))
-                .filter(value => Number.isInteger(value) && value >= -365 && value <= 365)
+                .filter(value => Number.isInteger(value) && value >= 0 && value <= 365)
         )].sort((a, b) => a - b);
 
         if (!days.length) {
-            Alert.alert('Uyarı günleri', '-365 ile 365 arasında en az bir gün girin. Eksi değer, bitişten sonraki günü ifade eder.');
+            Alert.alert('Uyarı günleri', '0 ile 365 arasında en az bir gün girin.');
             return null;
         }
 
@@ -167,7 +167,7 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                         <View style={styles.sectionTitleRow}><Text style={styles.sectionEmoji}>⏰</Text><View><Text style={styles.sectionTitle}>Uyarı günleri</Text><Text style={styles.sectionDescription}>Virgülle istediğiniz kadar gün ekleyin.</Text></View></View>
                         <Text style={styles.inputLabel}>KALAN GÜNLER</Text>
                         <TextInput value={reminderDays} onChangeText={setReminderDays} editable={canManage} keyboardType="numbers-and-punctuation" placeholder="10, 15, 20" placeholderTextColor="#94A3B8" style={styles.input} />
-                        <Text style={styles.helpText}>Örn: 30, 20, 15, 10, 0, -1, -7 • Eksi değer bitişten sonradır.</Text>
+                        <Text style={styles.helpText}>Örn: 30, 20, 15, 10, 0 • Süresi bitince belge yenilenmediyse sistem 1. ve 5. gün otomatik uyarır.</Text>
                     </View>
 
                     <View style={styles.card}>

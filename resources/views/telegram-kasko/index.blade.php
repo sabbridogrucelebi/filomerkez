@@ -89,7 +89,7 @@
                 </div>
                 <label for="reminder_days_text" class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-600">Kalan günler</label>
                 <input id="reminder_days_text" name="reminder_days_text" value="{{ $reminderDaysText }}" inputmode="numeric" placeholder="Örn: 10, 15, 20" class="w-full rounded-xl border-slate-200 px-4 py-3 text-sm font-bold text-slate-800 focus:border-sky-500 focus:ring-sky-500">
-                <p class="mt-2 text-xs font-medium text-slate-400">-365 ile 365 arasında istediğiniz günleri yazabilirsiniz. Eksi değer, bitişten sonraki günü ifade eder. Örn: <b>30, 20, 15, 10, 0, -1, -7</b></p>
+                <p class="mt-2 text-xs font-medium text-slate-400">0 ile 365 arasında istediğiniz günleri yazabilirsiniz. Süre bittikten sonra sistem belge yenilenmediyse otomatik olarak <b>1. gün</b> ve son kez <b>5. gün</b> uyarı verir.</p>
                 @error('reminder_days_text')<p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>@enderror
             </section>
 
@@ -131,7 +131,8 @@
                 <ul class="mt-4 space-y-3 text-sm font-medium leading-6 text-indigo-900/70">
                     <li>• Bot anahtarı ve sohbet kimliği veritabanında şifreli saklanır.</li>
                     <li>• Aynı araç için aynı bitiş tarihi ve gün eşiğinde tekrar mesaj gönderilmez.</li>
-                    <li>• Kasko bitiş tarihi yenilenirse yeni takvim için uyarılar yeniden çalışır.</li>
+                    <li>• Süresi biten kasko için 1. gün ve yeni belge yoksa 5. gün son kez uyarı verilir.</li>
+                    <li>• Telegram grubunda <b>kaskosu olmayan araçlar</b> yazınca eksik araçlar listelenir.</li>
                 </ul>
             </div>
 

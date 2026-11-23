@@ -26,10 +26,14 @@ class TelegramKaskoNotificationService
                     return;
                 }
 
-                $days = $this->normaliseReminderDays($setting->reminder_days);
-                if ($days === []) {
+                $configuredDays = $this->normaliseReminderDays($setting->reminder_days);
+                if ($configuredDays === []) {
                     return;
                 }
+
+                // Süre bittikten sonra yalnızca iki kontrollü hatırlatma yapılır:
+                // ertesi gün ve beşinci gün. Yenilenmiş belge varsa ikisi de atlanır.
+                $days = collect($configuredDays)->merge([-1, -5])->unique()->sort()->values()->all();
 
                 Vehicle::withoutGlobalScopes()
                     ->where('company_id', $setting->company_id)
@@ -43,7 +47,9 @@ class TelegramKaskoNotificationService
                         $expiryDate = Carbon::parse($vehicle->kasko_end_date)->startOfDay();
                         $daysLeft = $this->daysUntil($today, $expiryDate);
 
-                        if (!in_array($daysLeft, $days, true) || $this->wasAlreadySent($setting, $vehicle, $expiryDate, $daysLeft)) {
+                        if (!in_array($daysLeft, $days, true)
+                            || $this->hasRenewedKaskoDocument($vehicle, $expiryDate)
+                            || $this->wasAlreadySent($setting, $vehicle, $expiryDate, $daysLeft)) {
                             return;
                         }
 
@@ -113,6 +119,11 @@ class TelegramKaskoNotificationService
 
     private function send(TelegramKaskoNotificationSetting $setting, Vehicle $vehicle, int $daysLeft): string
     {
+        return $this->sendTextMessage($setting, $this->renderMessage($setting, $vehicle, $daysLeft));
+    }
+
+    public function sendTextMessage(TelegramKaskoNotificationSetting $setting, string $message): string
+    {
         if (!$setting->hasCredentials()) {
             throw new RuntimeException('Telegram bot anahtarı ve sohbet kimliği tanımlanmalıdır.');
         }
@@ -121,7 +132,7 @@ class TelegramKaskoNotificationService
             ->acceptJson()
             ->post('https://api.telegram.org/bot' . $setting->bot_token . '/sendMessage', [
                 'chat_id' => $setting->chat_id,
-                'text' => $this->renderMessage($setting, $vehicle, $daysLeft),
+                'text' => $message,
                 'parse_mode' => 'HTML',
                 'disable_web_page_preview' => true,
             ]);
@@ -131,6 +142,19 @@ class TelegramKaskoNotificationService
         }
 
         return (string) $response->json('result.message_id');
+    }
+
+    private function hasRenewedKaskoDocument(Vehicle $vehicle, Carbon $expiryDate): bool
+    {
+        if ($vehicle->kasko_end_date && Carbon::parse($vehicle->kasko_end_date)->startOfDay()->gt($expiryDate)) {
+            return true;
+        }
+
+        return $vehicle->documents()
+            ->whereNull('archived_at')
+            ->where('document_type', 'Kasko')
+            ->whereDate('end_date', '>', $expiryDate->toDateString())
+            ->exists();
     }
 
     private function wasAlreadySent(TelegramKaskoNotificationSetting $setting, Vehicle $vehicle, Carbon $expiryDate, int $daysLeft): bool
@@ -166,7 +190,7 @@ class TelegramKaskoNotificationService
         return collect($days ?? [])
             ->filter(fn ($day) => filter_var($day, FILTER_VALIDATE_INT) !== false)
             ->map(fn ($day) => (int) $day)
-            ->filter(fn (int $day) => $day >= -365 && $day <= 365)
+            ->filter(fn (int $day) => $day >= 0 && $day <= 365)
             ->unique()
             ->sort()
             ->values()

@@ -30,7 +30,7 @@ class TelegramKaskoNotificationApiController extends BaseApiController
             'bot_token' => ['nullable', 'string', 'max:255'],
             'chat_id' => ['nullable', 'string', 'max:100'],
             'reminder_days' => ['required', 'array', 'min:1'],
-            'reminder_days.*' => ['integer', 'min:-365', 'max:365'],
+            'reminder_days.*' => ['integer', 'min:0', 'max:365'],
             'message_template' => ['required', 'string', 'max:4000'],
         ]);
 
