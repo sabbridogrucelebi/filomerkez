@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Fleet\Vehicle;
 use App\Models\TelegramKaskoNotificationSetting;
 use App\Services\TelegramKaskoNotificationService;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -24,12 +25,16 @@ class TelegramKaskoNotificationController extends Controller
         );
 
         try {
-            Artisan::call('migrate', [
-                '--force' => true,
-                '--path' => 'database/migrations/2026_11_23_100000_create_telegram_kasko_notification_settings_table.php',
-            ]);
+            $outputs = [];
+            foreach ([
+                'database/migrations/2026_11_23_100000_create_telegram_kasko_notification_settings_table.php',
+                'database/migrations/2026_11_23_100100_make_telegram_kasko_reminder_day_signed.php',
+            ] as $path) {
+                Artisan::call('migrate', ['--force' => true, '--path' => $path]);
+                $outputs[] = trim(Artisan::output());
+            }
 
-            return redirect()->route('telegram-kasko.index')->with('success', 'Telegram kasko tabloları hazır. ' . trim(Artisan::output()));
+            return redirect()->route('telegram-kasko.index')->with('success', 'Telegram kasko tabloları hazır. ' . implode(' ', $outputs));
         } catch (Throwable $exception) {
             report($exception);
 
@@ -99,16 +104,17 @@ class TelegramKaskoNotificationController extends Controller
             return redirect()->route('telegram-kasko.index')->with('error', 'Önce bot anahtarı ve sohbet kimliğini kaydedin.');
         }
 
+        $today = now(config('app.timezone'))->startOfDay();
         $vehicle = Vehicle::query()
             ->where('company_id', $company->id)
             ->where('is_active', true)
             ->whereNotNull('kasko_end_date')
-            ->whereDate('kasko_end_date', '>=', now(config('app.timezone'))->toDateString())
-            ->orderBy('kasko_end_date')
+            ->get()
+            ->sortBy(fn (Vehicle $item) => abs($today->diffInDays(Carbon::parse($item->kasko_end_date)->startOfDay(), false)))
             ->first();
 
         if (!$vehicle) {
-            return redirect()->route('telegram-kasko.index')->with('error', 'Test mesajı için gelecekte kasko bitiş tarihi tanımlı aktif bir araç bulunamadı.');
+            return redirect()->route('telegram-kasko.index')->with('error', 'Test mesajı için kasko bitiş tarihi tanımlı aktif bir araç bulunamadı.');
         }
 
         try {
@@ -148,7 +154,7 @@ class TelegramKaskoNotificationController extends Controller
             ->filter(fn ($day) => $day !== '')
             ->filter(fn ($day) => filter_var($day, FILTER_VALIDATE_INT) !== false)
             ->map(fn ($day) => (int) $day)
-            ->filter(fn (int $day) => $day >= 0 && $day <= 365)
+            ->filter(fn (int $day) => $day >= -365 && $day <= 365)
             ->unique()
             ->sort()
             ->values()
@@ -156,7 +162,7 @@ class TelegramKaskoNotificationController extends Controller
 
         if ($days === []) {
             throw ValidationException::withMessages([
-                'reminder_days_text' => 'En az bir uyarı günü girin. Günler 0 ile 365 arasında olmalıdır.',
+                'reminder_days_text' => 'En az bir uyarı günü girin. Günler -365 ile 365 arasında olmalıdır.',
             ]);
         }
 

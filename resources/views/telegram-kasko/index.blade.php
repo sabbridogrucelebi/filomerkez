@@ -89,7 +89,7 @@
                 </div>
                 <label for="reminder_days_text" class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-600">Kalan günler</label>
                 <input id="reminder_days_text" name="reminder_days_text" value="{{ $reminderDaysText }}" inputmode="numeric" placeholder="Örn: 10, 15, 20" class="w-full rounded-xl border-slate-200 px-4 py-3 text-sm font-bold text-slate-800 focus:border-sky-500 focus:ring-sky-500">
-                <p class="mt-2 text-xs font-medium text-slate-400">0 ile 365 arasında istediğiniz günleri yazabilirsiniz. Örn: <b>30, 20, 15, 10, 7, 1</b></p>
+                <p class="mt-2 text-xs font-medium text-slate-400">-365 ile 365 arasında istediğiniz günleri yazabilirsiniz. Eksi değer, bitişten sonraki günü ifade eder. Örn: <b>30, 20, 15, 10, 0, -1, -7</b></p>
                 @error('reminder_days_text')<p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>@enderror
             </section>
 
@@ -104,7 +104,7 @@
                 <textarea id="message_template" name="message_template" rows="16" class="w-full rounded-2xl border-slate-200 bg-slate-50 px-4 py-4 font-mono text-sm leading-6 text-slate-800 focus:border-sky-500 focus:ring-sky-500">{{ old('message_template', $setting->message_template ?: \App\Models\TelegramKaskoNotificationSetting::defaultMessageTemplate()) }}</textarea>
                 @error('message_template')<p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>@enderror
                 <div class="mt-4 flex flex-wrap gap-2">
-                    @foreach(['{{company_name}}','{{days_left}}','{{plate}}','{{brand_model}}','{{model_year}}','{{license_serial_no}}','{{chassis_no}}','{{kasko_end_date}}'] as $placeholder)
+                    @foreach(['{{company_name}}','{{days_left}}','{{kasko_status}}','{{plate}}','{{brand_model}}','{{model_year}}','{{license_serial_no}}','{{chassis_no}}','{{kasko_end_date}}'] as $placeholder)
                         <code class="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600">{{ $placeholder }}</code>
                     @endforeach
                 </div>

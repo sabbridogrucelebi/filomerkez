@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Models\Fleet\Vehicle;
 use App\Models\TelegramKaskoNotificationSetting;
 use App\Services\TelegramKaskoNotificationService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -29,7 +30,7 @@ class TelegramKaskoNotificationApiController extends BaseApiController
             'bot_token' => ['nullable', 'string', 'max:255'],
             'chat_id' => ['nullable', 'string', 'max:100'],
             'reminder_days' => ['required', 'array', 'min:1'],
-            'reminder_days.*' => ['integer', 'min:0', 'max:365'],
+            'reminder_days.*' => ['integer', 'min:-365', 'max:365'],
             'message_template' => ['required', 'string', 'max:4000'],
         ]);
 
@@ -70,16 +71,17 @@ class TelegramKaskoNotificationApiController extends BaseApiController
             return $this->errorResponse('Önce bot anahtarı ve sohbet kimliğini kaydedin.', 422);
         }
 
+        $today = now(config('app.timezone'))->startOfDay();
         $vehicle = Vehicle::query()
             ->where('company_id', $this->getCompanyId())
             ->where('is_active', true)
             ->whereNotNull('kasko_end_date')
-            ->whereDate('kasko_end_date', '>=', now(config('app.timezone'))->toDateString())
-            ->orderBy('kasko_end_date')
+            ->get()
+            ->sortBy(fn (Vehicle $item) => abs($today->diffInDays(Carbon::parse($item->kasko_end_date)->startOfDay(), false)))
             ->first();
 
         if (!$vehicle) {
-            return $this->errorResponse('Test mesajı için gelecekte kasko bitiş tarihi tanımlı aktif bir araç bulunamadı.', 422);
+            return $this->errorResponse('Test mesajı için kasko bitiş tarihi tanımlı aktif bir araç bulunamadı.', 422);
         }
 
         try {

@@ -43,7 +43,7 @@ class TelegramKaskoNotificationService
                         $expiryDate = Carbon::parse($vehicle->kasko_end_date)->startOfDay();
                         $daysLeft = $this->daysUntil($today, $expiryDate);
 
-                        if (!in_array($daysLeft, $days, true) || $daysLeft < 0 || $this->wasAlreadySent($setting, $vehicle, $expiryDate, $daysLeft)) {
+                        if (!in_array($daysLeft, $days, true) || $this->wasAlreadySent($setting, $vehicle, $expiryDate, $daysLeft)) {
                             return;
                         }
 
@@ -89,9 +89,19 @@ class TelegramKaskoNotificationService
             ? $setting->message_template
             : TelegramKaskoNotificationSetting::defaultMessageTemplate();
 
+        // Eski, varsayılan şablonları da süresi geçmiş araçlar için doğru metne dönüştür.
+        if ($daysLeft <= 0 && !str_contains($template, '{{kasko_status}}')) {
+            $template = str_replace(
+                "Aşağıdaki aracın kasko poliçesinin sona ermesine\n⚠️ <b>{{days_left}} GÜN</b> kaldı.",
+                'Aşağıdaki aracın kasko poliçesi {{kasko_status}}',
+                $template
+            );
+        }
+
         return strtr($template, [
             '{{company_name}}' => e($setting->company?->name ?? 'Filo Merkez'),
-            '{{days_left}}' => (string) $daysLeft,
+            '{{days_left}}' => (string) abs($daysLeft),
+            '{{kasko_status}}' => $this->kaskoStatus($daysLeft),
             '{{plate}}' => e($vehicle->plate ?: '-'),
             '{{brand_model}}' => e(trim(($vehicle->brand ?? '') . ' ' . ($vehicle->model ?? '')) ?: '-'),
             '{{model_year}}' => e($vehicle->model_year ?: '-'),
@@ -135,7 +145,20 @@ class TelegramKaskoNotificationService
 
     private function daysUntil(Carbon $today, Carbon $expiryDate): int
     {
-        return (int) round($today->copy()->startOfDay()->diffInDays($expiryDate->copy()->startOfDay()));
+        return (int) $today->copy()->startOfDay()->diffInDays($expiryDate->copy()->startOfDay(), false);
+    }
+
+    private function kaskoStatus(int $daysLeft): string
+    {
+        if ($daysLeft > 0) {
+            return 'sona ermesine ⚠️ <b>' . $daysLeft . ' GÜN</b> kaldı.';
+        }
+
+        if ($daysLeft === 0) {
+            return '🚨 <b>BUGÜN</b> sona eriyor.';
+        }
+
+        return '🚨 <b>' . abs($daysLeft) . ' GÜN</b> önce sona erdi.';
     }
 
     private function normaliseReminderDays(array|null $days): array
@@ -143,7 +166,7 @@ class TelegramKaskoNotificationService
         return collect($days ?? [])
             ->filter(fn ($day) => filter_var($day, FILTER_VALIDATE_INT) !== false)
             ->map(fn ($day) => (int) $day)
-            ->filter(fn (int $day) => $day >= 0 && $day <= 365)
+            ->filter(fn (int $day) => $day >= -365 && $day <= 365)
             ->unique()
             ->sort()
             ->values()

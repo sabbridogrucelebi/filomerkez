@@ -38,4 +38,16 @@ class TelegramKaskoNotificationServiceTest extends TestCase
         $this->assertStringContainsString('ŞASE-001', $message);
         $this->assertStringContainsString('Filo Merkez | Filo Takip Sistemleri', $message);
     }
+
+    public function test_it_describes_an_expired_kasko_correctly(): void
+    {
+        $setting = new TelegramKaskoNotificationSetting([
+            'message_template' => TelegramKaskoNotificationSetting::defaultMessageTemplate(),
+        ]);
+        $vehicle = new Vehicle(['plate' => '34 ABC 123', 'kasko_end_date' => '2026-11-20']);
+
+        $message = (new TelegramKaskoNotificationService())->renderMessage($setting, $vehicle, -3);
+
+        $this->assertStringContainsString('3 GÜN</b> önce sona erdi', $message);
+    }
 }

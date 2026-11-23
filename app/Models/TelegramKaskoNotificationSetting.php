@@ -37,8 +37,7 @@ class TelegramKaskoNotificationSetting extends Model
 
 Sayın <b>{{company_name}}</b> yetkilisi,
 
-Aşağıdaki aracın kasko poliçesinin sona ermesine
-⚠️ <b>{{days_left}} GÜN</b> kaldı.
+Aşağıdaki aracın kasko poliçesi {{kasko_status}}
 
 🚘 <b>Plaka:</b> {{plate}}
 🏷️ <b>Marka / Model:</b> {{brand_model}}

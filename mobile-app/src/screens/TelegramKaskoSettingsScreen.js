@@ -10,8 +10,7 @@ const DEFAULT_TEMPLATE = `🚨 <b>KASKO BİTİŞ UYARISI</b>
 
 Sayın <b>{{company_name}}</b> yetkilisi,
 
-Aşağıdaki aracın kasko poliçesinin sona ermesine
-⚠️ <b>{{days_left}} GÜN</b> kaldı.
+Aşağıdaki aracın kasko poliçesi {{kasko_status}}
 
 🚘 <b>Plaka:</b> {{plate}}
 🏷️ <b>Marka / Model:</b> {{brand_model}}
@@ -68,11 +67,11 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                 .split(/[\s,;]+/)
                 .filter(Boolean)
                 .map(value => Number(value))
-                .filter(value => Number.isInteger(value) && value >= 0 && value <= 365)
+                .filter(value => Number.isInteger(value) && value >= -365 && value <= 365)
         )].sort((a, b) => a - b);
 
         if (!days.length) {
-            Alert.alert('Uyarı günleri', '0 ile 365 arasında en az bir gün girin.');
+            Alert.alert('Uyarı günleri', '-365 ile 365 arasında en az bir gün girin. Eksi değer, bitişten sonraki günü ifade eder.');
             return null;
         }
 
@@ -168,13 +167,13 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                         <View style={styles.sectionTitleRow}><Text style={styles.sectionEmoji}>⏰</Text><View><Text style={styles.sectionTitle}>Uyarı günleri</Text><Text style={styles.sectionDescription}>Virgülle istediğiniz kadar gün ekleyin.</Text></View></View>
                         <Text style={styles.inputLabel}>KALAN GÜNLER</Text>
                         <TextInput value={reminderDays} onChangeText={setReminderDays} editable={canManage} keyboardType="numbers-and-punctuation" placeholder="10, 15, 20" placeholderTextColor="#94A3B8" style={styles.input} />
-                        <Text style={styles.helpText}>Örn: 30, 20, 15, 10, 7, 1 • 0–365 gün arası</Text>
+                        <Text style={styles.helpText}>Örn: 30, 20, 15, 10, 0, -1, -7 • Eksi değer bitişten sonradır.</Text>
                     </View>
 
                     <View style={styles.card}>
                         <View style={styles.sectionTitleRow}><Text style={styles.sectionEmoji}>✨</Text><View><Text style={styles.sectionTitle}>Premium uyarı metni</Text><Text style={styles.sectionDescription}>Alanlar mesaj gönderilirken otomatik doldurulur.</Text></View></View>
                         <TextInput value={messageTemplate} onChangeText={setMessageTemplate} editable={canManage} multiline textAlignVertical="top" style={[styles.input, styles.templateInput]} />
-                        <Text style={styles.helpText}>Alanlar: {'{{plate}}'}, {'{{brand_model}}'}, {'{{model_year}}'}, {'{{license_serial_no}}'}, {'{{chassis_no}}'}, {'{{kasko_end_date}}'}</Text>
+                        <Text style={styles.helpText}>Alanlar: {'{{kasko_status}}'}, {'{{plate}}'}, {'{{brand_model}}'}, {'{{model_year}}'}, {'{{license_serial_no}}'}, {'{{chassis_no}}'}, {'{{kasko_end_date}}'}</Text>
                     </View>
 
                     {!canManage && <View style={styles.permissionNotice}><Ionicons name="lock-closed-outline" size={18} color="#B45309" /><Text style={styles.permissionText}>Bu ayarları değiştirme yetkiniz yok.</Text></View>}
