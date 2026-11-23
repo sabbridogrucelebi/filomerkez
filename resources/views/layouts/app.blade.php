@@ -174,6 +174,9 @@
                                     @foreach($navItems as $item)
                                         @php
                                             $routeStr = $item['route'] ?? '';
+                                            if ($routeStr === 'telegram-kasko.index') {
+                                                continue;
+                                            }
                                             $isActive = $routeStr ? (request()->routeIs(explode('.', $routeStr)[0].'.*') || request()->routeIs($routeStr)) : false;
 
                                             // Modül bazlı kontrol
@@ -220,6 +223,25 @@
 
                     </div>
                 </div>
+
+                @if($user && !$user->isSuperAdmin() && $user->hasPermission('telegram.manage'))
+                    @php $telegramActive = request()->routeIs('telegram-kasko.*'); @endphp
+                    <div class="shrink-0 border-t border-white/10 px-4 py-4">
+                        <a href="{{ route('telegram-kasko.index') }}"
+                           class="group relative flex items-center gap-4 rounded-2xl px-4 py-2.5 transition-all duration-500 {{ $telegramActive ? 'bg-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] text-white' : 'text-slate-300 hover:bg-white/[0.05] hover:text-white' }}">
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-500 {{ $telegramActive ? 'bg-gradient-to-br from-sky-500/20 to-indigo-600/20 border border-sky-400/30 shadow-[0_0_20px_rgba(14,165,233,0.35)]' : 'bg-slate-800/40 border border-white/5 group-hover:bg-slate-700/50' }}">
+                                <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Airplane.png" alt="Telegram" class="w-6 h-6 drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)] transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-6" />
+                            </div>
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-[14px] font-bold tracking-tight truncate">Telegram</span>
+                                <span class="text-[9px] font-bold {{ $telegramActive ? 'text-sky-200/70' : 'text-slate-500' }} uppercase tracking-widest truncate">Kasko Uyarıları</span>
+                            </div>
+                            @if($telegramActive)
+                                <div class="ml-auto h-2 w-2 rounded-full bg-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.8)] animate-pulse"></div>
+                            @endif
+                        </a>
+                    </div>
+                @endif
 
                 <style>
         [x-cloak] { display: none !important; }

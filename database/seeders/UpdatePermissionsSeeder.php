@@ -110,6 +110,9 @@ $permissions = [
     ['key' => 'settings.view', 'label' => 'Ayarları Görüntüleme'],
     ['key' => 'settings.edit', 'label' => 'Ayarları Düzenleme'],
 
+    // Telegram Kasko Bildirimleri
+    ['key' => 'telegram.manage', 'label' => 'Telegram Kasko Uyarılarını Yönetme'],
+
     // Backups
     ['key' => 'backups.view', 'label' => 'Yedeklemeleri Görüntüleme'],
     ['key' => 'backups.create', 'label' => 'Yedekleme Oluşturma'],

@@ -48,6 +48,7 @@ import CompanyUsersScreen from './src/screens/CompanyUsersScreen';
 import CompanyUserFormScreen from './src/screens/CompanyUserFormScreen';
 import ReportsScreen from './src/screens/ReportsScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import TelegramKaskoSettingsScreen from './src/screens/TelegramKaskoSettingsScreen';
 import CompanyDocumentsScreen from './src/screens/CompanyDocumentsScreen';
 import TendersScreen from './src/screens/TendersScreen';
 import TenderFormScreen from './src/screens/TenderFormScreen';
@@ -291,6 +292,7 @@ function MenuStackScreen() {
             <MenuStack.Screen name="CompanyUsers" component={CompanyUsersScreen} />
             <MenuStack.Screen name="CompanyUserForm" component={CompanyUserFormScreen} />
             <MenuStack.Screen name="Settings" component={SettingsScreen} />
+            <MenuStack.Screen name="TelegramKaskoSettings" component={TelegramKaskoSettingsScreen} />
             <MenuStack.Screen name="PilotCellDriver" component={PilotCellDriverScreen} />
             <MenuStack.Screen name="PilotCellPoints" component={PilotCellPointsScreen} />
             <MenuStack.Screen name="PilotCellRadius" component={PilotCellRadiusScreen} />

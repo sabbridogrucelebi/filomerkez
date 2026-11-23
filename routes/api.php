@@ -124,6 +124,14 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckCompa
 
     Route::get('/maintenances-settings', [\App\Http\Controllers\Api\V1\MaintenanceApiController::class, 'settings']);
     Route::post('/maintenances-settings', [\App\Http\Controllers\Api\V1\MaintenanceApiController::class, 'saveSettings']);
+
+    // Telegram Kasko Uyarıları (web ile mobil ortak ayar sözleşmesi)
+    Route::get('/telegram-kasko-settings', [\App\Http\Controllers\Api\V1\TelegramKaskoNotificationApiController::class, 'show'])
+        ->middleware('permission:telegram.manage');
+    Route::put('/telegram-kasko-settings', [\App\Http\Controllers\Api\V1\TelegramKaskoNotificationApiController::class, 'update'])
+        ->middleware('permission:telegram.manage');
+    Route::post('/telegram-kasko-settings/test', [\App\Http\Controllers\Api\V1\TelegramKaskoNotificationApiController::class, 'sendTest'])
+        ->middleware('permission:telegram.manage');
     
     Route::post('/maintenances-mechanics', [\App\Http\Controllers\Api\V1\MaintenanceApiController::class, 'storeMechanic']);
     Route::put('/maintenances-mechanics/{id}', [\App\Http\Controllers\Api\V1\MaintenanceApiController::class, 'updateMechanic']);

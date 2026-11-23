@@ -24,6 +24,7 @@ const menuItems = [
     { id: 14, emoji: 'Objects/Shield', label: 'Kullanıcılar', sub: 'ERİŞİM KONTROLÜ', route: 'CompanyUsers', adminOnly: true },
     { id: 15, emoji: 'Objects/Gear', label: 'Ayarlar', sub: 'SİSTEM YAPILANDIRMASI', route: 'Settings' },
     { id: 16, emoji: 'Travel%20and%20places/Minibus', label: 'PilotCell', sub: 'ŞOFÖR PANELİ', route: 'PilotCellDriver', permission: 'pilotcell.drive' },
+    { id: 19, emoji: 'Travel%20and%20places/Airplane', label: 'Telegram', sub: 'KASKO UYARILARI', route: 'TelegramKaskoSettings', permission: 'telegram.manage' },
 ];
 
 export default function MenuScreen({ navigation }) {

@@ -40,6 +40,8 @@
          'keys'=>['pilotcell.view','pilotcell.manage'],'labels'=>['Görüntüleme','Yönetim']],
         ['title'=>'Ayarlar','icon'=>'⚙️','gradient'=>'from-zinc-500 to-zinc-700','shadow'=>'shadow-zinc-500/25','bg'=>'bg-zinc-50','border'=>'border-zinc-200','text'=>'text-zinc-600',
          'keys'=>['settings.view','settings.edit'],'labels'=>['Görüntüleme','Düzenleme']],
+        ['title'=>'Telegram','icon'=>'✈️','gradient'=>'from-sky-500 to-blue-700','shadow'=>'shadow-sky-500/25','bg'=>'bg-sky-50','border'=>'border-sky-200','text'=>'text-sky-600',
+         'keys'=>['telegram.manage'],'labels'=>['Kasko Uyarılarını Yönetme']],
         ['title'=>'Yedeklemeler','icon'=>'💾','gradient'=>'from-gray-600 to-gray-800','shadow'=>'shadow-gray-500/25','bg'=>'bg-gray-50','border'=>'border-gray-300','text'=>'text-gray-600',
          'keys'=>['backups.view','backups.create'],'labels'=>['Görüntüleme','Oluşturma']],
     ];

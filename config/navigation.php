@@ -24,5 +24,6 @@ return [
         ['route' => 'pilotcell.dashboard', 'image' => 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Mobile%20Phone%20with%20Arrow.png', 'label' => 'PilotCell', 'sub' => 'Servis Takip Sistemi', 'module' => 'pilotcell', 'permission' => 'pilotcell.view'],
         ['route' => 'company-settings.edit', 'image' => 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Gear.png', 'label' => 'Ayarlar', 'sub' => 'Sistem Yapılandırması', 'module' => null, 'permission' => 'settings.view'],
         ['route' => 'backups.index', 'image' => 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Floppy%20Disk.png', 'label' => 'Yedeklemeler', 'sub' => 'Veri Güvenliği', 'module' => null, 'permission' => 'backups.view'],
+        ['route' => 'telegram-kasko.index', 'image' => 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Airplane.png', 'label' => 'Telegram', 'sub' => 'Kasko Uyarıları', 'module' => null, 'permission' => 'telegram.manage'],
     ],
 ];

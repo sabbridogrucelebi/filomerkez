@@ -46,6 +46,7 @@ use App\Http\Controllers\CustomerPortalUserController;
 use App\Http\Controllers\CustomerServiceRouteController;
 use App\Http\Controllers\VehicleTrackingController;
 use App\Http\Controllers\SharedPlaybackController;
+use App\Http\Controllers\TelegramKaskoNotificationController;
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardController;
 use App\Http\Controllers\SuperAdmin\CompanyController as SuperAdminCompanyController;
 
@@ -511,6 +512,21 @@ Route::delete('/vehicle-tracking/definitions/schedules/{schedule}', [\App\Http\C
 
 
 Route::middleware('auth')->group(function () {
+    /*
+    |--------------------------------------------------------------------------
+    | TELEGRAM KASKO BİLDİRİMLERİ
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/telegram-kasko', [TelegramKaskoNotificationController::class, 'index'])
+        ->middleware('permission:telegram.manage')
+        ->name('telegram-kasko.index');
+    Route::put('/telegram-kasko', [TelegramKaskoNotificationController::class, 'update'])
+        ->middleware('permission:telegram.manage')
+        ->name('telegram-kasko.update');
+    Route::post('/telegram-kasko/test', [TelegramKaskoNotificationController::class, 'sendTest'])
+        ->middleware('permission:telegram.manage')
+        ->name('telegram-kasko.test');
+
     /*
     |--------------------------------------------------------------------------
     | CHAT (MESSAGING)
