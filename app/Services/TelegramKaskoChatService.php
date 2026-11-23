@@ -21,8 +21,8 @@ class TelegramKaskoChatService
     {
         $handled = 0;
 
+        // Grup sorguları, "otomatik uyarılar" tercihi kapalı olsa da kullanılabilmelidir.
         TelegramKaskoNotificationSetting::withoutGlobalScopes()
-            ->where('is_enabled', true)
             ->get()
             ->each(function (TelegramKaskoNotificationSetting $setting) use (&$handled) {
                 if (!$setting->hasCredentials()) {
