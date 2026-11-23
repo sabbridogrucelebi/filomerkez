@@ -201,6 +201,12 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                     <TouchableOpacity style={styles.testButton} disabled={!canManage || connecting} onPress={connectGroup}>
                         {connecting ? <ActivityIndicator /> : <Text style={styles.testText}>Grup yanıtlarını bağla</Text>}
                     </TouchableOpacity>
+                    <View style={styles.card}>
+                        <Text style={styles.sectionTitle}>Telegram grup komutları</Text>
+                        <Text style={styles.helpText}>kaskosu olmayan araçlar — Belgesi eksik, tarihi tanımsız veya poliçesi henüz başlamamış araçlar.</Text>
+                        <Text style={styles.helpText}>süresi geçenler — Kaskosu bitmiş ve yenilenmemiş araçlar.</Text>
+                        <Text style={styles.helpText}>kaskolu araçlarım — Geçerli poliçelerin sayısı, başlangıç ve bitiş tarihleri, kalan günleri.</Text>
+                    </View>
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>

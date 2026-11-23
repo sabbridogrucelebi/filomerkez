@@ -128,6 +128,12 @@
                     @csrf
                     <button type="submit" class="w-full rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-black text-white">Grup yanıtlarını bağla</button>
                 </form>
+                <p class="mt-4 text-sm font-black text-slate-900">Telegram grup komutları</p>
+                <ul class="mt-2 space-y-2 text-sm text-slate-600">
+                    <li><b>kaskosu olmayan araçlar</b> — Belgesi eksik, tarihi tanımsız veya poliçesi henüz başlamamış araçlar.</li>
+                    <li><b>süresi geçenler</b> — Kaskosu bitmiş ve yenilenmemiş araçlar.</li>
+                    <li><b>kaskolu araçlarım</b> — Geçerli poliçelerin sayısı, başlangıç ve bitiş tarihleri, kalan günleri.</li>
+                </ul>
             </div>
 
             <div class="rounded-[28px] border border-indigo-100 bg-indigo-50/70 p-6">
@@ -136,7 +142,6 @@
                     <li>• Bot anahtarı ve sohbet kimliği veritabanında şifreli saklanır.</li>
                     <li>• Aynı araç için aynı bitiş tarihi ve gün eşiğinde tekrar mesaj gönderilmez.</li>
                     <li>• Süresi biten kasko için 1. gün ve yeni belge yoksa 5. gün son kez uyarı verilir.</li>
-                    <li>• Telegram grubunda <b>kaskosu olmayan araçlar</b> yazınca eksik araçlar listelenir.</li>
                 </ul>
             </div>
 

@@ -125,18 +125,24 @@ class TelegramKaskoChatService
             return false;
         }
         $command = $this->normaliseCommand($text);
-        $start = $this->isStartCommand($command);
-        if (!$start && !in_array($command, ['kaskosu olmayan araclar', 'kaskosu olmayan', 'kasko raporu', 'kasko listesi'], true)) {
+        $report = match ($command) {
+            'kaskosu olmayan araclar', 'kaskosu olmayan' => 'missing',
+            'suresi gecenler', 'suresi gecen araclar' => 'expired',
+            'kaskolu araclarim', 'kaskolu araclar' => 'covered',
+            'kasko raporu', 'kasko listesi' => 'attention',
+            default => $this->isStartCommand($command) ? 'help' : null,
+        };
+        if ($report === null) {
             return false;
         }
         $key = $this->webhookCacheKey($setting) . ':update:' . $update['update_id'];
-        return Cache::lock($key . ':lock', 180)->block(2, function () use ($key, $setting, $start) {
+        return Cache::lock($key . ':lock', 180)->block(2, function () use ($key, $setting, $report) {
             if (Cache::get($key) === 'done') {
                 return false;
             }
-            $replies = $start
-                ? ["👋 <b>Filo Merkez Kasko Asistanı</b>\nGrup raporu için <code>kaskosu olmayan araçlar</code> yazın."]
-                : $this->missingKaskoReportMessages($setting->company_id);
+            $replies = $report === 'help'
+                ? ["👋 <b>Filo Merkez Kasko Asistanı</b>\n\n❔ <code>kaskosu olmayan araçlar</code>\n⌛ <code>süresi geçenler</code>\n🛡️ <code>kaskolu araçlarım</code>"]
+                : $this->kaskoReportMessages($setting->company_id, $report);
             $next = (int) Cache::get($key, 0);
             foreach (array_slice($replies, $next) as $message) {
                 $this->telegram->sendTextMessage($setting, $message);
@@ -147,9 +153,9 @@ class TelegramKaskoChatService
         });
     }
 
-    private function missingKaskoReportMessages(int $companyId): array
+    private function kaskoReportMessages(int $companyId, string $report): array
     {
-        $today = now(config('app.timezone'))->startOfDay();
+        $today = today(config('app.timezone'));
         $vehicles = Vehicle::query()
             ->where('company_id', $companyId)
             ->with('kaskoDocuments')
@@ -161,29 +167,56 @@ class TelegramKaskoChatService
             $document = $vehicle->kaskoDocuments->first();
             $endDate = $vehicle->kaskoExpiryDate();
 
-            if ($endDate && $endDate->gte($today)) {
+            // A renewal may already be uploaded while the previous policy is still in force.
+            if ($document?->start_date?->gt($today)) {
+                $inForce = $vehicle->kaskoDocuments->first(fn ($doc) => filled($doc->file_path)
+                    && (!$doc->start_date || $doc->start_date->lte($today)) && $doc->end_date?->gte($today));
+                if ($inForce) {
+                    $document = $inForce;
+                    $endDate = $inForce->end_date;
+                }
+            }
+
+            $missingReason = match (true) {
+                blank($document?->file_path) => 'Kasko belgesi yüklenmemiş.',
+                $endDate === null => 'Kasko bitiş tarihi tanımsız.',
+                (bool) $document->start_date?->gt($today) => 'Poliçe ' . $document->start_date->format('d.m.Y') . ' tarihinde başlayacak.',
+                default => null,
+            };
+            $status = $missingReason ? 'missing' : ($endDate->lt($today) ? 'expired' : 'covered');
+            if ($report === 'attention' ? $status === 'covered' : $status !== $report) {
                 continue;
             }
 
             $entry = "🚘 <b>" . e($vehicle->plate ?: '-') . "</b> — " . e(trim(($vehicle->brand ?? '') . ' ' . ($vehicle->model ?? '')) ?: '-') . "\n";
-            if (!$endDate) {
-                $lastDated = $vehicle->kaskoDocuments->first(fn ($doc) => $doc->end_date !== null);
-                $entry .= "❔ <b>Kasko tarihi tanımsız.</b>\n📅 Son kayıtlı başlangıç: "
-                    . (($lastDated ?? $document)?->start_date?->format('d.m.Y') ?? '-')
-                    . "\n🛡️ Son kayıtlı bitiş: " . ($lastDated?->end_date?->format('d.m.Y') ?? '-');
+            if ($status === 'missing') {
+                $entry .= "❔ " . $missingReason;
+                $lastDated = $vehicle->kaskoDocuments->first(fn ($doc) => filled($doc->file_path) && $doc->end_date?->lt($today));
+                if ($lastDated) {
+                    $entry .= "\n📅 Önceki poliçe başlangıcı: " . ($lastDated->start_date?->format('d.m.Y') ?? 'Kayıtlı değil')
+                        . "\n🛡️ Önceki poliçe bitişi: " . $lastDated->end_date->format('d.m.Y');
+                }
             } else {
-                $startDate = $document?->end_date ? ($document->start_date?->format('d.m.Y') ?? '-') : '-';
-                $daysOverdue = abs($today->diffInDays($endDate, false));
-                $entry .= "⚠️ <b>Kasko süresi geçmiş.</b>\n📅 Son başlangıç: {$startDate}\n🛡️ Son bitiş: " . $endDate->format('d.m.Y') . " ({$daysOverdue} gün önce)";
+                $days = (int) $today->diffInDays($endDate, false);
+                $timing = match (true) {
+                    $days < 0 => '⌛ ' . abs($days) . ' gün önce bitti',
+                    $days === 0 => '⏳ Bugün bitiyor (0 gün kaldı)',
+                    default => "⏳ {$days} gün kaldı",
+                };
+                $entry .= '📅 Poliçe başlangıcı: ' . ($document->start_date?->format('d.m.Y') ?? 'Kayıtlı değil')
+                    . "\n🛡️ Bitiş: " . $endDate->format('d.m.Y') . "\n" . $timing;
             }
             $entries[] = $entry;
         }
 
-        if ($entries === []) {
-            return ["✅ <b>Kasko durumu</b>\n\nKritik Takvim’de kaskosu tanımsız veya süresi geçmiş araç bulunmuyor."];
-        }
-
-        return $this->chunkMessages('📋 <b>KASKOSU OLMAYAN / SÜRESİ GEÇEN ARAÇLAR</b>', $entries);
+        $title = match ($report) {
+            'missing' => '❔ Kaskosu olmayan araçlar',
+            'expired' => '⌛ Süresi geçen kaskolar',
+            'covered' => '🛡️ Kaskolu araçlarım',
+            'attention' => '📋 Kaskosu olmayan veya süresi geçen araçlar',
+        };
+        $heading = '<b>' . $title . "</b>\nToplam: <b>" . count($entries) . ' araç</b>';
+        return $this->chunkMessages($heading, $entries);
     }
 
     private function chunkMessages(string $heading, array $entries): array
@@ -206,7 +239,7 @@ class TelegramKaskoChatService
 
     private function normaliseCommand(string $text): string
     {
-        return trim(Str::ascii(Str::lower($text)));
+        return Str::squish(Str::lower(Str::ascii($text, 'tr')));
     }
 
     private function isStartCommand(string $command): bool
