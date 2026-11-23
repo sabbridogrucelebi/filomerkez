@@ -16,7 +16,12 @@ class TelegramKaskoNotificationController extends Controller
 {
     public function migrateStorage(): RedirectResponse
     {
-        abort_unless(auth()->user()?->isSuperAdmin(), 403, 'Bu işlem yalnızca süper yönetici tarafından yapılabilir.');
+        $user = auth()->user();
+        abort_unless(
+            $user && ($user->isSuperAdmin() || $user->isCompanyAdmin()),
+            403,
+            'Bu işlem yalnızca firma yöneticisi veya süper yönetici tarafından yapılabilir.'
+        );
 
         try {
             Artisan::call('migrate', [

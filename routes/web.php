@@ -518,7 +518,6 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::get('/telegram-kasko/migrate', [TelegramKaskoNotificationController::class, 'migrateStorage'])
-        ->middleware('super_admin')
         ->name('telegram-kasko.migrate');
     Route::get('/telegram-kasko', [TelegramKaskoNotificationController::class, 'index'])
         ->middleware('permission:telegram.manage')
