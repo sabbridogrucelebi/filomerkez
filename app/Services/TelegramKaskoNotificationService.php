@@ -18,7 +18,7 @@ class TelegramKaskoNotificationService
         $sentCount = 0;
         $today = now(config('app.timezone'))->startOfDay();
 
-        TelegramKaskoNotificationSetting::withoutGlobalScopes()
+        TelegramKaskoNotificationSetting::query()
             ->where('is_enabled', true)
             ->get()
             ->each(function (TelegramKaskoNotificationSetting $setting) use ($today, &$sentCount) {
@@ -27,28 +27,24 @@ class TelegramKaskoNotificationService
                 }
 
                 $configuredDays = $this->normaliseReminderDays($setting->reminder_days);
-                if ($configuredDays === []) {
-                    return;
-                }
 
                 // Süre bittikten sonra yalnızca iki kontrollü hatırlatma yapılır:
                 // ertesi gün ve beşinci gün. Yenilenmiş belge varsa ikisi de atlanır.
                 $days = collect($configuredDays)->merge([-1, -5])->unique()->sort()->values()->all();
 
-                Vehicle::withoutGlobalScopes()
+                $dates = array_map(fn (int $day) => $today->copy()->addDays($day)->toDateString(), $days);
+                Vehicle::query()->with('kaskoDocuments')
                     ->where('company_id', $setting->company_id)
-                    ->where('is_active', true)
-                    ->whereNotNull('kasko_end_date')
-                    ->whereIn('kasko_end_date', collect($days)
-                        ->map(fn (int $day) => $today->copy()->addDays($day)->toDateString())
-                        ->all())
-                    ->orderBy('kasko_end_date')
-                    ->each(function (Vehicle $vehicle) use ($setting, $today, $days, &$sentCount) {
-                        $expiryDate = Carbon::parse($vehicle->kasko_end_date)->startOfDay();
+                    ->where(fn ($q) => $q->whereIn('kasko_end_date', $dates)
+                        ->orWhereHas('kaskoDocuments', fn ($d) => $d->whereIn('documents.end_date', $dates)))
+                    ->eachById(function (Vehicle $vehicle) use ($setting, $today, $days, &$sentCount) {
+                        $expiryDate = $vehicle->kaskoExpiryDate()?->copy()->startOfDay();
+                        if (!$expiryDate) {
+                            return;
+                        }
                         $daysLeft = $this->daysUntil($today, $expiryDate);
 
                         if (!in_array($daysLeft, $days, true)
-                            || $this->hasRenewedKaskoDocument($vehicle, $expiryDate)
                             || $this->wasAlreadySent($setting, $vehicle, $expiryDate, $daysLeft)) {
                             return;
                         }
@@ -56,7 +52,7 @@ class TelegramKaskoNotificationService
                         try {
                             $messageId = $this->send($setting, $vehicle, $daysLeft);
 
-                            TelegramKaskoNotificationLog::withoutGlobalScopes()->create([
+                            TelegramKaskoNotificationLog::create([
                                 'company_id' => $setting->company_id,
                                 'vehicle_id' => $vehicle->id,
                                 'kasko_end_date' => $expiryDate->toDateString(),
@@ -80,9 +76,26 @@ class TelegramKaskoNotificationService
         return $sentCount;
     }
 
+    public function sendTestForCompany(TelegramKaskoNotificationSetting $setting): ?string
+    {
+        $today = now(config('app.timezone'))->startOfDay();
+        $vehicle = Vehicle::query()->with('kaskoDocuments')
+            ->where('company_id', $setting->company_id)
+            ->get()->filter(fn ($v) => $v->kaskoExpiryDate() !== null)
+            ->sortBy(fn ($v) => abs($this->daysUntil($today, $v->kaskoExpiryDate())))->first();
+
+        if (!$vehicle) {
+            $this->sendTextMessage($setting, "✅ <b>Filo Merkez bağlantı testi</b>\nMesaj bu gruba ulaştı. Kritik Takvim’de kasko bitiş tarihi bulunan araç yok.");
+            return null;
+        }
+
+        $this->sendTest($setting, $vehicle);
+        return $vehicle->plate;
+    }
+
     public function sendTest(TelegramKaskoNotificationSetting $setting, Vehicle $vehicle): string
     {
-        $expiryDate = Carbon::parse($vehicle->kasko_end_date)->startOfDay();
+        $expiryDate = $vehicle->kaskoExpiryDate()->copy()->startOfDay();
         $daysLeft = $this->daysUntil(now(config('app.timezone'))->startOfDay(), $expiryDate);
 
         return $this->send($setting, $vehicle, $daysLeft);
@@ -90,7 +103,7 @@ class TelegramKaskoNotificationService
 
     public function renderMessage(TelegramKaskoNotificationSetting $setting, Vehicle $vehicle, int $daysLeft): string
     {
-        $expiryDate = Carbon::parse($vehicle->kasko_end_date);
+        $expiryDate = $vehicle->kaskoExpiryDate();
         $template = filled($setting->message_template)
             ? $setting->message_template
             : TelegramKaskoNotificationSetting::defaultMessageTemplate();
@@ -128,14 +141,18 @@ class TelegramKaskoNotificationService
             throw new RuntimeException('Telegram bot anahtarı ve sohbet kimliği tanımlanmalıdır.');
         }
 
-        $response = Http::timeout(15)
-            ->acceptJson()
-            ->post('https://api.telegram.org/bot' . $setting->bot_token . '/sendMessage', [
-                'chat_id' => $setting->chat_id,
-                'text' => $message,
-                'parse_mode' => 'HTML',
-                'disable_web_page_preview' => true,
-            ]);
+        try {
+            $response = Http::timeout(15)
+                ->acceptJson()
+                ->post('https://api.telegram.org/bot' . $setting->bot_token . '/sendMessage', [
+                    'chat_id' => $setting->chat_id,
+                    'text' => $message,
+                    'parse_mode' => 'HTML',
+                    'disable_web_page_preview' => true,
+                ]);
+        } catch (\Illuminate\Http\Client\ConnectionException) {
+            throw new RuntimeException('Sunucu Telegram’a bağlanamadı.');
+        }
 
         if (!$response->successful() || !$response->json('ok')) {
             throw new RuntimeException($response->json('description') ?: 'Telegram mesajı gönderilemedi.');
@@ -144,22 +161,9 @@ class TelegramKaskoNotificationService
         return (string) $response->json('result.message_id');
     }
 
-    private function hasRenewedKaskoDocument(Vehicle $vehicle, Carbon $expiryDate): bool
-    {
-        if ($vehicle->kasko_end_date && Carbon::parse($vehicle->kasko_end_date)->startOfDay()->gt($expiryDate)) {
-            return true;
-        }
-
-        return $vehicle->documents()
-            ->whereNull('archived_at')
-            ->where('document_type', 'Kasko')
-            ->whereDate('end_date', '>', $expiryDate->toDateString())
-            ->exists();
-    }
-
     private function wasAlreadySent(TelegramKaskoNotificationSetting $setting, Vehicle $vehicle, Carbon $expiryDate, int $daysLeft): bool
     {
-        return TelegramKaskoNotificationLog::withoutGlobalScopes()
+        return TelegramKaskoNotificationLog::query()
             ->where('company_id', $setting->company_id)
             ->where('vehicle_id', $vehicle->id)
             ->whereDate('kasko_end_date', $expiryDate)

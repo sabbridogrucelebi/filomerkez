@@ -93,6 +93,17 @@ class Vehicle extends Model
         return $this->morphMany(Document::class, 'documentable');
     }
 
+    public function kaskoDocuments(): MorphMany
+    {
+        return $this->documents()->where('document_type', 'Kasko')
+            ->orderByRaw('COALESCE(end_date, created_at) DESC')->orderByDesc('id');
+    }
+
+    public function kaskoExpiryDate(): ?\Carbon\Carbon
+    {
+        return $this->kaskoDocuments->first()?->end_date ?? $this->kasko_end_date;
+    }
+
     /**
      * Muayene / Sigorta yaklaşan uyarıları (KPI kartları, liste filtresi, mobil KPI)
      * Araç detay sayfasındaki "Kritik Takvim" ile birebir aynı mantık:

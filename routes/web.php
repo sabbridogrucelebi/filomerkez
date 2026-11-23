@@ -528,6 +528,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/telegram-kasko/test', [TelegramKaskoNotificationController::class, 'sendTest'])
         ->middleware('permission:telegram.manage')
         ->name('telegram-kasko.test');
+    Route::post('/telegram-kasko/connect', [TelegramKaskoNotificationController::class, 'connect'])
+        ->middleware(['permission:telegram.manage', 'throttle:6,1'])->name('telegram-kasko.connect');
 
     /*
     |--------------------------------------------------------------------------

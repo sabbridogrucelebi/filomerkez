@@ -91,14 +91,13 @@
     $inspectionDoc = $latestDocByType->get('Muayene');
     $exhaustDoc    = $latestDocByType->get('Egzoz');
     $insuranceDoc  = $latestDocByType->get('Sigorta');
-    $kaskoDoc      = $latestDocByType->get('Kasko');
     $immDoc        = $latestDocByType->get('İMM Poliçesi') ?? $latestDocByType->get('İMM POLİÇESİ');
 
     // Önce documents'tan oku, yoksa vehicle model alanlarına fallback yap
     $inspectionInfo = $dateCard($inspectionDoc?->end_date ?? $vehicle->inspection_date ?? null);
     $exhaustInfo    = $dateCard($exhaustDoc?->end_date ?? $vehicle->exhaust_date ?? null);
     $insuranceInfo  = $dateCard($insuranceDoc?->end_date ?? $vehicle->insurance_end_date ?? null);
-    $kaskoInfo      = $dateCard($kaskoDoc?->end_date ?? $vehicle->kasko_end_date ?? null);
+    $kaskoInfo      = $dateCard($vehicle->kaskoExpiryDate());
     $immInfo        = $dateCard($immDoc?->end_date ?? null);
 
     $tabClass = function ($key) use ($activeTab) {

@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Fleet\Vehicle;
 use App\Models\TelegramKaskoNotificationSetting;
 use App\Services\TelegramKaskoNotificationService;
-use Carbon\Carbon;
+use App\Services\TelegramKaskoChatService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -105,28 +104,28 @@ class TelegramKaskoNotificationController extends Controller
             return redirect()->route('telegram-kasko.index')->with('error', 'Önce bot anahtarı ve sohbet kimliğini kaydedin.');
         }
 
-        $today = now(config('app.timezone'))->startOfDay();
-        $vehicle = Vehicle::query()
-            ->where('company_id', $company->id)
-            ->where('is_active', true)
-            ->whereNotNull('kasko_end_date')
-            ->get()
-            ->sortBy(fn (Vehicle $item) => abs($today->diffInDays(Carbon::parse($item->kasko_end_date)->startOfDay(), false)))
-            ->first();
-
-        if (!$vehicle) {
-            return redirect()->route('telegram-kasko.index')->with('error', 'Test mesajı için kasko bitiş tarihi tanımlı aktif bir araç bulunamadı.');
-        }
-
         try {
-            $telegram->sendTest($setting, $vehicle);
+            $plate = $telegram->sendTestForCompany($setting);
 
-            return redirect()->route('telegram-kasko.index')->with('success', "Test mesajı {$vehicle->plate} aracıyla Telegram'a gönderildi.");
+            return redirect()->route('telegram-kasko.index')->with('success', $plate
+                ? "Test mesajı {$plate} aracıyla Telegram'a gönderildi."
+                : 'Bağlantı testi Telegram grubuna gönderildi.');
         } catch (Throwable $exception) {
             report($exception);
 
             return redirect()->route('telegram-kasko.index')->with('error', 'Test mesajı gönderilemedi: ' . $exception->getMessage());
         }
+    }
+
+    public function connect(TelegramKaskoChatService $chat): RedirectResponse
+    {
+        $setting = $this->setting($this->company()->id);
+        try {
+            $chat->connectGroup($setting);
+        } catch (\RuntimeException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+        return back()->with('success', 'Telegram grup bağlantısını kabul etti. Gruba “kaskosu olmayan araçlar” yazın.');
     }
 
     private function company()

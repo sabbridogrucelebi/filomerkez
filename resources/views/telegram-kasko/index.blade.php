@@ -119,10 +119,14 @@
         <aside class="space-y-6">
             <div class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
                 <div class="flex items-center gap-3"><span class="text-2xl">🧪</span><h3 class="text-base font-black text-slate-900">Mesajı dene</h3></div>
-                <p class="mt-3 text-sm font-medium leading-6 text-slate-500">Sistemde kasko tarihi olan en yakın aktif araç kullanılarak gerçek Telegram mesajı gönderilir.</p>
+                <p class="mt-3 text-sm font-medium leading-6 text-slate-500">Test, Kritik Takvim’de bitiş tarihi en yakın aracın mesajını gönderir. Tüm tarihler tanımsızsa gruba bağlantı testi gönderilir.</p>
                 <form method="POST" action="{{ route('telegram-kasko.test') }}" class="mt-5">
                     @csrf
                     <button type="submit" class="w-full rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-black text-sky-700 transition hover:bg-sky-100">✈️ Test Mesajı Gönder</button>
+                </form>
+                <form method="POST" action="{{ route('telegram-kasko.connect') }}" class="mt-3">
+                    @csrf
+                    <button class="w-full rounded-2xl bg-sky-700 px-4 py-3 text-sm font-black text-white">Grup yanıtlarını bağla</button>
                 </form>
             </div>
 

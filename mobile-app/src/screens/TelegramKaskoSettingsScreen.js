@@ -22,7 +22,7 @@ Aşağıdaki aracın kasko poliçesi {{kasko_status}}
 ⏳ Poliçe yenileme işlemlerini zamanında yaparak
 aracınızın güvence sürekliliğini koruyun.
 
-<i>ServisPilot | Filo Takip Sistemi</i>`;
+<i>Filo Merkez | Filo Takip Sistemleri</i>`;
 
 export default function TelegramKaskoSettingsScreen({ navigation }) {
     useStatusBarStyle('dark-content');
@@ -30,6 +30,7 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [testing, setTesting] = useState(false);
+    const [connecting, setConnecting] = useState(false);
     const [isEnabled, setIsEnabled] = useState(false);
     const [botToken, setBotToken] = useState('');
     const [hasBotToken, setHasBotToken] = useState(false);
@@ -116,6 +117,18 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
         }
     };
 
+    const connectGroup = async () => {
+        setConnecting(true);
+        try {
+            const response = await api.post('/v1/telegram-kasko-settings/connect');
+            Alert.alert('Grup bağlantısı', response.data.message);
+        } catch (error) {
+            Alert.alert('Bağlantı kurulamadı', error.response?.data?.message || 'Sunucuya ulaşılamadı.');
+        } finally {
+            setConnecting(false);
+        }
+    };
+
     const sendTest = async () => {
         setTesting(true);
         try {
@@ -185,6 +198,9 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                         {testing ? <ActivityIndicator color="#0369A1" /> : <><Ionicons name="paper-plane-outline" size={20} color="#0369A1" /><Text style={styles.testText}>Test Mesajı Gönder</Text></>}
                     </TouchableOpacity>
                     <Text style={styles.footer}>Filo Merkez | Filo Takip Sistemleri</Text>
+                    <TouchableOpacity style={styles.testButton} disabled={!canManage || connecting} onPress={connectGroup}>
+                        {connecting ? <ActivityIndicator /> : <Text style={styles.testText}>Grup yanıtlarını bağla</Text>}
+                    </TouchableOpacity>
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>

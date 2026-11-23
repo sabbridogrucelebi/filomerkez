@@ -21,6 +21,8 @@ use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\TripController;
 
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/telegram-kasko/incoming/{id}', \App\Http\Controllers\TelegramKaskoWebhookController::class)
+    ->whereNumber('id')->name('telegram-kasko.receive');
 
 Route::middleware(['auth:sanctum', \App\Http\Middleware\CheckCompanyStatus::class])->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
@@ -132,6 +134,8 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckCompa
         ->middleware('permission:telegram.manage');
     Route::post('/telegram-kasko-settings/test', [\App\Http\Controllers\Api\V1\TelegramKaskoNotificationApiController::class, 'sendTest'])
         ->middleware('permission:telegram.manage');
+    Route::post('/telegram-kasko-settings/connect', [\App\Http\Controllers\Api\V1\TelegramKaskoNotificationApiController::class, 'connect'])
+        ->middleware(['permission:telegram.manage', 'throttle:6,1']);
     
     Route::post('/maintenances-mechanics', [\App\Http\Controllers\Api\V1\MaintenanceApiController::class, 'storeMechanic']);
     Route::put('/maintenances-mechanics/{id}', [\App\Http\Controllers\Api\V1\MaintenanceApiController::class, 'updateMechanic']);

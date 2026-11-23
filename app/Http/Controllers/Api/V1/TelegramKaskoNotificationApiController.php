@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Models\Fleet\Vehicle;
 use App\Models\TelegramKaskoNotificationSetting;
 use App\Services\TelegramKaskoNotificationService;
-use Carbon\Carbon;
+use App\Services\TelegramKaskoChatService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -71,30 +70,28 @@ class TelegramKaskoNotificationApiController extends BaseApiController
             return $this->errorResponse('Önce bot anahtarı ve sohbet kimliğini kaydedin.', 422);
         }
 
-        $today = now(config('app.timezone'))->startOfDay();
-        $vehicle = Vehicle::query()
-            ->where('company_id', $this->getCompanyId())
-            ->where('is_active', true)
-            ->whereNotNull('kasko_end_date')
-            ->get()
-            ->sortBy(fn (Vehicle $item) => abs($today->diffInDays(Carbon::parse($item->kasko_end_date)->startOfDay(), false)))
-            ->first();
-
-        if (!$vehicle) {
-            return $this->errorResponse('Test mesajı için kasko bitiş tarihi tanımlı aktif bir araç bulunamadı.', 422);
-        }
-
         try {
-            $telegram->sendTest($setting, $vehicle);
+            $plate = $telegram->sendTestForCompany($setting);
 
             return $this->successResponse([
-                'vehicle_plate' => $vehicle->plate,
+                'vehicle_plate' => $plate,
             ], 'Test mesajı Telegram\'a gönderildi.');
         } catch (Throwable $exception) {
             report($exception);
 
             return $this->errorResponse('Test mesajı gönderilemedi: ' . $exception->getMessage(), 422);
         }
+    }
+
+    public function connect(Request $request, TelegramKaskoChatService $chat)
+    {
+        $this->ensureCanManage($request);
+        try {
+            $chat->connectGroup($this->setting());
+        } catch (\RuntimeException $exception) {
+            return $this->errorResponse($exception->getMessage(), 422);
+        }
+        return $this->successResponse([], 'Telegram grup bağlantısını kabul etti. Gruba “kaskosu olmayan araçlar” yazın.');
     }
 
     private function ensureCanManage(Request $request): void

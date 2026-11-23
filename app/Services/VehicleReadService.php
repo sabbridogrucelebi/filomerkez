@@ -182,7 +182,6 @@ class VehicleReadService
         $inspectionDoc = $latestDocs->get('Muayene');
         $exhaustDoc    = $latestDocs->get('Egzoz');
         $insuranceDoc  = $latestDocs->get('Sigorta');
-        $kaskoDoc      = $latestDocs->get('Kasko');
         $immDoc        = $latestDocs->get('İMM Poliçesi') ?? $latestDocs->get('İMM POLİÇESİ');
 
         return [
@@ -194,7 +193,7 @@ class VehicleReadService
                 'inspection_date'   => $inspectionDoc?->end_date?->toDateString() ?? ($vehicle->inspection_date ? $vehicle->inspection_date->toDateString() : null),
                 'exhaust_date'      => $exhaustDoc?->end_date?->toDateString() ?? ($vehicle->exhaust_date ? $vehicle->exhaust_date->toDateString() : null),
                 'insurance_end_date'=> $insuranceDoc?->end_date?->toDateString() ?? ($vehicle->insurance_end_date ? $vehicle->insurance_end_date->toDateString() : null),
-                'kasko_end_date'    => $kaskoDoc?->end_date?->toDateString() ?? ($vehicle->kasko_end_date ? $vehicle->kasko_end_date->toDateString() : null),
+                'kasko_end_date'    => $vehicle->kaskoExpiryDate()?->toDateString(),
                 'imm_end_date'      => $immDoc?->end_date?->toDateString() ?? null,
             ]),
             'stats' => $stats,
