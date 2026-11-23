@@ -7,12 +7,31 @@ use App\Models\TelegramKaskoNotificationSetting;
 use App\Services\TelegramKaskoNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Throwable;
 
 class TelegramKaskoNotificationController extends Controller
 {
+    public function migrateStorage(): RedirectResponse
+    {
+        abort_unless(auth()->user()?->isSuperAdmin(), 403, 'Bu işlem yalnızca süper yönetici tarafından yapılabilir.');
+
+        try {
+            Artisan::call('migrate', [
+                '--force' => true,
+                '--path' => 'database/migrations/2026_11_23_100000_create_telegram_kasko_notification_settings_table.php',
+            ]);
+
+            return redirect()->route('telegram-kasko.index')->with('success', 'Telegram kasko tabloları hazır. ' . trim(Artisan::output()));
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()->route('telegram-kasko.index')->with('error', 'Migration çalıştırılamadı: ' . $exception->getMessage());
+        }
+    }
+
     public function index(): View
     {
         $company = $this->company();

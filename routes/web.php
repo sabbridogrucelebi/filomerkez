@@ -517,6 +517,9 @@ Route::middleware('auth')->group(function () {
     | TELEGRAM KASKO BİLDİRİMLERİ
     |--------------------------------------------------------------------------
     */
+    Route::get('/telegram-kasko/migrate', [TelegramKaskoNotificationController::class, 'migrateStorage'])
+        ->middleware('super_admin')
+        ->name('telegram-kasko.migrate');
     Route::get('/telegram-kasko', [TelegramKaskoNotificationController::class, 'index'])
         ->middleware('permission:telegram.manage')
         ->name('telegram-kasko.index');
