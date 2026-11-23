@@ -109,8 +109,6 @@ class TelegramKaskoNotificationController extends Controller
 
     private function setting(int $companyId): TelegramKaskoNotificationSetting
     {
-        TelegramKaskoNotificationSetting::ensureStorage();
-
         return TelegramKaskoNotificationSetting::firstOrNew(
             ['company_id' => $companyId],
             [

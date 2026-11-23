@@ -1,0 +1,41 @@
+<?php
+
+namespace Tests\Unit;
+
+use App\Models\Company;
+use App\Models\Fleet\Vehicle;
+use App\Models\TelegramKaskoNotificationSetting;
+use App\Services\TelegramKaskoNotificationService;
+use Tests\TestCase;
+
+class TelegramKaskoNotificationServiceTest extends TestCase
+{
+    public function test_it_renders_the_premium_kasko_message_with_vehicle_details(): void
+    {
+        $setting = new TelegramKaskoNotificationSetting([
+            'message_template' => TelegramKaskoNotificationSetting::defaultMessageTemplate(),
+        ]);
+        $setting->setRelation('company', new Company(['name' => 'Çelebi Turizm']));
+
+        $vehicle = new Vehicle([
+            'plate' => '34 ABC 123',
+            'brand' => 'Mercedes',
+            'model' => 'Sprinter',
+            'model_year' => 2023,
+            'license_serial_no' => 'SERİ-001',
+            'chassis_no' => 'ŞASE-001',
+            'kasko_end_date' => '2026-12-03',
+        ]);
+
+        $message = (new TelegramKaskoNotificationService())->renderMessage($setting, $vehicle, 10);
+
+        $this->assertStringContainsString('Çelebi Turizm', $message);
+        $this->assertStringContainsString('10 GÜN', $message);
+        $this->assertStringContainsString('34 ABC 123', $message);
+        $this->assertStringContainsString('Mercedes Sprinter', $message);
+        $this->assertStringContainsString('2023', $message);
+        $this->assertStringContainsString('SERİ-001', $message);
+        $this->assertStringContainsString('ŞASE-001', $message);
+        $this->assertStringContainsString('Filo Merkez | Filo Takip Sistemleri', $message);
+    }
+}
