@@ -50,6 +50,17 @@ use App\Http\Controllers\TelegramKaskoNotificationController;
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardController;
 use App\Http\Controllers\SuperAdmin\CompanyController as SuperAdminCompanyController;
 
+Route::get('/telegram-kasko/hazirla', function () {
+    try {
+        \App\Models\TelegramKaskoNotificationSetting::ensureStorage();
+        $output = e(\Illuminate\Support\Facades\Artisan::output());
+
+        return response('<p>Veritabanı hazır.</p><pre>'.$output.'</pre><p><a href="'.e(url('/telegram-kasko')).'">Telegram sayfasına geç</a></p>');
+    } catch (\Throwable $e) {
+        return response('Hata oluştu: '.e($e->getMessage()), 500);
+    }
+});
+
 Route::get('/run-migrations-secret', function () {
     try {
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);

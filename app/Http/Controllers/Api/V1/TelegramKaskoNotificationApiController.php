@@ -102,6 +102,8 @@ class TelegramKaskoNotificationApiController extends BaseApiController
 
     private function setting(): TelegramKaskoNotificationSetting
     {
+        TelegramKaskoNotificationSetting::ensureStorage();
+
         return TelegramKaskoNotificationSetting::firstOrNew(
             ['company_id' => $this->getCompanyId()],
             [

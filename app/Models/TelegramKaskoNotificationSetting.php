@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
 
 class TelegramKaskoNotificationSetting extends Model
 {
@@ -57,5 +59,17 @@ TEXT;
     public function hasCredentials(): bool
     {
         return filled($this->bot_token) && filled($this->chat_id);
+    }
+
+    public static function ensureStorage(): void
+    {
+        if (Schema::hasTable('telegram_kasko_notification_settings')) {
+            return;
+        }
+
+        Artisan::call('migrate', [
+            '--force' => true,
+            '--path' => 'database/migrations/2026_11_23_100000_create_telegram_kasko_notification_settings_table.php',
+        ]);
     }
 }
