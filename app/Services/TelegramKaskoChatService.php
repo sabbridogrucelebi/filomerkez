@@ -195,8 +195,10 @@ class TelegramKaskoChatService
                 $entry .= "❔ " . $missingReason;
                 $lastDated = $vehicle->kaskoDocuments->first(fn ($doc) => filled($doc->file_path) && $doc->end_date?->lt($today));
                 if ($lastDated) {
-                    $entry .= "\n📅 Önceki poliçe başlangıcı: " . ($lastDated->start_date?->format('d.m.Y') ?? 'Kayıtlı değil')
-                        . "\n🛡️ Önceki poliçe bitişi: " . $lastDated->end_date->format('d.m.Y');
+                    if ($lastDated->start_date) {
+                        $entry .= "\n📅 Önceki poliçe başlangıcı: " . $lastDated->start_date->format('d.m.Y');
+                    }
+                    $entry .= "\n🛡️ Önceki poliçe bitişi: " . $lastDated->end_date->format('d.m.Y');
                 }
             } else {
                 $days = (int) $today->diffInDays($endDate, false);
@@ -205,8 +207,10 @@ class TelegramKaskoChatService
                     $days === 0 => '⏳ Bugün bitiyor (0 gün kaldı)',
                     default => "⏳ {$days} gün kaldı",
                 };
-                $entry .= '📅 Poliçe başlangıcı: ' . ($document->start_date?->format('d.m.Y') ?? 'Kayıtlı değil')
-                    . "\n🛡️ Bitiş: " . $endDate->format('d.m.Y') . "\n" . $timing;
+                if ($document->start_date) {
+                    $entry .= '📅 Poliçe başlangıcı: ' . $document->start_date->format('d.m.Y') . "\n";
+                }
+                $entry .= '🛡️ Bitiş: ' . $endDate->format('d.m.Y') . "\n" . $timing;
             }
             $entries[] = $entry;
         }

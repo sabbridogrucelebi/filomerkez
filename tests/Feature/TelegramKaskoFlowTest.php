@@ -9,6 +9,7 @@ use App\Models\TelegramKaskoNotificationSetting;
 use App\Models\User;
 use App\Services\TelegramAlertBotSettings;
 use App\Services\TelegramFleetAlertService;
+use App\Services\TelegramImmChatService;
 use App\Services\TelegramKaskoChatService;
 use App\Services\TelegramKaskoNotificationService;
 use GuzzleHttp\Exception\ConnectException;
@@ -310,7 +311,7 @@ class TelegramKaskoFlowTest extends TestCase
             && str_contains($message['text'], 'TEMPLATE-ONE') && str_contains($message['text'], '5 gün kaldı')
             && !str_contains($message['text'], 'ÖRNEK-42'));
         $this->assertSame(1, $service->sendScheduledNotifications());
-        Http::assertSent(fn (Request $message) => $message['text'] === '📌 <b>TEMPLATE-ONE</b> · 5 gün kaldı · A &amp; B &lt;Filo&gt;');
+        Http::assertSent(fn (Request $message) => $message['text'] === "📌 <b>TEMPLATE-ONE</b> · 5 gün kaldı · A &amp; B &lt;Filo&gt;\n\n📅 <b>Poliçe başlangıcı:</b> 01.01.2025");
 
         $request->merge(['message_template' => '']);
         $settings->save($request, 1, 'imm');
@@ -409,6 +410,73 @@ class TelegramKaskoFlowTest extends TestCase
         $this->assertSame($texts[1], $texts[2]);
         $this->assertStringContainsString('IMM-PAGE-1', $texts[0]);
         $this->assertStringContainsString('IMM-PAGE-8', $texts[2]);
+    }
+
+    public function test_telegram_control_sends_individual_imm_messages_only_for_the_configured_group(): void
+    {
+        (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
+        $this->travelTo(now('Europe/Istanbul')->setDate(2026, 11, 24)->setTime(10, 0));
+        TelegramAlertBot::create(['company_id' => 1, 'channel' => 'imm', 'bot_token' => '124:demo', 'chat_id' => '-555', 'reminder_days' => [5, 20]]);
+        $known = $this->vehicle('IMM-WITH-START', ['brand' => 'ISUZU', 'model' => 'ROYBUS']);
+        $this->document($known, 5, ['document_type' => 'İMM Poliçesi', 'start_date' => '2025-11-29']);
+        $this->document($this->vehicle('IMM-MISSING-START'), 7, ['document_type' => 'İMM POLİÇESİ', 'start_date' => null]);
+        $this->document($this->vehicle('IMM-OUTSIDE-CONTROL'), 21, ['document_type' => 'İMM Poliçesi']);
+        $this->document($this->vehicle('IMM-OTHER-COMPANY', ['company_id' => 2]), 5, ['document_type' => 'İMM Poliçesi', 'company_id' => 2]);
+
+        Http::fake(['*/getUpdates*' => Http::response(['ok' => true, 'result' => [
+            ['update_id' => 100, 'message' => ['text' => 'kontrol', 'chat' => ['id' => -888, 'type' => 'group']]],
+            ['update_id' => 101, 'message' => ['text' => 'kontrol', 'chat' => ['id' => -555, 'type' => 'supergroup'], 'from' => ['is_bot' => true]]],
+            ['update_id' => 102, 'message' => ['text' => '  KONTROL  ', 'chat' => ['id' => -555, 'type' => 'group']]],
+        ]])]);
+
+        $service = app(TelegramImmChatService::class);
+        $this->assertSame(1, $service->processIncomingCommands());
+        $this->assertSame(0, $service->processIncomingCommands());
+        $sent = Http::recorded(fn (Request $request) => str_ends_with($request->url(), '/sendMessage'));
+        $this->assertCount(2, $sent);
+        [$first, $second] = $sent->map(fn (array $pair) => $pair[0]['text'])->values()->all();
+        foreach (['☂️ İMM POLİÇESİ YENİLEME UYARISI', 'IMM-WITH-START', 'ISUZU ROYBUS', 'Poliçe başlangıcı:</b> 29.11.2025', '5 gün kaldı'] as $value) {
+            $this->assertStringContainsString($value, $first);
+        }
+        $this->assertStringNotContainsString('IMM-MISSING-START', $first);
+        $this->assertStringContainsString('IMM-MISSING-START', $second);
+        $this->assertStringContainsString('7 gün kaldı', $second);
+        $this->assertStringNotContainsString('Poliçe başlangıcı', $second);
+        $this->assertStringNotContainsString('policy_start_line', $second);
+        Http::assertSent(fn (Request $request) => str_contains($request->url(), '/getUpdates?') && str_contains($request->url(), 'offset=103'));
+    }
+
+    public function test_telegram_control_resumes_after_a_rate_limit_without_duplicating_vehicle_messages(): void
+    {
+        (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
+        $this->travelTo(now('Europe/Istanbul')->setDate(2026, 11, 24)->setTime(10, 0));
+        TelegramAlertBot::create(['company_id' => 1, 'channel' => 'imm', 'bot_token' => '124:demo', 'chat_id' => '-555']);
+        $this->document($this->vehicle('IMM-FIRST'), 3, ['document_type' => 'İMM Poliçesi']);
+        $this->document($this->vehicle('IMM-SECOND'), 4, ['document_type' => 'İMM Poliçesi']);
+        Http::swap(new \Illuminate\Http\Client\Factory());
+        Http::preventStrayRequests();
+        Http::fake([
+            '*/getUpdates*' => Http::response(['ok' => true, 'result' => [
+                ['update_id' => 42, 'message' => ['text' => 'kontrol', 'chat' => ['id' => -555, 'type' => 'group']]],
+            ]]),
+            '*/sendMessage' => Http::sequence()
+                ->push(['ok' => true, 'result' => ['message_id' => 1]])
+                ->push(['ok' => false, 'error_code' => 429, 'parameters' => ['retry_after' => 32]], 429)
+                ->push(['ok' => true, 'result' => ['message_id' => 2]]),
+        ]);
+
+        $service = app(TelegramImmChatService::class);
+        $this->assertSame(0, $service->processIncomingCommands());
+        $this->assertSame(0, $service->processIncomingCommands());
+        $this->travel(60)->seconds();
+        $this->assertSame(1, $service->processIncomingCommands());
+        $this->assertSame(0, $service->processIncomingCommands());
+        $texts = Http::recorded(fn (Request $request) => str_ends_with($request->url(), '/sendMessage'))
+            ->map(fn (array $pair) => $pair[0]['text'])->values()->all();
+        $this->assertCount(3, $texts);
+        $this->assertStringContainsString('IMM-FIRST', $texts[0]);
+        $this->assertStringContainsString('IMM-SECOND', $texts[1]);
+        $this->assertSame($texts[1], $texts[2]);
     }
 
     public function test_telegram_retry_after_blocks_repeat_requests_until_the_limit_expires(): void

@@ -157,7 +157,8 @@ class TelegramFleetAlertService
     private function dateEvents(Vehicle $vehicle, string $channel, array $days, Carbon $today): array
     {
         if ($channel === 'imm') {
-            $end = TelegramPolicyAlerts::latestUploaded($vehicle, 'immDocuments')?->end_date;
+            $document = TelegramPolicyAlerts::latestUploaded($vehicle, 'immDocuments');
+            $end = $document?->end_date;
         } else {
             $types = Vehicle::ALERT_DOC_TYPES[$channel] ?? ['Egzoz', 'Egzoz Emisyon'];
             $fallback = Vehicle::ALERT_FALLBACK_FIELDS[$channel] ?? 'exhaust_date';
@@ -177,16 +178,9 @@ class TelegramFleetAlertService
             return [];
         }
 
-        return ['date:' . $end->toDateString() . ':' . $threshold => [
-            'end_date' => $end->format('d.m.Y'),
-            'days_left' => abs($remaining),
-            'expired' => $remaining < 0,
-            'expiry_status' => match (true) {
-                $remaining < 0 => abs($remaining) . ' gün önce sona erdi',
-                $remaining === 0 => 'Bugün sona eriyor',
-                default => "{$remaining} gün kaldı",
-            },
-        ]];
+        return ['date:' . $end->toDateString() . ':' . $threshold => TelegramFleetAlertMessage::dateEvent(
+            $end, $remaining, $channel === 'imm' ? $document : null,
+        )];
     }
 
     private function maintenanceEvents(Vehicle $vehicle, int $threshold, Carbon $today): array

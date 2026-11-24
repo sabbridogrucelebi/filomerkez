@@ -304,6 +304,7 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                                                 <Text style={styles.muted}>Grup komutları · kaskolu araçlarım · süresi geçenler · kaskosu olmayan araçlar</Text>
                                             </>
                                         )}
+                                        {isImm && configured(bot) && <Text style={styles.muted}>İMM grubuna kontrol yazın. Bot her araç için ayrı mesaj gönderir. BotFather’da Group Privacy ayarını kapatıp botu gruba yeniden ekleyin.</Text>}
                                     </>
                                 )}
                             </View>

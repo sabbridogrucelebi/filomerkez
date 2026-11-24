@@ -168,6 +168,8 @@
                     <button type="submit" class="tg-action">Grup yanıtlarını bağla</button>
                 </form>
                 <p class="mt-3 text-xs text-slate-600">Grup komutları · kaskolu araçlarım · süresi geçenler · kaskosu olmayan araçlar</p>
+            @elseif($isImm && $configured)
+                <p class="mt-5 border-t border-slate-200 pt-4 text-sm text-slate-700">İMM grubuna <code class="font-bold">kontrol</code> yazın. Bot, yaklaşan her poliçe için ayrı bir mesaj gönderir. BotFather’da <b>Group Privacy</b> ayarını kapatıp botu gruba yeniden ekleyin.</p>
             @endif
         @endif
     </section>

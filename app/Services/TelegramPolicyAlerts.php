@@ -46,7 +46,7 @@ final class TelegramPolicyAlerts
             $entry = '🚘 <b>' . e($vehicle->plate ?: '-') . '</b> — ' . e(trim(($vehicle->brand ?? '') . ' ' . ($vehicle->model ?? '')) ?: '-')
                 . "\n👤 Ruhsat sahibi: " . e($vehicle->license_owner ?: '-')
                 . "\n🏢 Vergi / T.C. No: " . e($vehicle->owner_tax_or_tc_no ?: '-')
-                . "\n📅 Poliçe başlangıcı: " . ($policy->start_date?->format('d.m.Y') ?? 'Kayıtlı değil')
+                . ($policy->start_date ? "\n📅 Poliçe başlangıcı: " . $policy->start_date->format('d.m.Y') : '')
                 . "\n🛡️ Bitiş: " . $policy->end_date->format('d.m.Y')
                 . "\n⏳ <b>{$days} gün kaldı</b>";
 
