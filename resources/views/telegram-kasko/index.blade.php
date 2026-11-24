@@ -5,7 +5,7 @@
 
 @section('content')
 @php
-    $reminderDaysText = old('reminder_days_text', implode(', ', $setting->reminder_days ?: [10, 15, 20]));
+    $reminderDaysText = old('reminder_days_text', implode(', ', $setting->reminder_days ?: [1, 3, 7, 10, 15, 20]));
 @endphp
 
 <div class="mx-auto w-full max-w-6xl space-y-6 p-1">
@@ -57,7 +57,7 @@
                 </div>
 
                 <label class="mb-5 flex cursor-pointer items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
-                    <span><span class="block text-sm font-extrabold text-slate-800">Otomatik uyarıları etkinleştir</span><span class="mt-1 block text-xs font-medium text-slate-500">Yalnızca aşağıda belirlediğiniz günlerde gönderilir.</span></span>
+                    <span><span class="block text-sm font-extrabold text-slate-800">Otomatik uyarıları etkinleştir</span><span class="mt-1 block text-xs font-medium text-slate-500">Bireysel uyarılar ve günlük yaklaşan kasko özeti birlikte çalışır.</span></span>
                     <span class="relative inline-flex items-center">
                         <input type="checkbox" name="is_enabled" value="1" class="peer sr-only" {{ old('is_enabled', $setting->is_enabled) ? 'checked' : '' }}>
                         <span class="h-7 w-12 rounded-full bg-slate-300 transition peer-checked:bg-emerald-500 after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-5"></span>
@@ -88,9 +88,23 @@
                     </div>
                 </div>
                 <label for="reminder_days_text" class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-600">Kalan günler</label>
-                <input id="reminder_days_text" name="reminder_days_text" value="{{ $reminderDaysText }}" inputmode="numeric" placeholder="Örn: 10, 15, 20" class="w-full rounded-xl border-slate-200 px-4 py-3 text-sm font-bold text-slate-800 focus:border-sky-500 focus:ring-sky-500">
-                <p class="mt-2 text-xs font-medium text-slate-400">0 ile 365 arasında istediğiniz günleri yazabilirsiniz. Süre bittikten sonra sistem belge yenilenmediyse otomatik olarak <b>1. gün</b> ve son kez <b>5. gün</b> uyarı verir.</p>
+                <input id="reminder_days_text" name="reminder_days_text" value="{{ $reminderDaysText }}" inputmode="numeric" placeholder="Örn: 20, 15, 10, 7, 3, 1" class="w-full rounded-xl border-slate-200 px-4 py-3 text-sm font-bold text-slate-800 focus:border-sky-500 focus:ring-sky-500">
+                <p class="mt-2 text-xs font-medium text-slate-400">Önerilen ayar: <b>20, 15, 10, 7, 3, 1</b>. Bu günlerde araç bazlı bildirim gider. Süre bittikten sonra sistem belge yenilenmediyse otomatik olarak <b>1. gün</b> ve son kez <b>5. gün</b> uyarı verir.</p>
                 @error('reminder_days_text')<p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>@enderror
+            </section>
+
+            <section class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+                <div class="mb-6 flex items-start gap-4">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-xl">📋</div>
+                    <div><h3 class="text-lg font-black text-slate-900">Günlük yaklaşan kasko özeti</h3><p class="mt-1 text-sm font-medium text-slate-500">Her gün 09:00'da, seçtiğiniz gün aralığında bitecek tüm aktif poliçeleri tek mesajda listeler.</p></div>
+                </div>
+                <label class="flex cursor-pointer items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
+                    <span><span class="block text-sm font-extrabold text-slate-800">Günlük özeti etkinleştir</span><span class="mt-1 block text-xs font-medium text-slate-500">Aynı gün içinde bir kez gönderilir.</span></span>
+                    <span class="relative inline-flex items-center"><input type="checkbox" name="upcoming_summary_enabled" value="1" class="peer sr-only" {{ old('upcoming_summary_enabled', $setting->upcoming_summary_enabled ?? true) ? 'checked' : '' }}><span class="h-7 w-12 rounded-full bg-slate-300 transition peer-checked:bg-emerald-500 after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-5"></span></span>
+                </label>
+                <label for="upcoming_summary_days" class="mb-2 mt-5 block text-xs font-black uppercase tracking-wider text-slate-600">Özet penceresi</label>
+                <div class="flex items-center gap-3"><input id="upcoming_summary_days" name="upcoming_summary_days" type="number" min="1" max="365" value="{{ old('upcoming_summary_days', $setting->upcoming_summary_days ?? 20) }}" class="w-28 rounded-xl border-slate-200 px-4 py-3 text-sm font-bold text-slate-800 focus:border-sky-500 focus:ring-sky-500"><span class="text-sm font-medium text-slate-500">gün içinde bitecek kaskolar</span></div>
+                @error('upcoming_summary_days')<p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>@enderror
             </section>
 
             <section class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
@@ -119,7 +133,7 @@
         <aside class="space-y-6">
             <div class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
                 <div class="flex items-center gap-3"><span class="text-2xl">🧪</span><h3 class="text-base font-black text-slate-900">Mesajı dene</h3></div>
-                <p class="mt-3 text-sm font-medium leading-6 text-slate-500">Test, Kritik Takvim’de bitiş tarihi en yakın aracın mesajını gönderir. Tüm tarihler tanımsızsa gruba bağlantı testi gönderilir.</p>
+                <p class="mt-3 text-sm font-medium leading-6 text-slate-500">Test, yüklü kasko belgesinde bitiş tarihi en yakın aracın mesajını gönderir. Geçerli belge yoksa gruba bağlantı testi gönderilir.</p>
                 <form method="POST" action="{{ route('telegram-kasko.test') }}" class="mt-5">
                     @csrf
                     <button type="submit" class="w-full rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-black text-sky-700 transition hover:bg-sky-100">✈️ Test Mesajı Gönder</button>

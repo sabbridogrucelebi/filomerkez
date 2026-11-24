@@ -26,6 +26,8 @@ class TelegramKaskoNotificationApiController extends BaseApiController
         $setting = $this->setting();
         $validated = $request->validate([
             'is_enabled' => ['required', 'boolean'],
+            'upcoming_summary_enabled' => ['nullable', 'boolean'],
+            'upcoming_summary_days' => ['nullable', 'integer', 'min:1', 'max:365'],
             'bot_token' => ['nullable', 'string', 'max:255'],
             'chat_id' => ['nullable', 'string', 'max:100'],
             'reminder_days' => ['required', 'array', 'min:1'],
@@ -45,6 +47,8 @@ class TelegramKaskoNotificationApiController extends BaseApiController
 
         $setting->fill([
             'is_enabled' => $validated['is_enabled'],
+            'upcoming_summary_enabled' => $request->boolean('upcoming_summary_enabled', $setting->upcoming_summary_enabled ?? true),
+            'upcoming_summary_days' => $validated['upcoming_summary_days'] ?? ($setting->upcoming_summary_days ?? 20),
             'reminder_days' => $days,
             'message_template' => $validated['message_template'],
         ]);
@@ -104,7 +108,9 @@ class TelegramKaskoNotificationApiController extends BaseApiController
         return TelegramKaskoNotificationSetting::firstOrNew(
             ['company_id' => $this->getCompanyId()],
             [
-                'reminder_days' => [10, 15, 20],
+                'reminder_days' => [1, 3, 7, 10, 15, 20],
+                'upcoming_summary_enabled' => true,
+                'upcoming_summary_days' => 20,
                 'message_template' => TelegramKaskoNotificationSetting::defaultMessageTemplate(),
             ]
         );
@@ -114,9 +120,11 @@ class TelegramKaskoNotificationApiController extends BaseApiController
     {
         return [
             'is_enabled' => (bool) $setting->is_enabled,
+            'upcoming_summary_enabled' => $setting->upcoming_summary_enabled ?? true,
+            'upcoming_summary_days' => $setting->upcoming_summary_days ?? 20,
             'has_bot_token' => filled($setting->bot_token),
             'chat_id' => $setting->chat_id,
-            'reminder_days' => $setting->reminder_days ?: [10, 15, 20],
+            'reminder_days' => $setting->reminder_days ?: [1, 3, 7, 10, 15, 20],
             'message_template' => $setting->message_template ?: TelegramKaskoNotificationSetting::defaultMessageTemplate(),
         ];
     }

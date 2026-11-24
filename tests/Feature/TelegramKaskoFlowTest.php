@@ -25,12 +25,13 @@ class TelegramKaskoFlowTest extends TestCase
         DB::statement('CREATE TABLE subscriptions (id INTEGER PRIMARY KEY, company_id INTEGER, status TEXT, ends_at TEXT)');
         DB::statement('CREATE TABLE vehicles (id INTEGER PRIMARY KEY, company_id INTEGER, plate TEXT, kasko_end_date TEXT, is_active INTEGER, deleted_at TEXT)');
         DB::statement('CREATE TABLE documents (id INTEGER PRIMARY KEY, company_id INTEGER, documentable_id INTEGER, documentable_type TEXT, document_type TEXT, start_date TEXT, end_date TEXT, archived_at TEXT, created_at TEXT, file_path TEXT)');
-        DB::statement('CREATE TABLE telegram_kasko_notification_settings (id INTEGER PRIMARY KEY, company_id INTEGER, is_enabled INTEGER, bot_token TEXT, chat_id TEXT, reminder_days TEXT, last_telegram_update_id INTEGER, created_at TEXT, updated_at TEXT)');
+        DB::statement('CREATE TABLE telegram_kasko_notification_settings (id INTEGER PRIMARY KEY, company_id INTEGER, is_enabled INTEGER, upcoming_summary_enabled INTEGER, upcoming_summary_days INTEGER, bot_token TEXT, chat_id TEXT, reminder_days TEXT, last_telegram_update_id INTEGER, last_upcoming_summary_date TEXT, created_at TEXT, updated_at TEXT)');
         DB::statement('CREATE TABLE telegram_kasko_notification_logs (id INTEGER PRIMARY KEY, company_id INTEGER, vehicle_id INTEGER, kasko_end_date TEXT, reminder_day INTEGER, telegram_message_id TEXT, sent_at TEXT, created_at TEXT, updated_at TEXT)');
         DB::table('companies')->insert(['id' => 1, 'name' => 'Test', 'is_active' => 1, 'license_expires_at' => '2099-01-01']);
         $this->setting = TelegramKaskoNotificationSetting::create([
             'company_id' => 1, 'bot_token' => 'test-token', 'chat_id' => '-12345678901',
             'reminder_days' => [10], 'is_enabled' => true,
+            'upcoming_summary_enabled' => false, 'upcoming_summary_days' => 20,
         ]);
         Http::preventStrayRequests();
         Http::fake(['*/sendMessage' => Http::response(['ok' => true, 'result' => ['message_id' => 1]]),
@@ -146,6 +147,28 @@ class TelegramKaskoFlowTest extends TestCase
         $this->assertSame(0, $service->sendScheduledNotifications());
     }
 
+    public function test_daily_summary_lists_every_uploaded_policy_ending_within_the_configured_window_once(): void
+    {
+        $this->setting->update(['upcoming_summary_enabled' => true, 'upcoming_summary_days' => 20]);
+        $this->document($this->vehicle('ONE-DAY'), 1, ['start_date' => '2026-01-01']);
+        $this->document($this->vehicle('TWENTY-DAY'), 20, ['start_date' => '2026-02-01']);
+        $this->document($this->vehicle('OUTSIDE-WINDOW'), 21);
+        $this->document($this->vehicle('NO-FILE'), 5, ['file_path' => null]);
+        $this->document($this->vehicle('INACTIVE', ['is_active' => 0]), 5);
+
+        $service = app(TelegramKaskoNotificationService::class);
+        $this->assertSame(1, $service->sendScheduledNotifications());
+        $message = Http::recorded()->last()[0]['text'];
+        foreach (['20 GÜN İÇİNDE BİTECEK KASKOLAR', 'Toplam: <b>2 araç</b>', 'ONE-DAY', 'TWENTY-DAY', '1 gün kaldı', '20 gün kaldı'] as $value) {
+            $this->assertStringContainsString($value, $message);
+        }
+        foreach (['OUTSIDE-WINDOW', 'NO-FILE', 'INACTIVE'] as $value) {
+            $this->assertStringNotContainsString($value, $message);
+        }
+        $this->assertSame(today()->toDateString(), $this->setting->refresh()->last_upcoming_summary_date->toDateString());
+        $this->assertSame(0, $service->sendScheduledNotifications());
+    }
+
     public function test_telegram_registers_the_subdirectory_callback_with_a_secret(): void
     {
         config(['app.url' => 'https://fleet.example/app']);
@@ -190,17 +213,15 @@ class TelegramKaskoFlowTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_calendar_uses_the_latest_kasko_record_then_falls_back_to_the_vehicle_field(): void
+    public function test_calendar_falls_back_to_the_vehicle_field_but_automation_requires_an_uploaded_kasko_document(): void
     {
         $fallback = today()->addDays(10)->toDateString();
         $id = $this->vehicle('CALENDAR', ['kasko_end_date' => $fallback]);
-        $this->document($id, -10);
-        $this->document($id, 0, ['end_date' => null, 'created_at' => today()->toDateTimeString()]);
         $this->document($id, 30, ['document_type' => 'Sigorta']);
         $this->assertSame($fallback, Vehicle::findOrFail($id)->kaskoExpiryDate()->toDateString());
         $service = app(TelegramKaskoNotificationService::class);
-        $this->assertSame(1, $service->sendScheduledNotifications());
-        $this->document($id, 40, ['archived_at' => today()]);
+        $this->assertSame(0, $service->sendScheduledNotifications());
+        $this->document($id, 40);
         $this->assertSame(today()->addDays(40)->toDateString(), Vehicle::findOrFail($id)->kaskoExpiryDate()->toDateString());
         $this->assertSame(0, $service->sendScheduledNotifications());
     }

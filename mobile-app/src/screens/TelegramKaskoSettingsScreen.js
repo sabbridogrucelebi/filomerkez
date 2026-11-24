@@ -35,7 +35,9 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
     const [botToken, setBotToken] = useState('');
     const [hasBotToken, setHasBotToken] = useState(false);
     const [chatId, setChatId] = useState('');
-    const [reminderDays, setReminderDays] = useState('10, 15, 20');
+    const [reminderDays, setReminderDays] = useState('20, 15, 10, 7, 3, 1');
+    const [upcomingSummaryEnabled, setUpcomingSummaryEnabled] = useState(true);
+    const [upcomingSummaryDays, setUpcomingSummaryDays] = useState('20');
     const [messageTemplate, setMessageTemplate] = useState(DEFAULT_TEMPLATE);
 
     const canManage = hasPermission('telegram.manage');
@@ -52,7 +54,9 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                 setIsEnabled(!!settings.is_enabled);
                 setHasBotToken(!!settings.has_bot_token);
                 setChatId(settings.chat_id || '');
-                setReminderDays((settings.reminder_days || [10, 15, 20]).join(', '));
+                setReminderDays((settings.reminder_days || [20, 15, 10, 7, 3, 1]).join(', '));
+                setUpcomingSummaryEnabled(settings.upcoming_summary_enabled !== false);
+                setUpcomingSummaryDays(String(settings.upcoming_summary_days || 20));
                 setMessageTemplate(settings.message_template || DEFAULT_TEMPLATE);
             }
         } catch (error) {
@@ -91,6 +95,11 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
             Alert.alert('Uyarı Metni', 'Uyarı metni boş bırakılamaz.');
             return;
         }
+        const summaryDays = Number(upcomingSummaryDays);
+        if (!Number.isInteger(summaryDays) || summaryDays < 1 || summaryDays > 365) {
+            Alert.alert('Günlük özet', 'Özet penceresi 1 ile 365 gün arasında olmalıdır.');
+            return;
+        }
 
         setSaving(true);
         try {
@@ -98,6 +107,8 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                 is_enabled: isEnabled,
                 chat_id: chatId.trim(),
                 reminder_days: days,
+                upcoming_summary_enabled: upcomingSummaryEnabled,
+                upcoming_summary_days: summaryDays,
                 message_template: messageTemplate,
             };
             if (botToken.trim()) payload.bot_token = botToken.trim();
@@ -106,7 +117,9 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
             const settings = response.data?.data?.settings;
             setHasBotToken(!!settings?.has_bot_token);
             setBotToken('');
-            setReminderDays((settings?.reminder_days || days).join(', '));
+                setReminderDays((settings?.reminder_days || days).join(', '));
+                setUpcomingSummaryEnabled(settings?.upcoming_summary_enabled !== false);
+                setUpcomingSummaryDays(String(settings?.upcoming_summary_days || summaryDays));
             Alert.alert('Başarılı', 'Telegram kasko bildirim ayarları kaydedildi.');
         } catch (error) {
             const errors = error.response?.data?.errors;
@@ -179,8 +192,16 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                     <View style={styles.card}>
                         <View style={styles.sectionTitleRow}><Text style={styles.sectionEmoji}>⏰</Text><View><Text style={styles.sectionTitle}>Uyarı günleri</Text><Text style={styles.sectionDescription}>Virgülle istediğiniz kadar gün ekleyin.</Text></View></View>
                         <Text style={styles.inputLabel}>KALAN GÜNLER</Text>
-                        <TextInput value={reminderDays} onChangeText={setReminderDays} editable={canManage} keyboardType="numbers-and-punctuation" placeholder="10, 15, 20" placeholderTextColor="#94A3B8" style={styles.input} />
-                        <Text style={styles.helpText}>Örn: 30, 20, 15, 10, 0 • Süresi bitince belge yenilenmediyse sistem 1. ve 5. gün otomatik uyarır.</Text>
+                        <TextInput value={reminderDays} onChangeText={setReminderDays} editable={canManage} keyboardType="numbers-and-punctuation" placeholder="20, 15, 10, 7, 3, 1" placeholderTextColor="#94A3B8" style={styles.input} />
+                        <Text style={styles.helpText}>Önerilen: 20, 15, 10, 7, 3, 1 • Süresi bitince belge yenilenmediyse sistem 1. ve 5. gün otomatik uyarır.</Text>
+                    </View>
+
+                    <View style={styles.card}>
+                        <View style={styles.sectionTitleRow}><Text style={styles.sectionEmoji}>📋</Text><View><Text style={styles.sectionTitle}>Günlük yaklaşan kasko özeti</Text><Text style={styles.sectionDescription}>Her gün 09:00'da yaklaşan tüm poliçeler tek mesajda listelenir.</Text></View></View>
+                        <View style={styles.switchRow}><View style={{ flex: 1 }}><Text style={styles.switchTitle}>Günlük özeti etkinleştir</Text><Text style={styles.switchDescription}>Aynı gün içinde bir kez gönderilir.</Text></View><Switch value={upcomingSummaryEnabled} onValueChange={setUpcomingSummaryEnabled} disabled={!canManage} trackColor={{ false: '#CBD5E1', true: '#22C55E' }} /></View>
+                        <Text style={styles.inputLabel}>ÖZET PENCERESİ</Text>
+                        <TextInput value={upcomingSummaryDays} onChangeText={setUpcomingSummaryDays} editable={canManage} keyboardType="number-pad" placeholder="20" placeholderTextColor="#94A3B8" style={styles.input} />
+                        <Text style={styles.helpText}>Örneğin 20 yazarsanız, bitişine 0–20 gün kalan kaskolar her gün tek özet mesajda gelir.</Text>
                     </View>
 
                     <View style={styles.card}>

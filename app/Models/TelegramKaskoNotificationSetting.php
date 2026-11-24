@@ -12,15 +12,21 @@ class TelegramKaskoNotificationSetting extends Model
     protected $fillable = [
         'company_id',
         'is_enabled',
+        'upcoming_summary_enabled',
+        'upcoming_summary_days',
         'bot_token',
         'chat_id',
         'reminder_days',
         'message_template',
         'last_telegram_update_id',
+        'last_upcoming_summary_date',
     ];
 
     protected $casts = [
         'is_enabled' => 'boolean',
+        'upcoming_summary_enabled' => 'boolean',
+        'upcoming_summary_days' => 'integer',
+        'last_upcoming_summary_date' => 'date',
         'bot_token' => 'encrypted',
         'chat_id' => 'encrypted',
         'reminder_days' => 'array',

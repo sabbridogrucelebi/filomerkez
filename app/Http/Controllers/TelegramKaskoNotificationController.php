@@ -29,6 +29,7 @@ class TelegramKaskoNotificationController extends Controller
                 'database/migrations/2026_11_23_100000_create_telegram_kasko_notification_settings_table.php',
                 'database/migrations/2026_11_23_100100_make_telegram_kasko_reminder_day_signed.php',
                 'database/migrations/2026_11_23_100200_add_last_telegram_update_id_to_kasko_settings.php',
+                'database/migrations/2026_11_24_090000_add_upcoming_summary_to_telegram_kasko_settings.php',
             ] as $path) {
                 Artisan::call('migrate', ['--force' => true, '--path' => $path]);
                 $outputs[] = trim(Artisan::output());
@@ -60,6 +61,8 @@ class TelegramKaskoNotificationController extends Controller
         $setting = $this->setting($company->id);
         $validated = $request->validate([
             'is_enabled' => ['nullable', 'boolean'],
+            'upcoming_summary_enabled' => ['nullable', 'boolean'],
+            'upcoming_summary_days' => ['nullable', 'integer', 'min:1', 'max:365'],
             'bot_token' => ['nullable', 'string', 'max:255'],
             'chat_id' => ['nullable', 'string', 'max:100'],
             'reminder_days_text' => ['required', 'string', 'max:500'],
@@ -79,6 +82,8 @@ class TelegramKaskoNotificationController extends Controller
 
         $setting->fill([
             'is_enabled' => $isEnabled,
+            'upcoming_summary_enabled' => $request->boolean('upcoming_summary_enabled'),
+            'upcoming_summary_days' => $validated['upcoming_summary_days'] ?? 20,
             'reminder_days' => $days,
             'message_template' => $validated['message_template'],
         ]);
@@ -142,7 +147,9 @@ class TelegramKaskoNotificationController extends Controller
         return TelegramKaskoNotificationSetting::firstOrNew(
             ['company_id' => $companyId],
             [
-                'reminder_days' => [10, 15, 20],
+                'reminder_days' => [1, 3, 7, 10, 15, 20],
+                'upcoming_summary_enabled' => true,
+                'upcoming_summary_days' => 20,
                 'message_template' => TelegramKaskoNotificationSetting::defaultMessageTemplate(),
             ]
         );
