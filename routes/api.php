@@ -23,6 +23,8 @@ use App\Http\Controllers\Api\TripController;
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/telegram-kasko/incoming/{id}', \App\Http\Controllers\TelegramKaskoWebhookController::class)
     ->whereNumber('id')->name('telegram-kasko.receive');
+Route::post('/telegram-imm/incoming/{id}', \App\Http\Controllers\TelegramImmWebhookController::class)
+    ->whereNumber('id')->name('telegram-imm.receive');
 
 Route::middleware(['auth:sanctum', \App\Http\Middleware\CheckCompanyStatus::class])->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
@@ -135,6 +137,8 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckCompa
     Route::post('/telegram-kasko-settings/test', [\App\Http\Controllers\Api\V1\TelegramKaskoNotificationApiController::class, 'sendTest'])
         ->middleware('permission:telegram.manage');
     Route::post('/telegram-kasko-settings/connect', [\App\Http\Controllers\Api\V1\TelegramKaskoNotificationApiController::class, 'connect'])
+        ->middleware(['permission:telegram.manage', 'throttle:6,1']);
+    Route::post('/telegram-kasko-settings/bots/imm/connect', [\App\Http\Controllers\Api\V1\TelegramKaskoNotificationApiController::class, 'connectImm'])
         ->middleware(['permission:telegram.manage', 'throttle:6,1']);
     Route::put('/telegram-kasko-settings/bots/{channel}', [\App\Http\Controllers\Api\V1\TelegramKaskoNotificationApiController::class, 'updateChannel'])
         ->middleware('permission:telegram.manage');

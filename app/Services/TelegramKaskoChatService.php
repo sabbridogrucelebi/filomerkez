@@ -73,17 +73,7 @@ class TelegramKaskoChatService
         if (!$setting->hasCredentials()) {
             throw new RuntimeException('Önce bot anahtarını ve grup kimliğini kaydedin.');
         }
-        $base = rtrim(config('app.url'), '/');
-        if (parse_url($base, PHP_URL_SCHEME) !== 'https' || !parse_url($base, PHP_URL_HOST)) {
-            // cPanel kurulumunun dış adresi sabittir; istemciden gelen adresi Telegram'a aktarmayın.
-            if (request()->getHost() !== 'mehmetcelebiturizm.com') {
-                throw new RuntimeException('Sunucuda APP_URL, Filo Merkez’in tam HTTPS adresi olmalı.');
-            }
-            $base = 'https://mehmetcelebiturizm.com/app';
-        } elseif (!parse_url($base, PHP_URL_PATH)) {
-            $base .= rtrim(request()->getBaseUrl(), '/');
-        }
-        $url = $base . route('telegram-kasko.receive', $setting->id, false);
+        $url = TelegramWebhookAddress::forRoute('telegram-kasko.receive', $setting->id);
         $bot = 'https://api.telegram.org/bot' . $setting->bot_token;
         try {
             $info = Http::timeout(10)->get($bot . '/getWebhookInfo');

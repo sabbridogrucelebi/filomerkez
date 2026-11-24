@@ -169,7 +169,11 @@
                 </form>
                 <p class="mt-3 text-xs text-slate-600">Grup komutları · kaskolu araçlarım · süresi geçenler · kaskosu olmayan araçlar</p>
             @elseif($isImm && $configured)
-                <p class="mt-5 border-t border-slate-200 pt-4 text-sm text-slate-700">İMM grubuna <code class="font-bold">kontrol</code> yazın. Bot, yaklaşan her poliçe için ayrı bir mesaj gönderir. BotFather’da <b>Group Privacy</b> ayarını kapatıp botu gruba yeniden ekleyin.</p>
+                <form class="mt-5 border-t border-slate-200 pt-5" method="POST" action="{{ route('telegram-kasko.imm.connect') }}">
+                    @csrf
+                    <button type="submit" class="tg-action">Grup komutlarını bağla</button>
+                </form>
+                <p class="mt-3 text-sm text-slate-700">Bağlantıdan sonra İMM grubuna <code class="font-bold">kontrol</code> yazın. Grup gizliliği açıksa bağlantı ekranı botun kullanıcı adıyla yazabileceğiniz komutu gösterir.</p>
             @endif
         @endif
     </section>

@@ -8,6 +8,7 @@ use App\Models\TelegramKaskoNotificationLog;
 use App\Services\TelegramAlertBotSettings;
 use App\Services\TelegramAlertSchedule;
 use App\Services\TelegramFleetAlertService;
+use App\Services\TelegramImmChatService;
 use App\Services\TelegramSendCooldown;
 use App\Services\TelegramKaskoNotificationService;
 use App\Services\TelegramKaskoChatService;
@@ -150,6 +151,17 @@ class TelegramKaskoNotificationController extends Controller
             return back()->with('error', $exception->getMessage());
         }
         return back()->with('success', 'Telegram grup bağlantısını kabul etti. Gruba “kaskosu olmayan araçlar” yazın.');
+    }
+
+    public function connectImm(TelegramAlertBotSettings $bots, TelegramImmChatService $chat): RedirectResponse
+    {
+        $bot = $bots->bot($this->company()->id, 'imm');
+        $page = redirect()->route('telegram-kasko.index', ['channel' => 'imm']);
+        try {
+            return $page->with('success', $chat->connectGroup($bot));
+        } catch (\RuntimeException $exception) {
+            return $page->with('error', $exception->getMessage());
+        }
     }
 
     public function updateChannel(Request $request, string $channel, TelegramAlertBotSettings $bots): RedirectResponse

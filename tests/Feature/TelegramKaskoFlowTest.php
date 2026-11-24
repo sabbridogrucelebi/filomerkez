@@ -446,6 +446,56 @@ class TelegramKaskoFlowTest extends TestCase
         Http::assertSent(fn (Request $request) => str_contains($request->url(), '/getUpdates?') && str_contains($request->url(), 'offset=103'));
     }
 
+    public function test_imm_group_connection_verifies_the_bot_and_routes_signed_webhook_commands(): void
+    {
+        (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
+        $this->travelTo(now('Europe/Istanbul')->setDate(2026, 11, 24)->setTime(11, 50));
+        config(['app.url' => 'https://fleet.example/app']);
+        $bot = TelegramAlertBot::create(['company_id' => 1, 'channel' => 'imm', 'bot_token' => '124:demo', 'chat_id' => '-555']);
+        $this->document($this->vehicle('IMM-IMMEDIATE'), 3, ['document_type' => 'İMM Poliçesi', 'start_date' => null]);
+        Http::fake([
+            '*/getMe' => Http::response(['ok' => true, 'result' => ['id' => 124, 'username' => 'CelebiImmBot', 'can_read_all_group_messages' => false]]),
+            '*/getChatMember*' => Http::response(['ok' => true, 'result' => ['status' => 'member']]),
+        ]);
+
+        $chat = app(TelegramImmChatService::class);
+        $this->assertStringContainsString('/kontrol@CelebiImmBot', $chat->connectGroup($bot));
+        Http::assertSent(fn (Request $request) => str_contains($request->url(), '/getChatMember?')
+            && str_contains($request->url(), 'chat_id=-555') && str_contains($request->url(), 'user_id=124'));
+        Http::assertSent(fn (Request $request) => str_ends_with($request->url(), '/setWebhook')
+            && $request['url'] === 'https://fleet.example/app/api/telegram-imm/incoming/' . $bot->id
+            && $request['secret_token'] === $chat->webhookSecret($bot));
+
+        $url = '/api/telegram-imm/incoming/' . $bot->id;
+        $headers = ['X-Telegram-Bot-Api-Secret-Token' => $chat->webhookSecret($bot)];
+        $update = ['update_id' => 300, 'message' => ['text' => '/kontrol@CelebiImmBot', 'chat' => ['id' => -555, 'type' => 'group']]];
+        $this->postJson($url, $update)->assertForbidden();
+        $this->postJson($url, $update, ['X-Telegram-Bot-Api-Secret-Token' => str_repeat('0', 64)])->assertForbidden();
+        $this->postJson($url, array_replace_recursive($update, ['message' => ['text' => '/kontrol@AnotherBot']]), $headers)->assertNoContent();
+        $this->postJson($url, array_replace_recursive($update, ['message' => ['chat' => ['id' => -666]]]), $headers)->assertNoContent();
+        $this->postJson($url, $update, $headers)->assertNoContent();
+        $this->postJson($url, $update, $headers)->assertNoContent();
+        $this->assertSame(0, $chat->processIncomingCommands());
+        $this->assertCount(1, Http::recorded(fn (Request $request) => str_ends_with($request->url(), '/sendMessage')));
+        Http::assertNotSent(fn (Request $request) => str_contains($request->url(), '/getUpdates'));
+    }
+
+    public function test_imm_group_connection_reports_a_bot_outside_the_group_without_registering_a_webhook(): void
+    {
+        (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
+        config(['app.url' => 'https://fleet.example/app']);
+        $this->withoutMiddleware()->actingAs(new User(['company_id' => 1, 'role' => 'company_admin']));
+        TelegramAlertBot::create(['company_id' => 1, 'channel' => 'imm', 'bot_token' => '124:demo', 'chat_id' => '-555']);
+        Http::fake([
+            '*/getMe' => Http::response(['ok' => true, 'result' => ['id' => 124, 'username' => 'CelebiImmBot']]),
+            '*/getChatMember*' => Http::response(['ok' => true, 'result' => ['status' => 'left']]),
+        ]);
+
+        $this->postJson('/api/v1/telegram-kasko-settings/bots/imm/connect')->assertStatus(422)
+            ->assertJsonPath('message', 'Telegram İMM botunun gruba üye olduğunu ve mesaj gönderebildiğini doğrulayamadı. Grup kimliğini ve botun grup üyeliğini kontrol edin.');
+        Http::assertNotSent(fn (Request $request) => str_ends_with($request->url(), '/setWebhook'));
+    }
+
     public function test_telegram_control_resumes_after_a_rate_limit_without_duplicating_vehicle_messages(): void
     {
         (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
