@@ -1,173 +1,149 @@
 @extends('layouts.app')
-
-@section('title', 'Telegram Kasko Uyarıları')
-@section('subtitle', 'BOT BİLDİRİM OTOMASYONU')
+@section('title', 'Telegram Uyarıları')
+@section('subtitle', 'FİLO MERKEZ')
 
 @section('content')
 @php
-    $reminderDaysText = old('reminder_days_text', implode(', ', $setting->reminder_days ?: [1, 3, 7, 10, 15, 20]));
+    $cards = ['kasko' => [
+        'label' => 'Kasko', 'icon' => '🛡️', 'kind' => 'date', 'description' => 'Kasko poliçesi bitişi',
+        'is_enabled' => $setting->is_enabled, 'has_bot_token' => $hasBotToken,
+        'chat_id' => $setting->chat_id, 'reminder_days' => $setting->reminder_days ?: \App\Services\TelegramAlertSchedule::DEFAULT_DAYS,
+        'last_sent_at' => $kaskoLastSent,
+    ]] + $channels;
+    $active = collect($cards)->filter(fn ($bot) => $bot['is_enabled'] && $bot['has_bot_token'] && filled($bot['chat_id']))->count();
+    $card = $cards[$selectedChannel];
+    $isKasko = $selectedChannel === 'kasko';
+    $configured = $card['has_bot_token'] && filled($card['chat_id']);
 @endphp
 
-<div class="mx-auto w-full max-w-6xl space-y-6 p-1">
+<style>
+    .tg-hero { background:radial-gradient(ellipse at 84% 10%,#164e78,transparent 52%),linear-gradient(135deg,#142542,#0b152b); }
+    .tg-orbit { position:absolute; right:clamp(1rem,8vw,7rem); top:50%; width:9rem; height:9rem; margin-top:-4.5rem; display:grid; place-items:center; perspective:500px; }
+    .tg-orbit::before,.tg-orbit::after { content:""; position:absolute; inset:0; border:1px solid #91d8ff70; border-radius:40%; transform:rotateX(56deg) rotateZ(-26deg); }
+    .tg-orbit::after { inset:-.8rem; border-color:#6dbcfe40; transform:rotateX(66deg) rotateZ(36deg); }
+    .tg-orbit span { z-index:1; width:4.5rem; height:4.5rem; display:grid; place-items:center; border:1px solid #b6e6ff9c; border-radius:1.5rem; background:linear-gradient(145deg,#77d6fb,#287ae3 72%); box-shadow:0 .5rem 0 #174587,0 1.45rem 2rem #07142d99; animation:tg-float 5s ease-in-out infinite; }
+    @keyframes tg-float { 0%,100% { transform:translateY(2px) rotateX(15deg) rotateY(-18deg); } 50% { transform:translateY(-10px) rotateX(5deg) rotateY(8deg); } }
+    .tg-card { transition:transform .22s ease,box-shadow .22s ease; }
+    .tg-icon { box-shadow:0 3px 0 #cee2ef,0 6px 12px #0c4a6e14; }
+    @media(hover:hover) { .tg-card:hover { transform:perspective(650px) translateY(-3px) rotateX(5deg); box-shadow:0 10px 24px #1742671b; } }
+    @media(max-width:560px) { .tg-orbit { right:-1.5rem; opacity:.34; scale:.7; } }
+    @media(prefers-reduced-motion:reduce) { .tg-card { transition:none; } .tg-card:hover { transform:none; } .tg-orbit span { animation:none; } }
+</style>
+
+<div class="mx-auto max-w-6xl space-y-6 p-1">
     @if(session('success'))
-        <div class="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-emerald-800">
-            <span class="text-xl">✅</span><p class="text-sm font-bold">{{ session('success') }}</p>
+        <p role="status" class="rounded-xl bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-800">{{ session('success') }}</p>
+    @endif
+    @if(session('error') || $errors->any())
+        <div role="alert" class="rounded-xl bg-rose-50 px-5 py-3 text-sm font-semibold text-rose-800">
+            @if(session('error')) <p>{{ session('error') }}</p> @endif
+            @foreach($errors->all() as $error) <p>{{ $error }}</p> @endforeach
         </div>
     @endif
-    @if(session('error'))
-        <div class="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-rose-800">
-            <span class="text-xl">⚠️</span><p class="text-sm font-bold">{{ session('error') }}</p>
+
+    <section class="tg-hero relative overflow-hidden rounded-[30px] px-6 py-9 text-white shadow-xl sm:px-9">
+        <div class="tg-orbit" aria-hidden="true"><span class="text-4xl">✈</span></div>
+        <div class="relative max-w-md">
+            <p class="text-sm font-bold text-sky-200">{{ $company->name }}</p>
+            <h2 class="mt-2 text-3xl font-black tracking-tight">Telegram Uyarı Merkezi</h2>
+            <p class="mt-4 text-sm font-semibold text-slate-200">{{ $active }} / {{ count($cards) }} bot etkin · Her gün {{ $schedule_time }} Türkiye saati</p>
         </div>
-    @endif
+    </section>
 
-    <div class="overflow-hidden rounded-[32px] bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-700 p-[1px] shadow-xl shadow-blue-200/60">
-        <div class="relative overflow-hidden rounded-[31px] bg-slate-950 px-7 py-8 text-white sm:px-10">
-            <div class="absolute -right-12 -top-16 h-56 w-56 rounded-full bg-sky-400/20 blur-3xl"></div>
-            <div class="absolute -bottom-20 left-1/3 h-48 w-48 rounded-full bg-indigo-400/20 blur-3xl"></div>
-            <div class="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-                <div class="flex items-center gap-5">
-                    <div class="flex h-16 w-16 items-center justify-center rounded-3xl border border-white/20 bg-white/10 text-4xl shadow-2xl">✈️</div>
-                    <div>
-                        <div class="mb-2 flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full {{ $setting->is_enabled ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500' }}"></span><span class="text-[10px] font-black uppercase tracking-[0.24em] text-sky-200">{{ $setting->is_enabled ? 'Aktif otomasyon' : 'Otomasyon beklemede' }}</span></div>
-                        <h2 class="text-2xl font-black tracking-tight">Telegram Kasko Asistanı</h2>
-                        <p class="mt-1 text-sm font-medium text-slate-300">Kasko bitiş tarihlerinde seçtiğiniz günlerde şık araç detaylarıyla otomatik bildirim gönderir.</p>
-                    </div>
-                </div>
-                <div class="rounded-2xl border border-white/10 bg-white/10 px-5 py-4 backdrop-blur">
-                    <p class="text-[10px] font-black uppercase tracking-widest text-sky-200">Firma</p>
-                    <p class="mt-1 text-sm font-extrabold">{{ $company->name }}</p>
-                    <p class="mt-1 text-xs text-slate-300">Her gün 09:00'da kontrol edilir.</p>
-                </div>
+    <nav aria-label="Uyarı türleri" class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+        @foreach($cards as $key => $item)
+            @php($connected = $item['has_bot_token'] && filled($item['chat_id']))
+            <a class="tg-card rounded-2xl border px-4 py-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-700 {{ $selectedChannel === $key ? 'border-sky-500 bg-sky-50 ring-1 ring-sky-500' : 'border-slate-200 bg-white shadow-sm' }}"
+                href="{{ route('telegram-kasko.index', ['channel' => $key]) }}#bot-settings"
+                @if($selectedChannel === $key) aria-current="page" @endif>
+                <span aria-hidden="true" class="tg-icon inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white text-xl">{{ $item['icon'] }}</span>
+                <span class="mt-3 block text-sm font-black text-slate-900">{{ $item['label'] }}</span>
+                <span class="mt-1 block text-xs font-bold {{ $connected && $item['is_enabled'] ? 'text-emerald-700' : 'text-slate-500' }}">
+                    {{ $connected ? ($item['is_enabled'] ? 'Etkin' : 'Kapalı') : 'Kurulum gerekli' }}
+                </span>
+            </a>
+        @endforeach
+    </nav>
+
+    <section id="bot-settings" class="scroll-mt-6 rounded-[26px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <header class="mb-5 flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <h2 class="text-xl font-black text-slate-900">{{ $card['icon'] }} {{ $card['label'] }}</h2>
+                <p class="mt-1 text-sm text-slate-600">{{ $card['description'] }}</p>
             </div>
-        </div>
-    </div>
+            @if($card['last_sent_at'])
+                <p class="rounded-full bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700">Son otomatik uyarı · {{ \Carbon\Carbon::parse($card['last_sent_at'])->format('d.m.Y H:i') }}</p>
+            @endif
+        </header>
 
-    <div class="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
-        <form method="POST" action="{{ route('telegram-kasko.update') }}" class="space-y-6">
-            @csrf
-            @method('PUT')
-
-            <section class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-                <div class="mb-7 flex items-start gap-4">
-                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-xl">🤖</div>
-                    <div>
-                        <h3 class="text-lg font-black text-slate-900">Bot bağlantısı</h3>
-                        <p class="mt-1 text-sm font-medium text-slate-500">BotFather'dan aldığınız anahtarı ve mesajın gönderileceği sohbet/grup kimliğini girin.</p>
-                    </div>
-                </div>
-
-                <label class="mb-5 flex cursor-pointer items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
-                    <span><span class="block text-sm font-extrabold text-slate-800">Otomatik uyarıları etkinleştir</span><span class="mt-1 block text-xs font-medium text-slate-500">Bireysel uyarılar ve günlük yaklaşan kasko özeti birlikte çalışır.</span></span>
-                    <span class="relative inline-flex items-center">
-                        <input type="checkbox" name="is_enabled" value="1" class="peer sr-only" {{ old('is_enabled', $setting->is_enabled) ? 'checked' : '' }}>
-                        <span class="h-7 w-12 rounded-full bg-slate-300 transition peer-checked:bg-emerald-500 after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-5"></span>
-                    </span>
+        @if(!$isKasko && !$fleet_ready)
+            <p class="rounded-xl bg-amber-50 p-4 text-sm font-semibold text-amber-900">Botu kurmak için önce <a class="underline" href="{{ route('telegram-kasko.migrate') }}">Telegram veritabanını güncelleyin</a>.</p>
+        @else
+            <form method="POST" action="{{ $isKasko ? route('telegram-kasko.update') : route('telegram-kasko.bots.update', ['channel' => $selectedChannel]) }}" class="space-y-5">
+                @csrf
+                @method('PUT')
+                <input type="hidden" name="is_enabled" value="0">
+                <label class="flex w-fit cursor-pointer items-center gap-3 rounded-xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-800">
+                    <input type="checkbox" name="is_enabled" value="1" class="rounded text-sky-700" @checked(old('is_enabled', $card['is_enabled']))>
+                    Otomatik uyarılar etkin
                 </label>
-                @error('is_enabled')<p class="mb-4 text-xs font-bold text-rose-600">{{ $message }}</p>@enderror
-
-                <div class="grid gap-5 sm:grid-cols-2">
-                    <div>
-                        <label for="bot_token" class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-600">Bot anahtarı</label>
-                        <input id="bot_token" name="bot_token" type="password" autocomplete="new-password" placeholder="{{ $hasBotToken ? 'Kayıtlı — değiştirmek için yeni anahtarı yazın' : '123456:ABC-DEF...' }}" class="w-full rounded-xl border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:border-sky-500 focus:ring-sky-500">
-                        @error('bot_token')<p class="mt-1 text-xs font-bold text-rose-600">{{ $message }}</p>@enderror
-                    </div>
-                    <div>
-                        <label for="chat_id" class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-600">Sohbet / grup kimliği</label>
-                        <input id="chat_id" name="chat_id" value="{{ old('chat_id', $setting->chat_id) }}" placeholder="Örn: -1001234567890" class="w-full rounded-xl border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:border-sky-500 focus:ring-sky-500">
-                        @error('chat_id')<p class="mt-1 text-xs font-bold text-rose-600">{{ $message }}</p>@enderror
-                    </div>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <label class="block text-sm font-bold text-slate-800">Bot anahtarı
+                        <input type="password" name="bot_token" autocomplete="new-password" maxlength="255" class="mt-2 w-full rounded-xl border-slate-300" placeholder="{{ $card['has_bot_token'] ? 'Kayıtlı · Yeni anahtarla değiştir' : 'BotFather anahtarı' }}">
+                    </label>
+                    <label class="block text-sm font-bold text-slate-800">Sohbet / grup kimliği
+                        <input type="text" name="chat_id" maxlength="100" class="mt-2 w-full rounded-xl border-slate-300" value="{{ old('chat_id', $card['chat_id']) }}" placeholder="Örn. -1001234567890">
+                    </label>
                 </div>
-            </section>
+                @if($card['kind'] === 'date')
+                    <label class="block text-sm font-bold text-slate-800">Kalan gün eşikleri
+                        <input type="text" required maxlength="500" name="reminder_days_text" class="mt-2 w-full rounded-xl border-slate-300" value="{{ old('reminder_days_text', implode(', ', $card['reminder_days'])) }}">
+                        <span class="mt-2 block text-xs font-medium text-slate-600">Günleri virgülle ayırın. Kaçan eşikte sistem geçerli son eşiği bir kez bildirir.</span>
+                    </label>
+                @elseif($card['kind'] === 'maintenance')
+                    <label class="block text-sm font-bold text-slate-800">Bakım uyarı mesafesi (km)
+                        <input type="number" min="0" max="100000" required name="maintenance_km" class="mt-2 block w-36 rounded-xl border-slate-300" value="{{ old('maintenance_km', $card['maintenance_km']) }}">
+                    </label>
+                @else
+                    <p class="text-sm text-slate-600">Bot, bugün ve dün girilen yakıt alımlarındaki km/litre değerini araç için kayıtlı alt sınırla karşılaştırır.</p>
+                @endif
+                @if($isKasko)
+                    <input type="hidden" name="upcoming_summary_enabled" value="0">
+                    <label class="flex cursor-pointer items-start gap-3 rounded-xl bg-slate-100 px-4 py-3 text-sm text-slate-800">
+                        <input type="checkbox" name="upcoming_summary_enabled" value="1" class="mt-1 rounded text-sky-700" @checked(old('upcoming_summary_enabled', $setting->upcoming_summary_enabled ?? true))>
+                        <span><b>Günlük yaklaşan kasko özeti</b><span class="mt-1 block text-xs text-slate-600">En büyük eşik özet aralığını belirler. Yenileme yüklenince yeni bitiş tarihi kullanılır.</span></span>
+                    </label>
+                    <details class="rounded-xl border border-slate-200 p-4" @if($errors->has('message_template')) open @endif>
+                        <summary class="cursor-pointer text-sm font-bold text-slate-800">Mesaj şablonu</summary>
+                        <textarea aria-label="Kasko mesaj şablonu" name="message_template" maxlength="4000" rows="12" class="mt-3 w-full rounded-xl border-slate-300 font-mono text-sm">{{ old('message_template', $setting->message_template ?: \App\Models\TelegramKaskoNotificationSetting::defaultMessageTemplate()) }}</textarea>
+                        <p class="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
+                            @foreach(['company_name', 'days_left', 'kasko_status', 'plate', 'brand_model', 'model_year', 'license_serial_no', 'chassis_no', 'license_owner', 'owner_tax_or_tc_no', 'kasko_end_date'] as $field)
+                                <code>&#123;&#123;{{ $field }}&#125;&#125;</code>
+                            @endforeach
+                        </p>
+                    </details>
+                @endif
+                <button class="rounded-xl bg-sky-700 px-5 py-3 text-sm font-bold text-white hover:bg-sky-800">Ayarları kaydet</button>
+            </form>
 
-            <section class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-                <div class="mb-6 flex items-start gap-4">
-                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-xl">⏰</div>
-                    <div>
-                        <h3 class="text-lg font-black text-slate-900">Uyarı günleri</h3>
-                        <p class="mt-1 text-sm font-medium text-slate-500">Kaskonun bitmesine kaç gün kala mesaj gideceğini yazın. Virgülle birden fazla gün ekleyebilirsiniz.</p>
-                    </div>
+            @if($configured)
+                <div class="mt-5 flex flex-wrap gap-3 border-t border-slate-200 pt-5">
+                    <form method="POST" action="{{ $isKasko ? route('telegram-kasko.test') : route('telegram-kasko.bots.test', ['channel' => $selectedChannel]) }}">
+                        @csrf
+                        <button class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm font-bold text-sky-800">{{ $isKasko ? 'Tek araç test mesajı' : 'Bağlantıyı test et' }}</button>
+                    </form>
+                    @if($isKasko)
+                        <form method="POST" action="{{ route('telegram-kasko.connect') }}">
+                            @csrf
+                            <button class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-800">Grup yanıtlarını bağla</button>
+                        </form>
+                    @endif
                 </div>
-                <label for="reminder_days_text" class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-600">Kalan günler</label>
-                <input id="reminder_days_text" name="reminder_days_text" value="{{ $reminderDaysText }}" inputmode="numeric" placeholder="Örn: 20, 15, 10, 7, 3, 1" class="w-full rounded-xl border-slate-200 px-4 py-3 text-sm font-bold text-slate-800 focus:border-sky-500 focus:ring-sky-500">
-                <p class="mt-2 text-xs font-medium text-slate-400">Önerilen ayar: <b>20, 15, 10, 7, 3, 1</b>. Bu günlerde araç bazlı bildirim gider. Süre bittikten sonra sistem belge yenilenmediyse otomatik olarak <b>1. gün</b> ve son kez <b>5. gün</b> uyarı verir.</p>
-                @error('reminder_days_text')<p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>@enderror
-            </section>
-
-            <section class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-                <div class="mb-6 flex items-start gap-4">
-                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-xl">📋</div>
-                    <div><h3 class="text-lg font-black text-slate-900">Günlük yaklaşan kasko özeti</h3><p class="mt-1 text-sm font-medium text-slate-500">Her gün 09:00'da, seçtiğiniz gün aralığında bitecek tüm aktif poliçeleri tek mesajda listeler.</p></div>
-                </div>
-                <label class="flex cursor-pointer items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
-                    <span><span class="block text-sm font-extrabold text-slate-800">Günlük özeti etkinleştir</span><span class="mt-1 block text-xs font-medium text-slate-500">Aynı gün içinde bir kez gönderilir.</span></span>
-                    <span class="relative inline-flex items-center"><input type="checkbox" name="upcoming_summary_enabled" value="1" class="peer sr-only" {{ old('upcoming_summary_enabled', $setting->upcoming_summary_enabled ?? true) ? 'checked' : '' }}><span class="h-7 w-12 rounded-full bg-slate-300 transition peer-checked:bg-emerald-500 after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-5"></span></span>
-                </label>
-                <label for="upcoming_summary_days" class="mb-2 mt-5 block text-xs font-black uppercase tracking-wider text-slate-600">Özet penceresi</label>
-                <div class="flex items-center gap-3"><input id="upcoming_summary_days" name="upcoming_summary_days" type="number" min="1" max="365" value="{{ old('upcoming_summary_days', $setting->upcoming_summary_days ?? 20) }}" class="w-28 rounded-xl border-slate-200 px-4 py-3 text-sm font-bold text-slate-800 focus:border-sky-500 focus:ring-sky-500"><span class="text-sm font-medium text-slate-500">gün içinde bitecek kaskolar</span></div>
-                @error('upcoming_summary_days')<p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>@enderror
-            </section>
-
-            <section class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-                <div class="mb-6 flex items-start gap-4">
-                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-xl">✨</div>
-                    <div>
-                        <h3 class="text-lg font-black text-slate-900">Premium uyarı metni</h3>
-                        <p class="mt-1 text-sm font-medium text-slate-500">Metni istediğiniz gibi kişiselleştirin. Aşağıdaki alanlar mesaj gönderilirken otomatik doldurulur.</p>
-                    </div>
-                </div>
-                <textarea id="message_template" name="message_template" rows="16" class="w-full rounded-2xl border-slate-200 bg-slate-50 px-4 py-4 font-mono text-sm leading-6 text-slate-800 focus:border-sky-500 focus:ring-sky-500">{{ old('message_template', $setting->message_template ?: \App\Models\TelegramKaskoNotificationSetting::defaultMessageTemplate()) }}</textarea>
-                @error('message_template')<p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>@enderror
-                <div class="mt-4 flex flex-wrap gap-2">
-                    @foreach(['company_name','days_left','kasko_status','plate','brand_model','model_year','license_serial_no','chassis_no','license_owner','owner_tax_or_tc_no','kasko_end_date'] as $field)
-                        <code class="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600">&#123;&#123;{{ $field }}&#125;&#125;</code>
-                    @endforeach
-                </div>
-                <p class="mt-3 text-xs font-medium text-slate-400">Telegram biçimi için <code>&lt;b&gt;kalın&lt;/b&gt;</code> ve <code>&lt;i&gt;italik&lt;/i&gt;</code> kullanabilirsiniz.</p>
-            </section>
-
-            <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 px-6 py-3.5 text-sm font-black text-white shadow-lg shadow-sky-200 transition hover:-translate-y-0.5 hover:shadow-xl">💾 Ayarları Kaydet</button>
-            </div>
-        </form>
-
-        <aside class="space-y-6">
-            <div class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-                <div class="flex items-center gap-3"><span class="text-2xl">🧪</span><h3 class="text-base font-black text-slate-900">Mesajı dene</h3></div>
-                <p class="mt-3 text-sm font-medium leading-6 text-slate-500">Test, yüklü kasko belgesinde bitiş tarihi en yakın aracın mesajını gönderir. Geçerli belge yoksa gruba bağlantı testi gönderilir.</p>
-                <form method="POST" action="{{ route('telegram-kasko.test') }}" class="mt-5">
-                    @csrf
-                    <button type="submit" class="w-full rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-black text-sky-700 transition hover:bg-sky-100">✈️ Test Mesajı Gönder</button>
-                </form>
-                <form method="POST" action="{{ route('telegram-kasko.connect') }}" class="mt-3">
-                    @csrf
-                    <button type="submit" class="w-full rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-black text-white">Grup yanıtlarını bağla</button>
-                </form>
-                <p class="mt-4 text-sm font-black text-slate-900">Telegram grup komutları</p>
-                <ul class="mt-2 space-y-2 text-sm text-slate-600">
-                    <li><b>kaskosu olmayan araçlar</b> — Belgesi eksik, tarihi tanımsız veya poliçesi henüz başlamamış araçlar.</li>
-                    <li><b>süresi geçenler</b> — Kaskosu bitmiş ve yenilenmemiş araçlar.</li>
-                    <li><b>kaskolu araçlarım</b> — Geçerli poliçelerin sayısı, başlangıç ve bitiş tarihleri, kalan günleri.</li>
-                </ul>
-            </div>
-
-            <div class="rounded-[28px] border border-indigo-100 bg-indigo-50/70 p-6">
-                <h3 class="flex items-center gap-2 text-base font-black text-indigo-950"><span>🔐</span> Güvenli bağlantı</h3>
-                <ul class="mt-4 space-y-3 text-sm font-medium leading-6 text-indigo-900/70">
-                    <li>• Bot anahtarı ve sohbet kimliği veritabanında şifreli saklanır.</li>
-                    <li>• Aynı araç için aynı bitiş tarihi ve gün eşiğinde tekrar mesaj gönderilmez.</li>
-                    <li>• Süresi biten kasko için 1. gün ve yeni belge yoksa 5. gün son kez uyarı verilir.</li>
-                </ul>
-            </div>
-
-            <div class="rounded-[28px] bg-slate-900 p-6 text-slate-200 shadow-xl shadow-slate-200">
-                <h3 class="flex items-center gap-2 text-base font-black text-white"><span>📌</span> Kurulum notu</h3>
-                <ol class="mt-4 space-y-3 text-sm font-medium leading-6 text-slate-300">
-                    <li><b class="text-white">1.</b> Telegram'da BotFather ile bir bot oluşturun.</li>
-                    <li><b class="text-white">2.</b> Botu mesajın gideceği grup ya da sohbete ekleyin.</li>
-                    <li><b class="text-white">3.</b> Bot anahtarını ve sohbet kimliğini buraya kaydedip test edin.</li>
-                </ol>
-            </div>
-        </aside>
-    </div>
+                @if($isKasko)
+                    <p class="mt-3 text-xs text-slate-600">Grup komutları · kaskolu araçlarım · süresi geçenler · kaskosu olmayan araçlar</p>
+                @endif
+            @endif
+        @endif
+    </section>
 </div>
 @endsection

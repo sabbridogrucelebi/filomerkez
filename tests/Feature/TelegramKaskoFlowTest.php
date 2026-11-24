@@ -3,10 +3,15 @@
 namespace Tests\Feature;
 
 use App\Models\Fleet\Vehicle;
+use App\Models\TelegramAlertBot;
+use App\Models\TelegramKaskoNotificationLog;
 use App\Models\TelegramKaskoNotificationSetting;
+use App\Services\TelegramAlertBotSettings;
+use App\Services\TelegramFleetAlertService;
 use App\Services\TelegramKaskoChatService;
 use App\Services\TelegramKaskoNotificationService;
 use Illuminate\Http\Client\Request;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -23,7 +28,7 @@ class TelegramKaskoFlowTest extends TestCase
         DB::purge('sqlite');
         DB::statement('CREATE TABLE companies (id INTEGER PRIMARY KEY, name TEXT, is_active INTEGER, license_expires_at TEXT)');
         DB::statement('CREATE TABLE subscriptions (id INTEGER PRIMARY KEY, company_id INTEGER, status TEXT, ends_at TEXT)');
-        DB::statement('CREATE TABLE vehicles (id INTEGER PRIMARY KEY, company_id INTEGER, plate TEXT, brand TEXT, model TEXT, license_owner TEXT, owner_tax_or_tc_no TEXT, kasko_end_date TEXT, is_active INTEGER, deleted_at TEXT)');
+        DB::statement('CREATE TABLE vehicles (id INTEGER PRIMARY KEY, company_id INTEGER, plate TEXT, brand TEXT, model TEXT, license_owner TEXT, owner_tax_or_tc_no TEXT, kasko_end_date TEXT, is_active INTEGER, deleted_at TEXT, inspection_date TEXT, insurance_end_date TEXT, exhaust_date TEXT, min_km_per_liter REAL, current_km INTEGER)');
         DB::statement('CREATE TABLE documents (id INTEGER PRIMARY KEY, company_id INTEGER, documentable_id INTEGER, documentable_type TEXT, document_type TEXT, start_date TEXT, end_date TEXT, archived_at TEXT, created_at TEXT, file_path TEXT)');
         DB::statement('CREATE TABLE telegram_kasko_notification_settings (id INTEGER PRIMARY KEY, company_id INTEGER, is_enabled INTEGER, upcoming_summary_enabled INTEGER, upcoming_summary_days INTEGER, bot_token TEXT, chat_id TEXT, reminder_days TEXT, last_telegram_update_id INTEGER, last_upcoming_summary_date TEXT, created_at TEXT, updated_at TEXT)');
         DB::statement('CREATE TABLE telegram_kasko_notification_logs (id INTEGER PRIMARY KEY, company_id INTEGER, vehicle_id INTEGER, kasko_end_date TEXT, reminder_day INTEGER, telegram_message_id TEXT, sent_at TEXT, created_at TEXT, updated_at TEXT)');
@@ -152,7 +157,7 @@ class TelegramKaskoFlowTest extends TestCase
 
     public function test_daily_summary_lists_every_uploaded_policy_ending_within_the_configured_window_once(): void
     {
-        $this->setting->update(['upcoming_summary_enabled' => true, 'upcoming_summary_days' => 20]);
+        $this->setting->update(['upcoming_summary_enabled' => true, 'upcoming_summary_days' => 8, 'reminder_days' => [1, 5, 20]]);
         $this->document($this->vehicle('ONE-DAY', [
             'license_owner' => 'Mehmet Taşımacılık Tic. Ltd. Şti.',
             'owner_tax_or_tc_no' => '6130942149',
@@ -163,8 +168,8 @@ class TelegramKaskoFlowTest extends TestCase
         $this->document($this->vehicle('INACTIVE', ['is_active' => 0]), 5);
 
         $service = app(TelegramKaskoNotificationService::class);
-        $this->assertSame(1, $service->sendScheduledNotifications());
-        $message = Http::recorded()->last()[0]['text'];
+        $this->assertSame(3, $service->sendScheduledNotifications());
+        $message = Http::recorded()->first()[0]['text'];
         foreach (['20 GÜN İÇİNDE BİTECEK KASKOLAR', 'Toplam: <b>2 araç</b>', 'ONE-DAY', 'TWENTY-DAY', '1 gün kaldı', '20 gün kaldı', 'Mehmet Taşımacılık Tic. Ltd. Şti.', '6130942149'] as $value) {
             $this->assertStringContainsString($value, $message);
         }
@@ -173,6 +178,108 @@ class TelegramKaskoFlowTest extends TestCase
         }
         $this->assertSame(today()->toDateString(), $this->setting->refresh()->last_upcoming_summary_date->toDateString());
         $this->assertSame(0, $service->sendScheduledNotifications());
+    }
+
+    public function test_missed_threshold_sends_once_with_actual_days_and_renewal_replaces_it(): void
+    {
+        $this->travelTo(now('Europe/Istanbul')->setDate(2026, 11, 24)->setTime(7, 50));
+        $this->setting->update(['reminder_days' => [1, 3, 5, 7, 10, 15, 20]]);
+        $vehicle = $this->vehicle('DEMO-0850');
+        $this->document($vehicle, 4);
+        $this->document($this->vehicle('OUTSIDE'), 21);
+        $this->document($this->vehicle('ANOTHER-FIVE'), 5);
+
+        $service = app(TelegramKaskoNotificationService::class);
+        $this->assertSame(2, $service->sendScheduledNotifications());
+        $this->assertSame(0, $service->sendScheduledNotifications());
+        Http::assertSent(fn (Request $request) => str_contains($request['text'], 'DEMO-0850') && str_contains($request['text'], '4 GÜN'));
+        $this->assertSame(5, TelegramKaskoNotificationLog::where('vehicle_id', $vehicle)->value('reminder_day'));
+
+        $this->document($vehicle, 365, ['start_date' => today()->addDays(5)->toDateString()]);
+        $this->travel(1)->days();
+        $this->assertSame(1, $service->sendScheduledNotifications());
+        $this->assertStringContainsString('OUTSIDE', Http::recorded()->last()[0]['text']);
+        $this->assertSame(1, TelegramKaskoNotificationLog::where('vehicle_id', $vehicle)->count());
+
+        $this->travel(344)->days();
+        $this->assertSame(1, $service->sendScheduledNotifications());
+        $this->assertStringContainsString('DEMO-0850', Http::recorded()->last()[0]['text']);
+        $this->assertSame(2, TelegramKaskoNotificationLog::where('vehicle_id', $vehicle)->count());
+    }
+
+    public function test_fleet_bots_use_separate_credentials_and_deduplicate_document_maintenance_and_fuel_alerts(): void
+    {
+        $this->travelTo(now('Europe/Istanbul')->setDate(2026, 11, 24)->setTime(7, 50));
+        DB::statement('CREATE TABLE fuels (id INTEGER PRIMARY KEY, company_id INTEGER, vehicle_id INTEGER, date TEXT, km INTEGER, liters REAL)');
+        DB::statement('CREATE TABLE vehicle_maintenance_settings (id INTEGER PRIMARY KEY, company_id INTEGER, vehicle_id INTEGER, oil_change_interval_km INTEGER, under_lubrication_interval_km INTEGER)');
+        DB::statement('CREATE TABLE vehicle_maintenances (id INTEGER PRIMARY KEY, company_id INTEGER, vehicle_id INTEGER, maintenance_type TEXT, service_date TEXT, km INTEGER, next_service_km INTEGER, next_service_date TEXT, status TEXT)');
+        (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
+        $vehicle = $this->vehicle('FLEET-ONE', [
+            'inspection_date' => today()->addDays(3)->toDateString(),
+            'insurance_end_date' => today()->addDays(5)->toDateString(),
+            'exhaust_date' => today()->addDays(7)->toDateString(),
+            'min_km_per_liter' => 8, 'current_km' => 1100,
+        ]);
+        $this->document($vehicle, 11, ['document_type' => 'İMM POLİÇESİ']);
+        $this->document($vehicle, 2, ['document_type' => 'Sigorta']);
+        $this->document($vehicle, 1, ['document_type' => 'Muayene', 'company_id' => 2]);
+        DB::table('fuels')->insert([
+            ['company_id' => 1, 'vehicle_id' => $vehicle, 'date' => today()->subDays(4)->toDateString(), 'km' => 1000, 'liters' => 20],
+            ['company_id' => 1, 'vehicle_id' => $vehicle, 'date' => today()->subDay()->toDateString(), 'km' => 1100, 'liters' => 20],
+        ]);
+        DB::table('vehicle_maintenances')->insert(['company_id' => 1, 'vehicle_id' => $vehicle, 'maintenance_type' => 'PERİYODİK BAKIM',
+            'service_date' => today()->subMonth()->toDateString(), 'km' => 900, 'next_service_km' => 1200, 'status' => 'completed']);
+
+        foreach (array_keys(TelegramAlertBot::CHANNELS) as $i => $channel) {
+            TelegramAlertBot::create(['company_id' => 1, 'channel' => $channel, 'bot_token' => (100 + $i) . ':demo',
+                'chat_id' => (string) (-200 - $i), 'is_enabled' => true]);
+        }
+
+        $service = app(TelegramFleetAlertService::class);
+        $this->assertSame(6, $service->sendScheduledNotifications());
+        $this->assertSame(0, $service->sendScheduledNotifications());
+        foreach (['11 gün kaldı', '2 gün kaldı', '3 gün kaldı', '7 gün kaldı', '100 km kaldı', '5,00 km/L'] as $i => $text) {
+            Http::assertSent(fn (Request $request) => str_ends_with($request->url(), '/bot' . (100 + $i) . ':demo/sendMessage')
+                && $request['chat_id'] === (string) (-200 - $i) && str_contains($request['text'], $text));
+        }
+        $dashboard = app(TelegramAlertBotSettings::class)->dashboard(1);
+        $this->assertTrue($dashboard['fleet_ready']);
+        $this->assertArrayNotHasKey('bot_token', $dashboard['channels']['fuel']);
+        $this->assertNotNull($dashboard['channels']['fuel']['last_sent_at']);
+    }
+
+    public function test_telegram_sends_at_0750_in_turkey(): void
+    {
+        $events = collect(app(Schedule::class)->events())->filter(fn ($event) => str_contains($event->command, 'telegram:kasko-alerts')
+            || str_contains($event->command, 'telegram:fleet-alerts'));
+        $this->assertCount(2, $events);
+        foreach ($events as $event) {
+            $this->assertSame('50 7 * * *', $event->expression);
+            $this->assertSame('Europe/Istanbul', $event->timezone);
+        }
+    }
+
+    public function test_fleet_settings_keep_bot_tokens_separate_even_after_rotation(): void
+    {
+        (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
+        $settings = app(TelegramAlertBotSettings::class);
+        $this->setting->update(['bot_token' => '123:demo']);
+        $request = \Illuminate\Http\Request::create('/', 'PUT', [
+            'is_enabled' => true, 'bot_token' => '123:rotated', 'chat_id' => '-555', 'reminder_days_text' => '20, 5',
+        ]);
+
+        try {
+            $settings->save($request, 1, 'imm');
+            $this->fail('A bot already assigned to Kasko cannot be shared with İMM.');
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            $this->assertArrayHasKey('bot_token', $exception->errors());
+        }
+        $this->assertSame(0, TelegramAlertBot::count());
+        $request->merge(['bot_token' => '124:demo']);
+        $settings->save($request, 1, 'imm');
+        $this->assertSame([5, 20], $settings->dashboard(1)['channels']['imm']['reminder_days']);
+        $this->assertFalse($settings->dashboard(2)['channels']['imm']['has_bot_token']);
+        $this->assertNotSame('124:demo', DB::table('telegram_alert_bots')->value('bot_token'));
     }
 
     public function test_telegram_registers_the_subdirectory_callback_with_a_secret(): void

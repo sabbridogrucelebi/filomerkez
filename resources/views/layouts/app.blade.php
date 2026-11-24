@@ -234,7 +234,7 @@
                             </div>
                             <div class="flex flex-col min-w-0">
                                 <span class="text-[14px] font-bold tracking-tight truncate">Telegram</span>
-                                <span class="text-[9px] font-bold {{ $telegramActive ? 'text-sky-200/70' : 'text-slate-500' }} uppercase tracking-widest truncate">Kasko Uyarıları</span>
+                                <span class="text-[9px] font-bold {{ $telegramActive ? 'text-sky-200/70' : 'text-slate-500' }} uppercase tracking-widest truncate">Uyarı Merkezi</span>
                             </div>
                             @if($telegramActive)
                                 <div class="ml-auto h-2 w-2 rounded-full bg-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.8)] animate-pulse"></div>

@@ -3,6 +3,10 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Models\TelegramKaskoNotificationSetting;
+use App\Models\TelegramKaskoNotificationLog;
+use App\Services\TelegramAlertBotSettings;
+use App\Services\TelegramAlertSchedule;
+use App\Services\TelegramFleetAlertService;
 use App\Services\TelegramKaskoNotificationService;
 use App\Services\TelegramKaskoChatService;
 use Illuminate\Http\Request;
@@ -11,16 +15,16 @@ use Throwable;
 
 class TelegramKaskoNotificationApiController extends BaseApiController
 {
-    public function show(Request $request)
+    public function show(Request $request, TelegramAlertBotSettings $bots)
     {
         $this->ensureCanManage($request);
 
         return $this->successResponse([
             'settings' => $this->payload($this->setting()),
-        ]);
+        ] + $bots->dashboard($this->getCompanyId()));
     }
 
-    public function update(Request $request)
+    public function update(Request $request, TelegramAlertBotSettings $bots)
     {
         $this->ensureCanManage($request);
         $setting = $this->setting();
@@ -48,11 +52,12 @@ class TelegramKaskoNotificationApiController extends BaseApiController
         $setting->fill([
             'is_enabled' => $validated['is_enabled'],
             'upcoming_summary_enabled' => $request->boolean('upcoming_summary_enabled', $setting->upcoming_summary_enabled ?? true),
-            'upcoming_summary_days' => $validated['upcoming_summary_days'] ?? ($setting->upcoming_summary_days ?? 20),
+            'upcoming_summary_days' => max(1, max($days)),
             'reminder_days' => $days,
             'message_template' => $validated['message_template'],
         ]);
         if (filled($validated['bot_token'] ?? null)) {
+            $bots->ensureDistinctToken($this->getCompanyId(), 'kasko', $botToken);
             $setting->bot_token = trim($validated['bot_token']);
         }
         if (filled($validated['chat_id'] ?? null)) {
@@ -98,9 +103,31 @@ class TelegramKaskoNotificationApiController extends BaseApiController
         return $this->successResponse([], 'Telegram grup bağlantısını kabul etti. Gruba “kaskosu olmayan araçlar” yazın.');
     }
 
+    public function updateChannel(Request $request, string $channel, TelegramAlertBotSettings $bots)
+    {
+        $this->ensureCanManage($request);
+        $bots->save($request, $this->getCompanyId(), $channel);
+
+        return $this->successResponse($bots->dashboard($this->getCompanyId()), 'Bot ayarları kaydedildi.');
+    }
+
+    public function testChannel(Request $request, string $channel, TelegramAlertBotSettings $bots, TelegramFleetAlertService $alerts)
+    {
+        $this->ensureCanManage($request);
+        $bot = $bots->bot($this->getCompanyId(), $channel);
+        try {
+            $alerts->sendTest($bot);
+        } catch (\RuntimeException $exception) {
+            return $this->errorResponse($exception->getMessage(), 422);
+        }
+
+        return $this->successResponse([], 'Test mesajı Telegram’a gönderildi.');
+    }
+
     private function ensureCanManage(Request $request): void
     {
         abort_unless($this->userHasPermission($request->user(), 'telegram.manage'), 403, 'Bu işlem için yetkiniz bulunmamaktadır.');
+        abort_unless($this->getCompanyId() > 0, 404, 'Firma kaydı bulunamadı.');
     }
 
     private function setting(): TelegramKaskoNotificationSetting
@@ -108,7 +135,7 @@ class TelegramKaskoNotificationApiController extends BaseApiController
         return TelegramKaskoNotificationSetting::firstOrNew(
             ['company_id' => $this->getCompanyId()],
             [
-                'reminder_days' => [1, 3, 7, 10, 15, 20],
+                'reminder_days' => TelegramAlertSchedule::DEFAULT_DAYS,
                 'upcoming_summary_enabled' => true,
                 'upcoming_summary_days' => 20,
                 'message_template' => TelegramKaskoNotificationSetting::defaultMessageTemplate(),
@@ -118,13 +145,15 @@ class TelegramKaskoNotificationApiController extends BaseApiController
 
     private function payload(TelegramKaskoNotificationSetting $setting): array
     {
+        $days = TelegramAlertSchedule::days($setting->reminder_days ?: TelegramAlertSchedule::DEFAULT_DAYS);
         return [
             'is_enabled' => (bool) $setting->is_enabled,
             'upcoming_summary_enabled' => $setting->upcoming_summary_enabled ?? true,
-            'upcoming_summary_days' => $setting->upcoming_summary_days ?? 20,
+            'upcoming_summary_days' => max($days ?: TelegramAlertSchedule::DEFAULT_DAYS),
             'has_bot_token' => filled($setting->bot_token),
             'chat_id' => $setting->chat_id,
-            'reminder_days' => $setting->reminder_days ?: [1, 3, 7, 10, 15, 20],
+            'reminder_days' => $days,
+            'last_sent_at' => TelegramKaskoNotificationLog::where('company_id', $setting->company_id)->max('sent_at'),
             'message_template' => $setting->message_template ?: TelegramKaskoNotificationSetting::defaultMessageTemplate(),
         ];
     }

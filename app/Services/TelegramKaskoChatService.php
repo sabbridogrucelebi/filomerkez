@@ -236,6 +236,13 @@ class TelegramKaskoChatService
         }
         $messages[] = $current;
 
+        $total = count($messages);
+        if ($total > 1) {
+            foreach ($messages as $index => $message) {
+                $messages[$index] = '<i>Sayfa ' . ($index + 1) . '/' . $total . "</i>\n" . $message;
+            }
+        }
+
         return $messages;
     }
 

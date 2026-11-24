@@ -13,5 +13,6 @@ Schedule::command('app:backup-tenant-data')->dailyAt('00:00');
 Schedule::command('maintenance:check-health')->everyTenMinutes();
 Schedule::command('trips:analyze-stops')->dailyAt('03:00');
 Schedule::command('reports:calculate-daily')->dailyAt('04:00');
-Schedule::command('telegram:kasko-alerts')->dailyAt('09:00')->withoutOverlapping();
+Schedule::command('telegram:kasko-alerts')->dailyAt(\App\Services\TelegramAlertSchedule::TIME)->timezone(\App\Services\TelegramAlertSchedule::TIMEZONE)->withoutOverlapping();
+Schedule::command('telegram:fleet-alerts')->dailyAt(\App\Services\TelegramAlertSchedule::TIME)->timezone(\App\Services\TelegramAlertSchedule::TIMEZONE)->withoutOverlapping();
 Schedule::command('telegram:kasko-commands')->everyMinute()->withoutOverlapping();

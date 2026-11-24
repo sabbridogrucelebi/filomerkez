@@ -1,258 +1,305 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, ActivityIndicator, Alert, Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import useStatusBarStyle from '../hooks/useStatusBarStyle';
 
-const DEFAULT_TEMPLATE = `🚨 <b>KASKO BİTİŞ UYARISI</b>
+const ENDPOINT = '/v1/telegram-kasko-settings';
+const KASKO_CARD = { label: 'Kasko', icon: '🛡️', description: 'Kasko poliçesi bitişi', kind: 'date' };
+const FIELDS = ['company_name', 'days_left', 'kasko_status', 'plate', 'brand_model', 'model_year', 'license_serial_no', 'chassis_no', 'license_owner', 'owner_tax_or_tc_no', 'kasko_end_date'];
 
-Sayın <b>{{company_name}}</b> yetkilisi,
+function configured(bot) {
+    return bot?.has_bot_token && !!bot.chat_id;
+}
 
-Aşağıdaki aracın kasko poliçesi {{kasko_status}}
-
-🚘 <b>Plaka:</b> {{plate}}
-🏷️ <b>Marka / Model:</b> {{brand_model}}
-📅 <b>Model Yılı:</b> {{model_year}}
-🔢 <b>Seri No:</b> {{license_serial_no}}
-🧾 <b>Şase No:</b> {{chassis_no}}
-👤 <b>Ruhsat Sahibi:</b> {{license_owner}}
-🏢 <b>Vergi / T.C. No:</b> {{owner_tax_or_tc_no}}
-🛡️ <b>Kasko Bitiş Tarihi:</b> {{kasko_end_date}}
-
-⏳ Poliçe yenileme işlemlerini zamanında yaparak
-aracınızın güvence sürekliliğini koruyun.
-
-<i>Filo Merkez | Filo Takip Sistemleri</i>`;
+function Input({ label, style, ...props }) {
+    return (
+        <View>
+            <Text style={styles.label}>{label}</Text>
+            <TextInput accessibilityLabel={label} placeholderTextColor="#64748B" style={[styles.input, style]} {...props} />
+        </View>
+    );
+}
 
 export default function TelegramKaskoSettingsScreen({ navigation }) {
     useStatusBarStyle('dark-content');
     const { hasPermission } = useContext(AuthContext);
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [testing, setTesting] = useState(false);
-    const [connecting, setConnecting] = useState(false);
-    const [isEnabled, setIsEnabled] = useState(false);
-    const [botToken, setBotToken] = useState('');
-    const [hasBotToken, setHasBotToken] = useState(false);
-    const [chatId, setChatId] = useState('');
-    const [reminderDays, setReminderDays] = useState('20, 15, 10, 7, 3, 1');
-    const [upcomingSummaryEnabled, setUpcomingSummaryEnabled] = useState(true);
-    const [upcomingSummaryDays, setUpcomingSummaryDays] = useState('20');
-    const [messageTemplate, setMessageTemplate] = useState(DEFAULT_TEMPLATE);
-
     const canManage = hasPermission('telegram.manage');
+    const [dashboard, setDashboard] = useState(null);
+    const [channel, setChannel] = useState('kasko');
+    const [form, setForm] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [working, setWorking] = useState(false);
+    const [showTemplate, setShowTemplate] = useState(false);
+    const scroll = useRef(null);
+    const settingsTop = useRef(0);
+    const orbit = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        loadSettings();
-    }, []);
+        let enabled = true;
+        let animation;
+        function motion(reduced) {
+            if (!enabled) return;
+            animation?.stop();
+            orbit.setValue(0);
+            if (reduced) return;
+            animation = Animated.loop(Animated.sequence([
+                Animated.timing(orbit, { toValue: 1, duration: 2100, useNativeDriver: true, isInteraction: false }),
+                Animated.timing(orbit, { toValue: 0, duration: 2100, useNativeDriver: true, isInteraction: false }),
+            ]));
+            animation.start();
+        }
+        AccessibilityInfo.isReduceMotionEnabled().then(motion).catch(() => {});
+        const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', motion);
+        return () => {
+            enabled = false;
+            animation?.stop();
+            subscription.remove();
+        };
+    }, [orbit]);
 
-    const loadSettings = async () => {
+    function applyForm(card) {
+        setForm({
+            enabled: !!card.is_enabled,
+            token: '',
+            chat: card.chat_id || '',
+            days: (card.reminder_days || []).join(', '),
+            km: String(card.maintenance_km ?? 200),
+            summary: card.upcoming_summary_enabled !== false,
+            template: card.message_template || '',
+        });
+    }
+
+    async function load() {
+        setLoading(true);
         try {
-            const response = await api.get('/v1/telegram-kasko-settings');
-            const settings = response.data?.data?.settings;
-            if (settings) {
-                setIsEnabled(!!settings.is_enabled);
-                setHasBotToken(!!settings.has_bot_token);
-                setChatId(settings.chat_id || '');
-                setReminderDays((settings.reminder_days || [20, 15, 10, 7, 3, 1]).join(', '));
-                setUpcomingSummaryEnabled(settings.upcoming_summary_enabled !== false);
-                setUpcomingSummaryDays(String(settings.upcoming_summary_days || 20));
-                setMessageTemplate(settings.message_template || DEFAULT_TEMPLATE);
-            }
+            const response = await api.get(ENDPOINT);
+            const data = response.data.data;
+            setDashboard(data);
+            applyForm(data.settings);
         } catch (error) {
-            Alert.alert('Hata', error.response?.data?.message || 'Telegram ayarları yüklenemedi.');
+            Alert.alert('Telegram', error.response?.data?.message || 'Ayarlar yüklenemedi.');
         } finally {
             setLoading(false);
         }
-    };
+    }
 
-    const parseReminderDays = () => {
-        const days = [...new Set(
-            reminderDays
-                .split(/[\s,;]+/)
-                .filter(Boolean)
-                .map(value => Number(value))
-                .filter(value => Number.isInteger(value) && value >= 0 && value <= 365)
-        )].sort((a, b) => a - b);
+    useEffect(() => { if (canManage) load(); }, [canManage]);
 
-        if (!days.length) {
-            Alert.alert('Uyarı günleri', '0 ile 365 arasında en az bir gün girin.');
-            return null;
+    const update = (key, value) => setForm(previous => ({ ...previous, [key]: value }));
+    const cards = dashboard ? { kasko: { ...KASKO_CARD, ...dashboard.settings }, ...dashboard.channels } : {};
+    const bot = cards[channel];
+    const isKasko = channel === 'kasko';
+    const endpoint = isKasko ? ENDPOINT : ENDPOINT + '/bots/' + channel;
+    const ready = isKasko || dashboard?.fleet_ready;
+    const count = Object.values(cards).filter(item => configured(item) && item.is_enabled).length;
+
+    function select(key) {
+        if (working) return;
+        setChannel(key);
+        setShowTemplate(false);
+        applyForm(cards[key]);
+        if (settingsTop.current > 0) scroll.current?.scrollTo({ y: settingsTop.current, animated: false });
+    }
+
+    async function save() {
+        const token = form.token.trim();
+        const chat = form.chat.trim();
+        const days = form.days.split(/[\s,;]+/).filter(value => /^\d+$/.test(value)).map(Number)
+            .filter(day => day >= 0 && day <= 365);
+        const km = Number(form.km);
+        if (form.enabled && (!(token || bot.has_bot_token) || !(chat || bot.chat_id))) {
+            return Alert.alert('Bot bağlantısı', 'Bot anahtarı ve sohbet kimliğini girin.');
+        }
+        if (bot.kind === 'date' && !days.length) {
+            return Alert.alert('Gün eşikleri', '0 ile 365 arasında en az bir gün girin.');
+        }
+        if (bot.kind === 'maintenance' && (!form.km.trim() || !Number.isInteger(km) || km < 0 || km > 100000)) {
+            return Alert.alert('Bakım mesafesi', '0 ile 100.000 arasında bir kilometre değeri girin.');
+        }
+        if (isKasko && !form.template.trim()) {
+            return Alert.alert('Mesaj şablonu', 'Kasko mesajını girin.');
+        }
+        if (!isKasko && ((token && !/^\d+:[A-Za-z0-9_-]+$/.test(token)) || (chat && !/^(?:-?\d+|@[A-Za-z0-9_]{5,})$/.test(chat)))) {
+            return Alert.alert('Bot bağlantısı', 'Bot anahtarı veya sohbet kimliği biçimini kontrol edin.');
         }
 
-        return days;
-    };
-
-    const saveSettings = async () => {
-        if (!canManage) {
-            Alert.alert('Yetki Hatası', 'Telegram ayarlarını yönetme yetkiniz yok.');
-            return;
+        const payload = { is_enabled: form.enabled, chat_id: chat, ...(token ? { bot_token: token } : {}) };
+        if (isKasko) {
+            Object.assign(payload, { reminder_days: days, upcoming_summary_enabled: form.summary, message_template: form.template });
+        } else if (bot.kind === 'date') {
+            payload.reminder_days_text = form.days;
+        } else if (bot.kind === 'maintenance') {
+            payload.maintenance_km = km;
         }
-
-        const days = parseReminderDays();
-        if (!days) return;
-        if (!messageTemplate.trim()) {
-            Alert.alert('Uyarı Metni', 'Uyarı metni boş bırakılamaz.');
-            return;
-        }
-        const summaryDays = Number(upcomingSummaryDays);
-        if (!Number.isInteger(summaryDays) || summaryDays < 1 || summaryDays > 365) {
-            Alert.alert('Günlük özet', 'Özet penceresi 1 ile 365 gün arasında olmalıdır.');
-            return;
-        }
-
-        setSaving(true);
+        setWorking(true);
         try {
-            const payload = {
-                is_enabled: isEnabled,
-                chat_id: chatId.trim(),
-                reminder_days: days,
-                upcoming_summary_enabled: upcomingSummaryEnabled,
-                upcoming_summary_days: summaryDays,
-                message_template: messageTemplate,
-            };
-            if (botToken.trim()) payload.bot_token = botToken.trim();
-
-            const response = await api.put('/v1/telegram-kasko-settings', payload);
-            const settings = response.data?.data?.settings;
-            setHasBotToken(!!settings?.has_bot_token);
-            setBotToken('');
-                setReminderDays((settings?.reminder_days || days).join(', '));
-                setUpcomingSummaryEnabled(settings?.upcoming_summary_enabled !== false);
-                setUpcomingSummaryDays(String(settings?.upcoming_summary_days || summaryDays));
-            Alert.alert('Başarılı', 'Telegram kasko bildirim ayarları kaydedildi.');
+            const { data } = await api.put(endpoint, payload);
+            setDashboard(previous => ({ ...previous, ...data.data }));
+            applyForm(isKasko ? data.data.settings : data.data.channels[channel]);
+            Alert.alert('Telegram', data.message);
         } catch (error) {
             const errors = error.response?.data?.errors;
-            const firstError = errors ? Object.values(errors).flat()[0] : null;
-            Alert.alert('Kaydedilemedi', firstError || error.response?.data?.message || 'Ayarlar kaydedilemedi.');
+            Alert.alert('Kaydedilemedi', (errors && Object.values(errors).flat()[0]) || error.response?.data?.message || 'Bot ayarları kaydedilemedi.');
         } finally {
-            setSaving(false);
+            setWorking(false);
         }
-    };
+    }
 
-    const connectGroup = async () => {
-        setConnecting(true);
+    async function action(name) {
+        setWorking(true);
         try {
-            const response = await api.post('/v1/telegram-kasko-settings/connect');
-            Alert.alert('Grup bağlantısı', response.data.message);
+            const { data } = await api.post(endpoint + '/' + name);
+            Alert.alert('Telegram', data.message);
         } catch (error) {
-            Alert.alert('Bağlantı kurulamadı', error.response?.data?.message || 'Sunucuya ulaşılamadı.');
+            Alert.alert('Telegram', error.response?.data?.message || 'İşlem tamamlanamadı.');
         } finally {
-            setConnecting(false);
+            setWorking(false);
         }
-    };
-
-    const sendTest = async () => {
-        setTesting(true);
-        try {
-            const response = await api.post('/v1/telegram-kasko-settings/test');
-            Alert.alert('Test Mesajı Gönderildi', response.data?.message || 'Telegram mesajı gönderildi.');
-        } catch (error) {
-            Alert.alert('Test Gönderilemedi', error.response?.data?.message || 'Önce ayarları kaydedin ve bot bağlantısını kontrol edin.');
-        } finally {
-            setTesting(false);
-        }
-    };
-
-    if (loading) {
-        return <SafeAreaView style={styles.loading}><ActivityIndicator size="large" color="#0284C7" /></SafeAreaView>;
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+        <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}><Ionicons name="arrow-back" size={23} color="#0F172A" /></TouchableOpacity>
-                <View style={styles.headerCopy}><Text style={styles.headerTitle}>Telegram</Text><Text style={styles.headerSubtitle}>KASKO UYARILARI</Text></View>
-                <View style={styles.telegramBadge}><Ionicons name="paper-plane" size={19} color="#fff" /></View>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Geri" onPress={() => navigation.goBack()} style={styles.back}>
+                    <Ionicons name="arrow-back" size={24} color="#172A45" />
+                </TouchableOpacity>
+                <Text style={styles.title}>Telegram Uyarıları</Text>
             </View>
+            {!canManage ? <Text style={styles.notice}>Telegram ayarlarını yönetme yetkiniz yok.</Text>
+                : loading ? <ActivityIndicator style={styles.loader} color="#0369A1" />
+                : !dashboard || !form ? <TouchableOpacity onPress={load} style={styles.secondary}><Text style={styles.secondaryText}>Yeniden yükle</Text></TouchableOpacity>
+                : (
+                    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                        <ScrollView ref={scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+                            <View style={styles.hero}>
+                                <View style={styles.heroCopy}>
+                                    <Text style={styles.heroTitle}>Telegram Uyarı Merkezi</Text>
+                                    <Text style={styles.heroInfo}>{count} / {Object.keys(cards).length} bot etkin</Text>
+                                    <Text style={styles.heroInfo}>Her gün {dashboard.schedule_time || '07:50'} · Türkiye saati</Text>
+                                </View>
+                                <Animated.View style={[styles.orb, { transform: [
+                                    { perspective: 500 },
+                                    { translateY: orbit.interpolate({ inputRange: [0, 1], outputRange: [4, -5] }) },
+                                    { rotateY: orbit.interpolate({ inputRange: [0, 1], outputRange: ['-14deg', '14deg'] }) },
+                                ] }]}>
+                                    <Ionicons name="paper-plane" size={32} color="#FFFFFF" />
+                                </Animated.View>
+                            </View>
 
-            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                    <View style={styles.hero}>
-                        <View style={styles.heroIcon}><Text style={{ fontSize: 30 }}>✈️</Text></View>
-                        <View style={{ flex: 1 }}>
-                            <Text style={styles.heroStatus}>{isEnabled ? '● AKTİF OTOMASYON' : '● OTOMASYON BEKLEMEDE'}</Text>
-                            <Text style={styles.heroTitle}>Kasko Asistanı</Text>
-                            <Text style={styles.heroText}>Seçtiğiniz günlerde araç bilgileriyle premium Telegram uyarısı gönderir.</Text>
-                        </View>
-                    </View>
+                            <View style={styles.grid}>
+                                {Object.entries(cards).map(([key, item]) => (
+                                    <TouchableOpacity key={key} accessibilityRole="button" accessibilityState={{ selected: channel === key }}
+                                        disabled={working} onPress={() => select(key)} style={[styles.tile, channel === key && styles.selected]}>
+                                        <Text style={styles.icon}>{item.icon}</Text>
+                                        <Text style={styles.tileTitle}>{item.label}</Text>
+                                        <Text style={[styles.muted, configured(item) && item.is_enabled && styles.enabled]}>
+                                            {configured(item) ? (item.is_enabled ? 'Etkin' : 'Kapalı') : 'Kurulum gerekli'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
 
-                    <View style={styles.card}>
-                        <View style={styles.sectionTitleRow}><Text style={styles.sectionEmoji}>🤖</Text><View><Text style={styles.sectionTitle}>Bot bağlantısı</Text><Text style={styles.sectionDescription}>Bot anahtarınızı ve sohbet kimliğinizi girin.</Text></View></View>
-                        <View style={styles.switchRow}>
-                            <View style={{ flex: 1 }}><Text style={styles.switchTitle}>Otomatik uyarıları etkinleştir</Text><Text style={styles.switchDescription}>Her gün 09:00'da kontrol edilir.</Text></View>
-                            <Switch value={isEnabled} onValueChange={setIsEnabled} disabled={!canManage} trackColor={{ false: '#CBD5E1', true: '#38BDF8' }} thumbColor="#fff" />
-                        </View>
-                        <Text style={styles.inputLabel}>BOT ANAHTARI {hasBotToken ? '• KAYITLI' : ''}</Text>
-                        <TextInput value={botToken} onChangeText={setBotToken} editable={canManage} secureTextEntry placeholder={hasBotToken ? 'Değiştirmek için yeni anahtarı yazın' : '123456:ABC-DEF...'} placeholderTextColor="#94A3B8" style={styles.input} autoCapitalize="none" autoCorrect={false} />
-                        <Text style={styles.inputLabel}>SOHBET / GRUP KİMLİĞİ</Text>
-                        <TextInput value={chatId} onChangeText={setChatId} editable={canManage} placeholder="Örn: -1001234567890" placeholderTextColor="#94A3B8" style={styles.input} autoCapitalize="none" autoCorrect={false} />
-                    </View>
-
-                    <View style={styles.card}>
-                        <View style={styles.sectionTitleRow}><Text style={styles.sectionEmoji}>⏰</Text><View><Text style={styles.sectionTitle}>Uyarı günleri</Text><Text style={styles.sectionDescription}>Virgülle istediğiniz kadar gün ekleyin.</Text></View></View>
-                        <Text style={styles.inputLabel}>KALAN GÜNLER</Text>
-                        <TextInput value={reminderDays} onChangeText={setReminderDays} editable={canManage} keyboardType="numbers-and-punctuation" placeholder="20, 15, 10, 7, 3, 1" placeholderTextColor="#94A3B8" style={styles.input} />
-                        <Text style={styles.helpText}>Önerilen: 20, 15, 10, 7, 3, 1 • Süresi bitince belge yenilenmediyse sistem 1. ve 5. gün otomatik uyarır.</Text>
-                    </View>
-
-                    <View style={styles.card}>
-                        <View style={styles.sectionTitleRow}><Text style={styles.sectionEmoji}>📋</Text><View><Text style={styles.sectionTitle}>Günlük yaklaşan kasko özeti</Text><Text style={styles.sectionDescription}>Her gün 09:00'da yaklaşan tüm poliçeler tek mesajda listelenir.</Text></View></View>
-                        <View style={styles.switchRow}><View style={{ flex: 1 }}><Text style={styles.switchTitle}>Günlük özeti etkinleştir</Text><Text style={styles.switchDescription}>Aynı gün içinde bir kez gönderilir.</Text></View><Switch value={upcomingSummaryEnabled} onValueChange={setUpcomingSummaryEnabled} disabled={!canManage} trackColor={{ false: '#CBD5E1', true: '#22C55E' }} /></View>
-                        <Text style={styles.inputLabel}>ÖZET PENCERESİ</Text>
-                        <TextInput value={upcomingSummaryDays} onChangeText={setUpcomingSummaryDays} editable={canManage} keyboardType="number-pad" placeholder="20" placeholderTextColor="#94A3B8" style={styles.input} />
-                        <Text style={styles.helpText}>Örneğin 20 yazarsanız, bitişine 0–20 gün kalan kaskolar her gün tek özet mesajda gelir.</Text>
-                    </View>
-
-                    <View style={styles.card}>
-                        <View style={styles.sectionTitleRow}><Text style={styles.sectionEmoji}>✨</Text><View><Text style={styles.sectionTitle}>Premium uyarı metni</Text><Text style={styles.sectionDescription}>Alanlar mesaj gönderilirken otomatik doldurulur.</Text></View></View>
-                        <TextInput value={messageTemplate} onChangeText={setMessageTemplate} editable={canManage} multiline textAlignVertical="top" style={[styles.input, styles.templateInput]} />
-                        <Text style={styles.helpText}>Alanlar: {'{{kasko_status}}'}, {'{{plate}}'}, {'{{brand_model}}'}, {'{{model_year}}'}, {'{{license_serial_no}}'}, {'{{chassis_no}}'}, {'{{license_owner}}'}, {'{{owner_tax_or_tc_no}}'}, {'{{kasko_end_date}}'}</Text>
-                    </View>
-
-                    {!canManage && <View style={styles.permissionNotice}><Ionicons name="lock-closed-outline" size={18} color="#B45309" /><Text style={styles.permissionText}>Bu ayarları değiştirme yetkiniz yok.</Text></View>}
-
-                    <TouchableOpacity style={[styles.saveButton, (!canManage || saving) && styles.disabledButton]} disabled={!canManage || saving} onPress={saveSettings}>
-                        {saving ? <ActivityIndicator color="#fff" /> : <><Ionicons name="save-outline" size={20} color="#fff" /><Text style={styles.saveText}>Ayarları Kaydet</Text></>}
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.testButton, testing && styles.disabledButton]} disabled={testing} onPress={sendTest}>
-                        {testing ? <ActivityIndicator color="#0369A1" /> : <><Ionicons name="paper-plane-outline" size={20} color="#0369A1" /><Text style={styles.testText}>Test Mesajı Gönder</Text></>}
-                    </TouchableOpacity>
-                    <Text style={styles.footer}>Filo Merkez | Filo Takip Sistemleri</Text>
-                    <TouchableOpacity style={styles.testButton} disabled={!canManage || connecting} onPress={connectGroup}>
-                        {connecting ? <ActivityIndicator /> : <Text style={styles.testText}>Grup yanıtlarını bağla</Text>}
-                    </TouchableOpacity>
-                    <View style={styles.card}>
-                        <Text style={styles.sectionTitle}>Telegram grup komutları</Text>
-                        <Text style={styles.helpText}>kaskosu olmayan araçlar — Belgesi eksik, tarihi tanımsız veya poliçesi henüz başlamamış araçlar.</Text>
-                        <Text style={styles.helpText}>süresi geçenler — Kaskosu bitmiş ve yenilenmemiş araçlar.</Text>
-                        <Text style={styles.helpText}>kaskolu araçlarım — Geçerli poliçelerin sayısı, başlangıç ve bitiş tarihleri, kalan günleri.</Text>
-                    </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
+                            <View onLayout={event => { settingsTop.current = event.nativeEvent.layout.y; }} style={styles.panel}>
+                                <Text style={styles.title}>{bot.icon} {bot.label}</Text>
+                                <Text style={styles.muted}>{bot.description}</Text>
+                                {!!bot.last_sent_at && <Text style={styles.muted}>Son otomatik uyarı · {bot.last_sent_at}</Text>}
+                                {!ready ? <Text style={styles.notice}>Bu botu kurmak için web panelinden Telegram veritabanını güncelleyin.</Text> : (
+                                    <>
+                                        <View style={styles.toggle}>
+                                            <Text style={styles.label}>Otomatik uyarılar etkin</Text>
+                                            <Switch accessibilityLabel="Otomatik uyarılar etkin" value={form.enabled} onValueChange={value => update('enabled', value)} disabled={working} />
+                                        </View>
+                                        <Input label="Bot anahtarı" value={form.token} onChangeText={value => update('token', value)} secureTextEntry autoCapitalize="none" autoCorrect={false}
+                                            maxLength={255} placeholder={bot.has_bot_token ? 'Kayıtlı · Yeni anahtarla değiştir' : 'BotFather anahtarı'} editable={!working} />
+                                        <Input label="Sohbet / grup kimliği" value={form.chat} onChangeText={value => update('chat', value)} autoCapitalize="none" autoCorrect={false}
+                                            maxLength={100} placeholder="Örn. -1001234567890" editable={!working} />
+                                        {bot.kind === 'date' && (
+                                            <>
+                                                <Input label="Kalan gün eşikleri" value={form.days} onChangeText={value => update('days', value)} maxLength={500} editable={!working} />
+                                                <Text style={styles.muted}>Günleri virgülle ayırın. Kaçan eşikte geçerli son eşik bir kez bildirilir.</Text>
+                                            </>
+                                        )}
+                                        {bot.kind === 'maintenance' && <Input label="Bakım uyarı mesafesi (km)" value={form.km} onChangeText={value => update('km', value)} keyboardType="number-pad" editable={!working} />}
+                                        {bot.kind === 'fuel' && <Text style={styles.muted}>Bugünün ve dünün yakıt alımları araçta kayıtlı minimum km/litre sınırıyla karşılaştırılır.</Text>}
+                                        {isKasko && (
+                                            <>
+                                                <View style={styles.toggle}>
+                                                    <View style={styles.heroCopy}>
+                                                        <Text style={styles.label}>Günlük yaklaşan kasko özeti</Text>
+                                                        <Text style={styles.muted}>Aralığı en büyük eşik belirler. Yenileme yüklenince yeni bitiş tarihi kullanılır.</Text>
+                                                    </View>
+                                                    <Switch accessibilityLabel="Günlük yaklaşan kasko özeti" value={form.summary} onValueChange={value => update('summary', value)} disabled={working} />
+                                                </View>
+                                                <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: showTemplate }} onPress={() => setShowTemplate(value => !value)} style={styles.secondary}>
+                                                    <Text style={styles.secondaryText}>Mesaj şablonu {showTemplate ? '−' : '+'}</Text>
+                                                </TouchableOpacity>
+                                                {showTemplate && (
+                                                    <>
+                                                        <Input label="Kasko mesaj şablonu" value={form.template} onChangeText={value => update('template', value)}
+                                                            multiline textAlignVertical="top" maxLength={4000} style={styles.template} editable={!working} />
+                                                        <Text style={styles.muted}>{FIELDS.map(field => '{{' + field + '}}').join('  ')}</Text>
+                                                    </>
+                                                )}
+                                            </>
+                                        )}
+                                        <TouchableOpacity accessibilityRole="button" disabled={working} onPress={save} style={styles.primary}>
+                                            {working ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryText}>Ayarları kaydet</Text>}
+                                        </TouchableOpacity>
+                                        {configured(bot) && (
+                                            <>
+                                                <TouchableOpacity accessibilityRole="button" disabled={working} onPress={() => action('test')} style={styles.secondary}>
+                                                    <Text style={styles.secondaryText}>{isKasko ? 'Tek araç test mesajı' : 'Bağlantıyı test et'}</Text>
+                                                </TouchableOpacity>
+                                                {isKasko && (
+                                                    <>
+                                                        <TouchableOpacity accessibilityRole="button" disabled={working} onPress={() => action('connect')} style={styles.secondary}>
+                                                            <Text style={styles.secondaryText}>Grup yanıtlarını bağla</Text>
+                                                        </TouchableOpacity>
+                                                        <Text style={styles.muted}>Grup komutları · kaskolu araçlarım · süresi geçenler · kaskosu olmayan araçlar</Text>
+                                                    </>
+                                                )}
+                                            </>
+                                        )}
+                                    </>
+                                )}
+                            </View>
+                        </ScrollView>
+                    </KeyboardAvoidingView>
+                )}
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F8FAFC' },
-    loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC' },
-    header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 18, paddingVertical: 14, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
-    backButton: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5F9' },
-    headerCopy: { flex: 1 }, headerTitle: { fontSize: 19, fontWeight: '900', color: '#0F172A' }, headerSubtitle: { marginTop: 2, fontSize: 9, fontWeight: '900', letterSpacing: 1.4, color: '#64748B' },
-    telegramBadge: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0284C7' },
-    content: { padding: 18, paddingBottom: 42 },
-    hero: { flexDirection: 'row', gap: 14, alignItems: 'center', borderRadius: 24, backgroundColor: '#0F172A', padding: 18, marginBottom: 18 },
-    heroIcon: { width: 54, height: 54, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(56,189,248,0.18)' },
-    heroStatus: { fontSize: 9, fontWeight: '900', letterSpacing: 1.1, color: '#7DD3FC' }, heroTitle: { marginTop: 3, fontSize: 19, fontWeight: '900', color: '#fff' }, heroText: { marginTop: 3, fontSize: 12, lineHeight: 17, fontWeight: '500', color: '#CBD5E1' },
-    card: { backgroundColor: '#fff', borderRadius: 22, padding: 17, marginBottom: 14, borderWidth: 1, borderColor: '#E2E8F0' },
-    sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }, sectionEmoji: { fontSize: 22 }, sectionTitle: { fontSize: 16, fontWeight: '900', color: '#0F172A' }, sectionDescription: { marginTop: 2, fontSize: 12, fontWeight: '500', color: '#64748B' },
-    switchRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 13, borderRadius: 15, backgroundColor: '#F8FAFC', marginBottom: 15 }, switchTitle: { fontSize: 13, fontWeight: '800', color: '#1E293B' }, switchDescription: { marginTop: 2, fontSize: 11, fontWeight: '500', color: '#64748B' },
-    inputLabel: { marginBottom: 7, marginTop: 10, fontSize: 10, fontWeight: '900', letterSpacing: 0.8, color: '#475569' }, input: { minHeight: 46, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 13, paddingHorizontal: 13, paddingVertical: 11, fontSize: 13, fontWeight: '600', color: '#0F172A', backgroundColor: '#fff' },
-    templateInput: { height: 315, fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace' }), lineHeight: 19, fontSize: 12 }, helpText: { marginTop: 9, fontSize: 11, lineHeight: 16, fontWeight: '500', color: '#64748B' },
-    permissionNotice: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14, padding: 13, borderRadius: 14, backgroundColor: '#FEF3C7' }, permissionText: { flex: 1, fontSize: 12, fontWeight: '700', color: '#92400E' },
-    saveButton: { minHeight: 52, borderRadius: 16, backgroundColor: '#0284C7', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 5 }, saveText: { fontSize: 15, fontWeight: '900', color: '#fff' },
-    testButton: { minHeight: 52, borderRadius: 16, borderWidth: 1, borderColor: '#7DD3FC', backgroundColor: '#F0F9FF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 11 }, testText: { fontSize: 14, fontWeight: '900', color: '#0369A1' }, disabledButton: { opacity: 0.55 }, footer: { textAlign: 'center', marginTop: 22, fontSize: 11, fontWeight: '800', color: '#94A3B8' },
+    container: { flex: 1, backgroundColor: '#F2F6FB' },
+    header: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, backgroundColor: '#FFFFFF' },
+    back: { backgroundColor: '#EAF1F8', borderRadius: 12, padding: 8 },
+    title: { color: '#172A45', fontWeight: '900', fontSize: 19 },
+    loader: { marginTop: 40 },
+    content: { padding: 16, paddingBottom: 36 },
+    hero: { borderRadius: 23, padding: 18, backgroundColor: '#11294B', flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 },
+    heroCopy: { flex: 1 },
+    heroTitle: { color: '#FFFFFF', fontSize: 21, fontWeight: '900' },
+    heroInfo: { color: '#C9E6FB', fontSize: 12, marginTop: 6 },
+    orb: { width: 60, height: 60, borderRadius: 19, backgroundColor: '#167CC7', borderBottomWidth: 5, borderColor: '#10518E', alignItems: 'center', justifyContent: 'center', elevation: 5 },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 9, marginBottom: 16 },
+    tile: { width: '48.7%', padding: 13, gap: 4, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D7E4EF', borderRadius: 16, elevation: 2 },
+    selected: { borderColor: '#117ABB', backgroundColor: '#EAF7FF' },
+    icon: { fontSize: 20 },
+    tileTitle: { color: '#172A45', fontWeight: '800', fontSize: 14 },
+    enabled: { color: '#047857', fontWeight: '800' },
+    muted: { color: '#475569', fontSize: 12, lineHeight: 17 },
+    notice: { color: '#92400E', backgroundColor: '#FFF4D6', borderRadius: 10, padding: 12, marginTop: 10 },
+    panel: { gap: 11, padding: 17, borderRadius: 21, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D7E4EF' },
+    label: { fontSize: 13, fontWeight: '800', color: '#172A45' },
+    input: { marginTop: 6, borderWidth: 1, borderColor: '#B8CDE0', borderRadius: 12, paddingHorizontal: 12, minHeight: 46, color: '#172A45' },
+    template: { minHeight: 220, paddingVertical: 10 },
+    toggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, backgroundColor: '#EEF4FA', paddingHorizontal: 11, paddingVertical: 6, borderRadius: 12 },
+    primary: { alignItems: 'center', backgroundColor: '#0369A1', borderRadius: 12, padding: 13 },
+    primaryText: { color: '#FFFFFF', fontWeight: '800' },
+    secondary: { alignItems: 'center', backgroundColor: '#EAF4FC', borderRadius: 12, padding: 12 },
+    secondaryText: { color: '#075985', fontWeight: '800' },
 });

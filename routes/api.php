@@ -136,6 +136,10 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckCompa
         ->middleware('permission:telegram.manage');
     Route::post('/telegram-kasko-settings/connect', [\App\Http\Controllers\Api\V1\TelegramKaskoNotificationApiController::class, 'connect'])
         ->middleware(['permission:telegram.manage', 'throttle:6,1']);
+    Route::put('/telegram-kasko-settings/bots/{channel}', [\App\Http\Controllers\Api\V1\TelegramKaskoNotificationApiController::class, 'updateChannel'])
+        ->middleware('permission:telegram.manage');
+    Route::post('/telegram-kasko-settings/bots/{channel}/test', [\App\Http\Controllers\Api\V1\TelegramKaskoNotificationApiController::class, 'testChannel'])
+        ->middleware(['permission:telegram.manage', 'throttle:6,1']);
     
     Route::post('/maintenances-mechanics', [\App\Http\Controllers\Api\V1\MaintenanceApiController::class, 'storeMechanic']);
     Route::put('/maintenances-mechanics/{id}', [\App\Http\Controllers\Api\V1\MaintenanceApiController::class, 'updateMechanic']);
