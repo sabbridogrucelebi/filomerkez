@@ -28,6 +28,15 @@ final class TelegramAlertSchedule
         return null;
     }
 
+    public static function policyThreshold(array $sortedDays, int $remaining): ?int
+    {
+        if ($remaining >= 0) {
+            return self::dueThreshold($sortedDays, $remaining);
+        }
+
+        return in_array($remaining, [-1, -5], true) ? $remaining : null;
+    }
+
     public static function parseDays(string $text): array
     {
         $days = self::days(preg_split('/[\s,;]+/', trim($text), -1, PREG_SPLIT_NO_EMPTY));

@@ -305,9 +305,10 @@ class TelegramKaskoFlowTest extends TestCase
         $vehicle = $this->vehicle('TEMPLATE-ONE', ['license_owner' => 'A & B <Filo>']);
         $this->document($vehicle, 5, ['document_type' => 'İMM Poliçesi']);
         $service = app(TelegramFleetAlertService::class);
-        $service->sendTest($settings->bot(1, 'imm'));
-        Http::assertSent(fn (Request $message) => str_contains($message['text'], 'TEST MESAJI')
-            && str_contains($message['text'], '<b>ÖRNEK-42</b> · 5 gün kaldı · Örnek Filo'));
+        $this->assertSame(1, $service->sendTest($settings->bot(1, 'imm')));
+        Http::assertSent(fn (Request $message) => str_contains($message['text'], 'İMM KONTROLÜ')
+            && str_contains($message['text'], 'TEMPLATE-ONE') && str_contains($message['text'], '5 gün kaldı')
+            && !str_contains($message['text'], 'ÖRNEK-42'));
         $this->assertSame(1, $service->sendScheduledNotifications());
         Http::assertSent(fn (Request $message) => $message['text'] === '📌 <b>TEMPLATE-ONE</b> · 5 gün kaldı · A &amp; B &lt;Filo&gt;');
 
@@ -317,6 +318,99 @@ class TelegramKaskoFlowTest extends TestCase
         $this->assertStringContainsString('İMM POLİÇESİ YENİLEME UYARISI', $settings->dashboard(1)['channels']['imm']['message_template']);
     }
 
+    public function test_imm_control_only_reports_uploaded_current_policies_inside_the_saved_window(): void
+    {
+        (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
+        $this->travelTo(now('Europe/Istanbul')->setDate(2026, 11, 24)->setTime(10, 0));
+        $this->withoutMiddleware()->actingAs(new User(['company_id' => 1, 'role' => 'company_admin']));
+        $bot = TelegramAlertBot::create(['company_id' => 1, 'channel' => 'imm', 'bot_token' => '124:demo', 'chat_id' => '-555', 'reminder_days' => [5, 1, 20]]);
+        $url = '/api/v1/telegram-kasko-settings/bots/imm/test';
+        $this->postJson($url)->assertOk()->assertJsonPath('data.vehicle_count', 0);
+        Http::assertNothingSent();
+
+        $this->document($this->vehicle('IMM-TODAY'), 0, ['document_type' => 'İMM POLİÇESİ']);
+        $this->document($this->vehicle('IMM-IN-WINDOW'), 8, ['document_type' => 'İMM Poliçesi']);
+        $this->document($this->vehicle('IMM-END-OF-WINDOW'), 20, ['document_type' => 'İMM Poliçesi']);
+        $this->document($this->vehicle('IMM-OUTSIDE'), 21, ['document_type' => 'İMM Poliçesi']);
+        $this->document($this->vehicle('IMM-OTHER-TENANT', ['company_id' => 2]), 1, ['document_type' => 'İMM Poliçesi', 'company_id' => 2]);
+        $this->document($this->vehicle('IMM-INACTIVE', ['is_active' => 0]), 1, ['document_type' => 'İMM Poliçesi']);
+        $this->document($this->vehicle('IMM-NO-FILE'), 2, ['document_type' => 'İMM Poliçesi', 'file_path' => null]);
+        $this->document($this->vehicle('IMM-EXPIRED'), -1, ['document_type' => 'İMM Poliçesi']);
+        $renewed = $this->vehicle('IMM-RENEWED');
+        $this->document($renewed, 2, ['document_type' => 'İMM Poliçesi']);
+        $this->document($renewed, 367, ['document_type' => 'İMM Poliçesi', 'start_date' => today()->addDays(3)->toDateString()]);
+
+        $this->postJson($url)->assertOk()->assertJsonPath('data.vehicle_count', 3);
+        Http::assertSentCount(1);
+        $text = Http::recorded()->first()[0]['text'];
+        foreach (['İMM KONTROLÜ', 'IMM-TODAY', 'IMM-IN-WINDOW', 'IMM-END-OF-WINDOW', '8 gün kaldı', '20 gün kaldı'] as $value) {
+            $this->assertStringContainsString($value, $text);
+        }
+        foreach (['IMM-OUTSIDE', 'IMM-OTHER-TENANT', 'IMM-INACTIVE', 'IMM-NO-FILE', 'IMM-EXPIRED', 'IMM-RENEWED', 'ÖRNEK-42'] as $value) {
+            $this->assertStringNotContainsString($value, $text);
+        }
+        $this->assertSame(0, DB::table('telegram_alert_deliveries')->where('bot_id', $bot->id)->count());
+    }
+
+    public function test_imm_daily_summary_and_expiry_alerts_follow_the_same_policy_rules_as_kasko(): void
+    {
+        (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
+        (require database_path('migrations/2026_11_24_130000_add_imm_summary_to_telegram_alert_bots.php'))->up();
+        $this->travelTo(now('Europe/Istanbul')->setDate(2026, 11, 24)->setTime(7, 50));
+        $bot = TelegramAlertBot::create(['company_id' => 1, 'channel' => 'imm', 'bot_token' => '124:demo', 'chat_id' => '-555',
+            'is_enabled' => true, 'reminder_days' => [1, 3, 5, 20], 'upcoming_summary_enabled' => true]);
+        $near = $this->vehicle('IMM-CATCH-UP');
+        $this->document($near, 4, ['document_type' => 'İMM Poliçesi']);
+        $this->document($this->vehicle('IMM-POST-EXPIRY'), -1, ['document_type' => 'İMM POLİÇESİ']);
+
+        $service = app(TelegramFleetAlertService::class);
+        $this->assertSame(3, $service->sendScheduledNotifications());
+        $this->assertSame(0, $service->sendScheduledNotifications());
+        $this->assertSame(today()->toDateString(), $bot->refresh()->last_upcoming_summary_date->toDateString());
+        $this->assertStringContainsString('20 GÜN İÇİNDE BİTECEK İMM POLİÇELERİ', Http::recorded()->first()[0]['text']);
+        Http::assertSent(fn (Request $request) => str_contains($request['text'], 'IMM-CATCH-UP') && str_contains($request['text'], '4 gün kaldı'));
+        Http::assertSent(fn (Request $request) => str_contains($request['text'], 'IMM-POST-EXPIRY') && str_contains($request['text'], '1 gün önce sona erdi'));
+        $this->assertStringEndsWith(':5', DB::table('telegram_alert_deliveries')->where('vehicle_id', $near)->value('event_key'));
+
+        $this->document($near, 370, ['document_type' => 'İMM Poliçesi', 'start_date' => today()->addDays(5)->toDateString()]);
+        $this->travel(1)->days();
+        $this->assertSame(0, $service->sendScheduledNotifications());
+        $this->travel(3)->days();
+        $this->assertSame(1, $service->sendScheduledNotifications());
+        $this->assertStringContainsString('5 gün önce sona erdi', Http::recorded()->last()[0]['text']);
+        $this->travel(1)->days();
+        $this->assertSame(0, $service->sendScheduledNotifications());
+    }
+
+    public function test_imm_control_resumes_after_a_rate_limit_without_resending_delivered_pages(): void
+    {
+        (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
+        $this->travelTo(now('Europe/Istanbul')->setDate(2026, 11, 24)->setTime(10, 0));
+        $this->withoutMiddleware()->actingAs(new User(['company_id' => 1, 'role' => 'company_admin']));
+        TelegramAlertBot::create(['company_id' => 1, 'channel' => 'imm', 'bot_token' => '124:demo', 'chat_id' => '-555']);
+        for ($i = 1; $i <= 8; $i++) {
+            $this->document($this->vehicle('IMM-PAGE-' . $i, ['license_owner' => str_repeat('A', 500)]), $i,
+                ['document_type' => 'İMM Poliçesi']);
+        }
+        Http::swap(new \Illuminate\Http\Client\Factory());
+        Http::preventStrayRequests();
+        Http::fake(['*/sendMessage' => Http::sequence()
+            ->push(['ok' => true, 'result' => ['message_id' => 1]])
+            ->push(['ok' => false, 'error_code' => 429, 'parameters' => ['retry_after' => 32]], 429)
+            ->push(['ok' => true, 'result' => ['message_id' => 2]])]);
+
+        $url = '/api/v1/telegram-kasko-settings/bots/imm/test';
+        $this->postJson($url)->assertStatus(429);
+        $this->travel(32)->seconds();
+        $this->postJson($url)->assertOk()->assertJsonPath('data.vehicle_count', 8);
+        Http::assertSentCount(3);
+        $texts = Http::recorded()->map(fn ($record) => $record[0]['text'])->all();
+        $this->assertNotSame($texts[0], $texts[2]);
+        $this->assertSame($texts[1], $texts[2]);
+        $this->assertStringContainsString('IMM-PAGE-1', $texts[0]);
+        $this->assertStringContainsString('IMM-PAGE-8', $texts[2]);
+    }
+
     public function test_telegram_retry_after_blocks_repeat_requests_until_the_limit_expires(): void
     {
         (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
@@ -324,6 +418,7 @@ class TelegramKaskoFlowTest extends TestCase
         $this->withoutMiddleware()->actingAs(new User(['company_id' => 1, 'role' => 'company_admin']));
         TelegramAlertBot::create(['company_id' => 1, 'channel' => 'imm', 'bot_token' => '124:demo', 'chat_id' => '-555']);
         TelegramAlertBot::create(['company_id' => 1, 'channel' => 'insurance', 'bot_token' => '125:demo', 'chat_id' => '-556']);
+        $this->document($this->vehicle('IMM-LIMIT'), 5, ['document_type' => 'İMM Poliçesi']);
         Http::swap(new \Illuminate\Http\Client\Factory());
         Http::preventStrayRequests();
         Http::fake([
@@ -355,6 +450,7 @@ class TelegramKaskoFlowTest extends TestCase
         (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
         $this->withoutMiddleware()->actingAs(new User(['company_id' => 1, 'role' => 'company_admin']));
         TelegramAlertBot::create(['company_id' => 1, 'channel' => 'imm', 'bot_token' => '124:demo', 'chat_id' => '-555']);
+        $this->document($this->vehicle('IMM-CONNECTION'), 5, ['document_type' => 'İMM Poliçesi']);
         Http::swap(new \Illuminate\Http\Client\Factory());
         Http::preventStrayRequests();
         $attempts = [];
@@ -376,6 +472,7 @@ class TelegramKaskoFlowTest extends TestCase
         (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
         $this->withoutMiddleware()->actingAs(new User(['company_id' => 1, 'role' => 'company_admin']));
         TelegramAlertBot::create(['company_id' => 1, 'channel' => 'imm', 'bot_token' => '124:demo', 'chat_id' => '-555']);
+        $this->document($this->vehicle('IMM-TIMEOUT'), 5, ['document_type' => 'İMM Poliçesi']);
         Http::swap(new \Illuminate\Http\Client\Factory());
         Http::preventStrayRequests();
         $attempts = 0;

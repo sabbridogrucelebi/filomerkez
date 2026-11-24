@@ -20,6 +20,7 @@ class TelegramAlertBotSettings
     {
         $available = $this->available();
         $templatesReady = $available && Schema::hasColumn('telegram_alert_bots', 'message_template');
+        $summaryReady = $available && $this->immSummaryAvailable();
         $bots = $available ? TelegramAlertBot::where('company_id', $companyId)->get()->keyBy('channel') : collect();
         $lastSent = $available ? TelegramAlertDelivery::where('company_id', $companyId)
             ->selectRaw('bot_id, MAX(created_at) as last_sent_at')->groupBy('bot_id')->pluck('last_sent_at', 'bot_id') : collect();
@@ -38,9 +39,12 @@ class TelegramAlertBotSettings
                 'message_template' => $bot?->message_template ?: TelegramFleetAlertMessage::defaultTemplate($key),
                 'template_fields' => TelegramFleetAlertMessage::fields($meta['kind']),
             ];
+            if ($key === 'imm') {
+                $channels[$key]['upcoming_summary_enabled'] = $bot?->upcoming_summary_enabled ?? true;
+            }
         }
 
-        return ['fleet_ready' => $available, 'fleet_templates_ready' => $templatesReady, 'channels' => $channels,
+        return ['fleet_ready' => $available, 'fleet_templates_ready' => $templatesReady, 'imm_summary_ready' => $summaryReady, 'channels' => $channels,
             'schedule_time' => TelegramAlertSchedule::TIME];
     }
 
@@ -63,6 +67,7 @@ class TelegramAlertBotSettings
             'reminder_days_text' => [$kind === 'date' ? 'required' : 'nullable', 'string', 'max:500'],
             'maintenance_km' => [$kind === 'maintenance' ? 'required' : 'nullable', 'integer', 'min:0', 'max:100000'],
             'message_template' => ['sometimes', 'nullable', 'string', 'max:' . TelegramFleetAlertMessage::MAX_TEMPLATE_LENGTH],
+            'upcoming_summary_enabled' => ['sometimes', 'boolean'],
         ]);
 
         $days = $kind === 'date' ? TelegramAlertSchedule::parseDays($data['reminder_days_text']) : null;
@@ -80,8 +85,17 @@ class TelegramAlertBotSettings
             abort_unless(Schema::hasColumn('telegram_alert_bots', 'message_template'), 503, 'Mesaj şablonunu kaydetmek için Telegram veritabanını güncelleyin.');
             $bot->message_template = filled($data['message_template']) ? $data['message_template'] : null;
         }
+        if ($channel === 'imm' && array_key_exists('upcoming_summary_enabled', $data)) {
+            abort_unless($this->immSummaryAvailable(), 503, 'İMM özetini kaydetmek için Telegram veritabanını güncelleyin.');
+            $bot->upcoming_summary_enabled = $request->boolean('upcoming_summary_enabled');
+        }
         $bot->fill(['is_enabled' => $request->boolean('is_enabled'), 'reminder_days' => $days,
             'maintenance_km' => $kind === 'maintenance' ? $data['maintenance_km'] : null])->save();
+    }
+
+    private function immSummaryAvailable(): bool
+    {
+        return Schema::hasColumns('telegram_alert_bots', ['upcoming_summary_enabled', 'last_upcoming_summary_date']);
     }
 
     public function ensureDistinctToken(int $companyId, string $channel, string $token): void

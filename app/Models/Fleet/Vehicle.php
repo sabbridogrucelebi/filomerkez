@@ -99,6 +99,12 @@ class Vehicle extends Model
             ->orderByRaw('COALESCE(end_date, created_at) DESC')->orderByDesc('id');
     }
 
+    public function immDocuments(): MorphMany
+    {
+        return $this->documents()->whereIn('document_type', ['İMM Poliçesi', 'İMM POLİÇESİ'])
+            ->orderByRaw('COALESCE(end_date, created_at) DESC')->orderByDesc('id');
+    }
+
     public function kaskoExpiryDate(): ?\Carbon\Carbon
     {
         return $this->kaskoDocuments->first()?->end_date ?? $this->kasko_end_date;

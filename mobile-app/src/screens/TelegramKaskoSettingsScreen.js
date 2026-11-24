@@ -99,6 +99,8 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
     const cards = dashboard ? { kasko: { ...KASKO_CARD, ...dashboard.settings }, ...dashboard.channels } : {};
     const bot = cards[channel];
     const isKasko = channel === 'kasko';
+    const isImm = channel === 'imm';
+    const canEditSummary = isKasko || (isImm && dashboard?.imm_summary_ready);
     const endpoint = isKasko ? ENDPOINT : ENDPOINT + '/bots/' + channel;
     const ready = isKasko || dashboard?.fleet_ready;
     const canEditTemplate = isKasko || dashboard?.fleet_templates_ready;
@@ -150,8 +152,9 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
 
         const payload = { is_enabled: form.enabled, chat_id: chat, ...(token ? { bot_token: token } : {}) };
         if (canEditTemplate) payload.message_template = form.template;
+        if (canEditSummary) payload.upcoming_summary_enabled = form.summary;
         if (isKasko) {
-            Object.assign(payload, { reminder_days: days, upcoming_summary_enabled: form.summary });
+            payload.reminder_days = days;
         } else if (bot.kind === 'date') {
             payload.reminder_days_text = form.days;
         } else if (bot.kind === 'maintenance') {
@@ -248,7 +251,7 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                                         </TouchableOpacity>
                                         <TouchableOpacity accessibilityRole="button" disabled={working || waiting || !configured(bot)} onPress={() => action('test')}
                                             style={[styles.secondary, (waiting || !configured(bot)) && styles.disabled]}>
-                                            <Text style={styles.secondaryText}>{waiting ? testSeconds + ' sn bekleyin' : (isKasko ? 'Tek Araç Testi' : 'Örnek Mesaj Gönder')}</Text>
+                                            <Text style={styles.secondaryText}>{waiting ? testSeconds + ' sn bekleyin' : (isKasko ? 'Tek Araç Testi' : isImm ? 'Kontrol Mesajı Gönder' : 'Örnek Mesaj Gönder')}</Text>
                                         </TouchableOpacity>
                                         {waiting && <Text style={styles.muted}>Telegram gönderim sınırı uyguladı. Sayaç bitince tekrar deneyin.</Text>}
                                         <View style={styles.toggle}>
@@ -267,15 +270,16 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                                         )}
                                         {bot.kind === 'maintenance' && <Input label="Bakım uyarı mesafesi (km)" value={form.km} onChangeText={value => update('km', value)} keyboardType="number-pad" editable={!working} />}
                                         {bot.kind === 'fuel' && <Text style={styles.muted}>Bugünün ve dünün yakıt alımları araçta kayıtlı minimum km/litre sınırıyla karşılaştırılır.</Text>}
-                                        {isKasko && (
+                                        {canEditSummary && (
                                             <View style={styles.toggle}>
                                                 <View style={styles.heroCopy}>
-                                                    <Text style={styles.label}>Günlük yaklaşan kasko özeti</Text>
+                                                    <Text style={styles.label}>Günlük yaklaşan {isKasko ? 'kasko' : 'İMM'} özeti</Text>
                                                     <Text style={styles.muted}>Aralığı en büyük eşik belirler. Yenileme yüklenince yeni bitiş tarihi kullanılır.</Text>
                                                 </View>
-                                                <Switch accessibilityLabel="Günlük yaklaşan kasko özeti" value={form.summary} onValueChange={value => update('summary', value)} disabled={working} />
+                                                <Switch accessibilityLabel={isKasko ? 'Günlük yaklaşan kasko özeti' : 'Günlük yaklaşan İMM özeti'} value={form.summary} onValueChange={value => update('summary', value)} disabled={working} />
                                             </View>
                                         )}
+                                        {isImm && !canEditSummary && <Text style={styles.notice}>Günlük İMM özeti için web panelinden Telegram veritabanını güncelleyin.</Text>}
                                         <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: showTemplate }} onPress={() => setShowTemplate(value => !value)} style={styles.secondary}>
                                             <Text style={styles.secondaryText}>Telegram mesaj şablonu {showTemplate ? '−' : '+'}</Text>
                                         </TouchableOpacity>
@@ -286,6 +290,7 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                                                 {canEditTemplate ? (
                                                     <>
                                                         <Text style={styles.muted}>Alanlar araç bilgileriyle otomatik dolar. {!isKasko && 'Hazır şablona dönmek için metni silip kaydedin.'}</Text>
+                                                        {isImm && <Text style={styles.muted}>Kontrol mesajı en büyük eşiğe giren İMM poliçelerini toplu listeler.</Text>}
                                                         <Text style={styles.muted}>{(bot.template_fields || FIELDS).map(field => '{{' + field + '}}').join('  ')}</Text>
                                                     </>
                                                 ) : <Text style={styles.notice}>Şablonu düzenlemek için web panelinden Telegram veritabanını güncelleyin.</Text>}

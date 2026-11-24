@@ -18,7 +18,7 @@ class TelegramAlertBot extends Model
         'fuel' => ['label' => 'Aşırı yakıt', 'icon' => '⛽', 'description' => 'Araçtaki minimum km/litre sınırının altındaki alımlar', 'kind' => 'fuel'],
     ];
 
-    protected $fillable = ['company_id', 'channel', 'is_enabled', 'bot_token', 'chat_id', 'reminder_days', 'maintenance_km', 'message_template'];
+    protected $fillable = ['company_id', 'channel', 'is_enabled', 'bot_token', 'chat_id', 'reminder_days', 'maintenance_km', 'message_template', 'upcoming_summary_enabled'];
 
     protected $casts = [
         'is_enabled' => 'boolean',
@@ -26,6 +26,8 @@ class TelegramAlertBot extends Model
         'chat_id' => 'encrypted',
         'reminder_days' => 'array',
         'maintenance_km' => 'integer',
+        'upcoming_summary_enabled' => 'boolean',
+        'last_upcoming_summary_date' => 'date',
     ];
 
     protected $hidden = ['bot_token', 'chat_id'];

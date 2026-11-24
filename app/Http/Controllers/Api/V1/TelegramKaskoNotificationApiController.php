@@ -123,7 +123,7 @@ class TelegramKaskoNotificationApiController extends BaseApiController
         $this->ensureCanManage($request);
         $bot = $bots->bot($this->getCompanyId(), $channel);
         try {
-            $alerts->sendTest($bot);
+            $vehicleCount = $alerts->sendTest($bot);
         } catch (TelegramRateLimited $exception) {
             return $this->rateLimitedResponse($exception);
         } catch (TelegramConnectionProblem $exception) {
@@ -132,7 +132,11 @@ class TelegramKaskoNotificationApiController extends BaseApiController
             return $this->errorResponse($exception->getMessage(), 422);
         }
 
-        return $this->successResponse([], 'Örnek şablon Telegram’a gönderildi.');
+        return $this->successResponse(['vehicle_count' => $vehicleCount], match ($vehicleCount) {
+            null => 'Örnek şablon Telegram’a gönderildi.',
+            0 => 'Seçili gün aralığında süresi dolacak İMM poliçesi bulunamadı.',
+            default => "İMM kontrolü tamamlandı. {$vehicleCount} araç Telegram’a bildirildi.",
+        });
     }
 
     private function rateLimitedResponse(TelegramRateLimited $exception)

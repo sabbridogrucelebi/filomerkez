@@ -8,6 +8,8 @@ use App\Models\TelegramAlertBot;
 final class TelegramFleetAlertMessage
 {
     public const MAX_TEMPLATE_LENGTH = 3000;
+    private const OLD_IMM_LEAD = 'Aracınızın ihtiyari mali mesuliyet poliçesinin bitişi yaklaşıyor.';
+    private const IMM_LEAD = 'Aşağıda aracınızın ihtiyari mali mesuliyet poliçesinin güncel durumu yer alıyor.';
 
     private const VEHICLE_FIELDS = ['company_name', 'plate', 'brand_model', 'model_year', 'license_serial_no', 'chassis_no', 'license_owner', 'owner_tax_or_tc_no'];
 
@@ -23,7 +25,7 @@ final class TelegramFleetAlertMessage
     public static function defaultTemplate(string $channel): string
     {
         [$heading, $lead, $action] = match ($channel) {
-            'imm' => ['☂️ İMM POLİÇESİ YENİLEME UYARISI', 'Aracınızın ihtiyari mali mesuliyet poliçesinin bitişi yaklaşıyor.', 'Teminatın sürmesi için yeni poliçeyi düzenletip Filo Merkez’e yükleyin.'],
+            'imm' => ['☂️ İMM POLİÇESİ YENİLEME UYARISI', self::IMM_LEAD, 'Teminatın sürmesi için yeni poliçeyi düzenletip Filo Merkez’e yükleyin.'],
             'insurance' => ['🛡️ TRAFİK SİGORTASI YENİLEME UYARISI', 'Aracınızın zorunlu trafik sigortasının bitişi yaklaşıyor.', 'Poliçenizi zamanında yenileyip Filo Merkez’e yükleyin.'],
             'inspection' => ['🔍 ARAÇ MUAYENESİ HATIRLATMASI', 'Aracınızın muayene geçerlilik süresi sona ermek üzere.', 'Muayene randevusunu planlayıp yeni belgeyi Filo Merkez’e yükleyin.'],
             'exhaust' => ['💨 EGZOZ EMİSYON ÖLÇÜMÜ HATIRLATMASI', 'Aracınızın egzoz emisyon ölçümünün geçerlilik süresi sona ermek üzere.', 'Yeni ölçümü planlayıp sonuç belgesini Filo Merkez’e yükleyin.'],
@@ -76,6 +78,11 @@ TEXT;
             $values['{{' . $field . '}}'] = filled($value) ? e($value) : '—';
         }
 
-        return strtr($bot->message_template ?: self::defaultTemplate($bot->channel), $values);
+        $template = $bot->message_template ?: self::defaultTemplate($bot->channel);
+        if ($bot->channel === 'imm' && ($event['expired'] ?? false)) {
+            $template = str_replace(self::OLD_IMM_LEAD, self::IMM_LEAD, $template);
+        }
+
+        return strtr($template, $values);
     }
 }

@@ -6,7 +6,9 @@ use App\Models\Fleet\Vehicle;
 use App\Models\TelegramAlertBot;
 use App\Models\TelegramAlertDelivery;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 use Throwable;
 
 class TelegramFleetAlertService
@@ -40,9 +42,19 @@ class TelegramFleetAlertService
         return $sent;
     }
 
-    public function sendTest(TelegramAlertBot $bot): void
+    public function sendTest(TelegramAlertBot $bot): ?int
     {
         $today = today(TelegramAlertSchedule::TIMEZONE);
+        if ($bot->channel === 'imm') {
+            if (!$bot->hasCredentials()) {
+                throw new RuntimeException('Önce bot anahtarını ve sohbet kimliğini kaydedin.');
+            }
+
+            [$vehicles] = $this->sendImmSummary($bot, $today, manual: true);
+
+            return $vehicles;
+        }
+
         $sample = new Vehicle([
             'plate' => 'ÖRNEK-42', 'brand' => 'Örnek', 'model' => 'Araç', 'model_year' => 2024,
             'license_serial_no' => 'ÖRNEK-001', 'chassis_no' => 'ÖRNEK-ŞASE',
@@ -57,6 +69,8 @@ class TelegramFleetAlertService
         };
 
         $this->telegram->sendTextMessage($bot, "🧪 <b>TEST MESAJI</b> · Örnek veriler\n\n" . $this->messages->render($bot, $sample, $event));
+
+        return null;
     }
 
     private function sendForBot(TelegramAlertBot $bot, Carbon $today): int
@@ -64,8 +78,15 @@ class TelegramFleetAlertService
         $kind = TelegramAlertBot::CHANNELS[$bot->channel]['kind'];
         $days = TelegramAlertSchedule::days($bot->reminder_days ?? TelegramAlertSchedule::DEFAULT_DAYS);
         $sent = 0;
+        if ($bot->channel === 'imm' && $bot->upcoming_summary_enabled) {
+            try {
+                [, $sent] = $this->sendImmSummary($bot, $today, manual: false);
+            } catch (Throwable $exception) {
+                Log::warning('Telegram İMM özeti gönderilemedi.', ['bot_id' => $bot->id, 'error_type' => $exception::class]);
+            }
+        }
         Vehicle::where('company_id', $bot->company_id)->where('is_active', true)
-            ->when($kind === 'date', fn ($query) => $query->with('alertDocuments'))
+            ->when($kind === 'date', fn ($query) => $query->with($bot->channel === 'imm' ? 'immDocuments' : 'alertDocuments'))
             ->when($kind === 'maintenance', fn ($query) => $query->with('maintenanceSetting'))
             ->when($kind === 'fuel', fn ($query) => $query->where('min_km_per_liter', '>', 0))
             ->eachById(function (Vehicle $vehicle) use ($bot, $kind, $days, $today, &$sent) {
@@ -95,30 +116,76 @@ class TelegramFleetAlertService
         return $sent;
     }
 
+    /** @return array{0: int, 1: int} Matching vehicles and messages sent by this call. */
+    private function sendImmSummary(TelegramAlertBot $bot, Carbon $today, bool $manual): array
+    {
+        $lockKey = 'telegram:imm:summary:' . $bot->id;
+        $result = Cache::lock($lockKey, 300)->get(function () use ($bot, $today, $manual, $lockKey) {
+            if (!$manual && $bot->last_upcoming_summary_date?->isSameDay($today)) {
+                return [0, 0];
+            }
+
+            $window = max(TelegramAlertSchedule::days($bot->reminder_days ?? []) ?: TelegramAlertSchedule::DEFAULT_DAYS);
+            $entries = TelegramPolicyAlerts::upcoming($bot->company_id, 'immDocuments', $today, $window);
+            $title = $manual ? "İMM KONTROLÜ · {$window} GÜN İÇİNDE BİTECEK POLİÇELER" : "{$window} GÜN İÇİNDE BİTECEK İMM POLİÇELERİ";
+            $messages = TelegramPolicyAlerts::summaryMessages($title, $entries);
+            $progressKey = $lockKey . ':' . $today->toDateString() . ':' . hash('sha256', $bot->chat_id . serialize($messages));
+            $next = (int) Cache::get($progressKey, 0);
+            $sent = 0;
+            foreach (array_slice($messages, $next) as $message) {
+                $this->telegram->sendTextMessage($bot, $message);
+                Cache::put($progressKey, ++$next, $today->copy()->addDay());
+                $sent++;
+            }
+
+            if (!$manual) {
+                $bot->last_upcoming_summary_date = $today;
+                $bot->save();
+            }
+            Cache::forget($progressKey);
+
+            return [$entries->count(), $sent];
+        });
+
+        if ($result === false) {
+            throw new RuntimeException('İMM kontrolü zaten çalışıyor. Biraz sonra tekrar deneyin.');
+        }
+
+        return $result;
+    }
+
     private function dateEvents(Vehicle $vehicle, string $channel, array $days, Carbon $today): array
     {
-        $types = Vehicle::ALERT_DOC_TYPES[$channel] ?? match ($channel) {
-            'imm' => ['İMM Poliçesi', 'İMM POLİÇESİ'],
-            'exhaust' => ['Egzoz', 'Egzoz Emisyon'],
-        };
-        $fallback = Vehicle::ALERT_FALLBACK_FIELDS[$channel] ?? ($channel === 'exhaust' ? 'exhaust_date' : null);
-        $document = $vehicle->alertDocuments->where('company_id', $vehicle->company_id)
-            ->whereIn('document_type', $types)->sortByDesc('end_date')->first();
-        $end = $document?->end_date ?? ($fallback ? $vehicle->{$fallback} : null);
+        if ($channel === 'imm') {
+            $end = TelegramPolicyAlerts::latestUploaded($vehicle, 'immDocuments')?->end_date;
+        } else {
+            $types = Vehicle::ALERT_DOC_TYPES[$channel] ?? ['Egzoz', 'Egzoz Emisyon'];
+            $fallback = Vehicle::ALERT_FALLBACK_FIELDS[$channel] ?? 'exhaust_date';
+            $document = $vehicle->alertDocuments->where('company_id', $vehicle->company_id)
+                ->whereIn('document_type', $types)->sortByDesc('end_date')->first();
+            $end = $document?->end_date ?? $vehicle->{$fallback};
+        }
         if (!$end) {
             return [];
         }
 
-        $remaining = (int) $today->diffInDays(Carbon::parse($end->toDateString(), $today->timezone));
-        $threshold = $remaining >= 0 ? TelegramAlertSchedule::dueThreshold($days, $remaining) : null;
+        $remaining = TelegramPolicyAlerts::daysUntil($today, $end);
+        $threshold = $channel === 'imm'
+            ? TelegramAlertSchedule::policyThreshold($days, $remaining)
+            : ($remaining >= 0 ? TelegramAlertSchedule::dueThreshold($days, $remaining) : null);
         if ($threshold === null) {
             return [];
         }
 
         return ['date:' . $end->toDateString() . ':' . $threshold => [
             'end_date' => $end->format('d.m.Y'),
-            'days_left' => $remaining,
-            'expiry_status' => $remaining === 0 ? 'Bugün sona eriyor' : "{$remaining} gün kaldı",
+            'days_left' => abs($remaining),
+            'expired' => $remaining < 0,
+            'expiry_status' => match (true) {
+                $remaining < 0 => abs($remaining) . ' gün önce sona erdi',
+                $remaining === 0 => 'Bugün sona eriyor',
+                default => "{$remaining} gün kaldı",
+            },
         ]];
     }
 

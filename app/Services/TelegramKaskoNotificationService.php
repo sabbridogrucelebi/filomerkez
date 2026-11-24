@@ -48,16 +48,14 @@ class TelegramKaskoNotificationService
                     ->where('company_id', $setting->company_id)
                     ->where('is_active', true)
                     ->eachById(function (Vehicle $vehicle) use ($setting, $today, $days, &$sentCount) {
-                        $policy = $this->latestUploadedPolicy($vehicle);
+                        $policy = TelegramPolicyAlerts::latestUploaded($vehicle, 'kaskoDocuments');
                         $expiryDate = $policy?->end_date?->copy()->startOfDay();
                         if (!$expiryDate) {
                             return;
                         }
-                        $daysLeft = $this->daysUntil($today, $expiryDate);
+                        $daysLeft = TelegramPolicyAlerts::daysUntil($today, $expiryDate);
 
-                        $threshold = $daysLeft >= 0
-                            ? TelegramAlertSchedule::dueThreshold($days, $daysLeft)
-                            : (in_array($daysLeft, [-1, -5], true) ? $daysLeft : null);
+                        $threshold = TelegramAlertSchedule::policyThreshold($days, $daysLeft);
                         if ($threshold === null || $this->wasAlreadySent($setting, $vehicle, $expiryDate, $threshold)) {
                             return;
                         }
@@ -95,11 +93,11 @@ class TelegramKaskoNotificationService
         $vehicle = Vehicle::query()->with('kaskoDocuments')
             ->where('company_id', $setting->company_id)->where('is_active', true)
             ->get()->map(function (Vehicle $vehicle) {
-                $vehicle->setRelation('telegramKaskoPolicy', $this->latestUploadedPolicy($vehicle));
+                $vehicle->setRelation('telegramKaskoPolicy', TelegramPolicyAlerts::latestUploaded($vehicle, 'kaskoDocuments'));
 
                 return $vehicle;
             })->filter(fn (Vehicle $vehicle) => $vehicle->getRelation('telegramKaskoPolicy') !== null)
-            ->sortBy(fn (Vehicle $vehicle) => abs($this->daysUntil($today, $vehicle->getRelation('telegramKaskoPolicy')->end_date)))->first();
+            ->sortBy(fn (Vehicle $vehicle) => abs(TelegramPolicyAlerts::daysUntil($today, $vehicle->getRelation('telegramKaskoPolicy')->end_date)))->first();
 
         if (!$vehicle) {
             $this->sendTextMessage($setting, "✅ <b>Filo Merkez bağlantı testi</b>\nMesaj bu gruba ulaştı. Yüklü kasko belgesi bulunan araç yok.");
@@ -116,7 +114,7 @@ class TelegramKaskoNotificationService
         if (!$expiryDate) {
             throw new RuntimeException('Test için geçerli bir kasko poliçesi bulunamadı.');
         }
-        $daysLeft = $this->daysUntil(now(TelegramAlertSchedule::TIMEZONE)->startOfDay(), $expiryDate);
+        $daysLeft = TelegramPolicyAlerts::daysUntil(now(TelegramAlertSchedule::TIMEZONE)->startOfDay(), $expiryDate);
 
         return $this->send($setting, $vehicle, $daysLeft, $expiryDate);
     }
@@ -246,12 +244,6 @@ class TelegramKaskoNotificationService
             ->exists();
     }
 
-    private function latestUploadedPolicy(Vehicle $vehicle): ?\App\Models\Document
-    {
-        return $vehicle->kaskoDocuments->first(fn ($document) => (int) $document->company_id === (int) $vehicle->company_id
-            && filled($document->file_path) && $document->end_date);
-    }
-
     private function sendUpcomingSummary(TelegramKaskoNotificationSetting $setting, Carbon $today, int $summaryDays): int
     {
         if (!$setting->upcoming_summary_enabled
@@ -259,59 +251,16 @@ class TelegramKaskoNotificationService
             return 0;
         }
 
-        $entries = Vehicle::query()->with('kaskoDocuments')
-            ->where('company_id', $setting->company_id)
-            ->where('is_active', true)
-            ->get()
-            ->map(function (Vehicle $vehicle) {
-                $policy = $this->latestUploadedPolicy($vehicle);
-                if (!$policy) {
-                    return null;
-                }
-
-                return ['vehicle' => $vehicle, 'policy' => $policy];
-            })
-            ->filter()
-            ->filter(function (array $item) use ($today, $summaryDays) {
-                $remainingDays = $this->daysUntil($today, $item['policy']->end_date);
-
-                return $remainingDays >= 0 && $remainingDays <= $summaryDays;
-            })
-            ->sortBy(fn (array $item) => $item['policy']->end_date)
-            ->values();
-
-        if ($entries->isEmpty()) {
-            $setting->last_upcoming_summary_date = $today;
-            $setting->save();
-
-            return 0;
-        }
-
-        $lines = $entries->map(function (array $item) use ($today) {
-            $vehicle = $item['vehicle'];
-            $policy = $item['policy'];
-            $remainingDays = $this->daysUntil($today, $policy->end_date);
-            $startDate = $policy->start_date?->format('d.m.Y') ?? 'Kayıtlı değil';
-
-            return "🚘 <b>" . e($vehicle->plate ?: '-') . '</b> — ' . e(trim(($vehicle->brand ?? '') . ' ' . ($vehicle->model ?? '')) ?: '-')
-                . "\n👤 Ruhsat sahibi: " . e($vehicle->license_owner ?: '-')
-                . "\n🏢 Vergi / T.C. No: " . e($vehicle->owner_tax_or_tc_no ?: '-')
-                . "\n📅 Poliçe başlangıcı: {$startDate}"
-                . "\n🛡️ Bitiş: " . $policy->end_date->format('d.m.Y')
-                . "\n⏳ <b>{$remainingDays} gün kaldı</b>";
-        })->all();
-
-        $heading = "📋 <b>{$summaryDays} GÜN İÇİNDE BİTECEK KASKOLAR</b>\nToplam: <b>" . $entries->count() . ' araç</b>';
-        $sent = 0;
-        foreach ($this->chunkMessages($heading, $lines) as $message) {
+        $entries = TelegramPolicyAlerts::upcoming($setting->company_id, 'kaskoDocuments', $today, $summaryDays);
+        $messages = TelegramPolicyAlerts::summaryMessages("{$summaryDays} GÜN İÇİNDE BİTECEK KASKOLAR", $entries);
+        foreach ($messages as $message) {
             $this->sendTextMessage($setting, $message);
-            $sent++;
         }
 
         $setting->last_upcoming_summary_date = $today;
         $setting->save();
 
-        return $sent;
+        return count($messages);
     }
 
     private function ensureOwnershipFields(string $template): string
@@ -334,32 +283,6 @@ class TelegramKaskoNotificationService
         }
 
         return rtrim($template) . "\n\n" . implode("\n", $fields);
-    }
-
-    private function chunkMessages(string $heading, array $lines): array
-    {
-        $messages = [];
-        $current = $heading;
-        foreach ($lines as $line) {
-            $candidate = $current . "\n\n" . $line;
-            if (mb_strlen($candidate) > 3500 && $current !== $heading) {
-                $messages[] = $current;
-                $current = $heading . "\n\n" . $line;
-            } else {
-                $current = $candidate;
-            }
-        }
-
-        $messages[] = $current;
-
-        return $messages;
-    }
-
-    private function daysUntil(Carbon $today, Carbon $expiryDate): int
-    {
-        $end = Carbon::parse($expiryDate->toDateString(), $today->timezone);
-
-        return (int) $today->diffInDays($end, false);
     }
 
     private function kaskoStatus(int $daysLeft): string

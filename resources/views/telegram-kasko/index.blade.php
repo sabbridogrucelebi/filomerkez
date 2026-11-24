@@ -10,16 +10,22 @@
         'retry_after' => $kaskoRetryAfter,
         'chat_id' => $setting->chat_id, 'reminder_days' => $setting->reminder_days ?: \App\Services\TelegramAlertSchedule::DEFAULT_DAYS,
         'last_sent_at' => $kaskoLastSent,
+        'upcoming_summary_enabled' => $setting->upcoming_summary_enabled ?? true,
         'message_template' => $setting->message_template ?: \App\Models\TelegramKaskoNotificationSetting::defaultMessageTemplate(),
         'template_fields' => ['company_name', 'days_left', 'kasko_status', 'plate', 'brand_model', 'model_year', 'license_serial_no', 'chassis_no', 'license_owner', 'owner_tax_or_tc_no', 'kasko_end_date'],
     ]] + $channels;
     $active = collect($cards)->filter(fn ($bot) => $bot['is_enabled'] && $bot['has_bot_token'] && filled($bot['chat_id']))->count();
     $card = $cards[$selectedChannel];
     $isKasko = $selectedChannel === 'kasko';
+    $isImm = $selectedChannel === 'imm';
     $configured = $card['has_bot_token'] && filled($card['chat_id']);
     $canEditTemplate = $isKasko || $fleet_templates_ready;
     $retryAfter = $card['retry_after'] ?? 0;
-    $testLabel = $isKasko ? 'Tek Araç Testi' : 'Örnek Mesaj Gönder';
+    $testLabel = match ($selectedChannel) {
+        'kasko' => 'Tek Araç Testi',
+        'imm' => 'Kontrol Mesajı Gönder',
+        default => 'Örnek Mesaj Gönder',
+    };
 @endphp
 
 <style>
@@ -47,7 +53,7 @@
         <p role="status" class="rounded-xl bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-800">{{ session('success') }}</p>
     @endif
     @if(session('telegram_rate_limited'))
-        <p id="tg-test-status" role="status" class="rounded-xl bg-amber-50 px-5 py-3 text-sm font-semibold text-amber-900">{{ $retryAfter > 0 ? 'Telegram gönderim sınırı uyguladı. Sayaç bitince tekrar deneyin.' : 'Bekleme süresi doldu. Test mesajını tekrar gönderebilirsiniz.' }}</p>
+        <p id="tg-test-status" role="status" class="rounded-xl bg-amber-50 px-5 py-3 text-sm font-semibold text-amber-900">{{ $retryAfter > 0 ? 'Telegram gönderim sınırı uyguladı. Sayaç bitince tekrar deneyin.' : 'Bekleme süresi doldu. Mesaj göndermeyi tekrar deneyebilirsiniz.' }}</p>
     @endif
     @if(session('error') || $errors->any())
         <div role="alert" class="rounded-xl bg-rose-50 px-5 py-3 text-sm font-semibold text-rose-800">
@@ -131,12 +137,14 @@
                 @else
                     <p class="text-sm text-slate-600">Bot, bugün ve dün girilen yakıt alımlarındaki km/litre değerini araç için kayıtlı alt sınırla karşılaştırır.</p>
                 @endif
-                @if($isKasko)
+                @if($isKasko || ($isImm && $imm_summary_ready))
                     <input type="hidden" name="upcoming_summary_enabled" value="0">
                     <label class="flex cursor-pointer items-start gap-3 rounded-xl bg-slate-100 px-4 py-3 text-sm text-slate-800">
-                        <input type="checkbox" name="upcoming_summary_enabled" value="1" class="mt-1 rounded text-sky-700" @checked(old('upcoming_summary_enabled', $setting->upcoming_summary_enabled ?? true))>
-                        <span><b>Günlük yaklaşan kasko özeti</b><span class="mt-1 block text-xs text-slate-600">En büyük eşik özet aralığını belirler. Yenileme yüklenince yeni bitiş tarihi kullanılır.</span></span>
+                        <input type="checkbox" name="upcoming_summary_enabled" value="1" class="mt-1 rounded text-sky-700" @checked(old('upcoming_summary_enabled', $card['upcoming_summary_enabled']))>
+                        <span><b>Günlük yaklaşan {{ $isKasko ? 'kasko' : 'İMM' }} özeti</b><span class="mt-1 block text-xs text-slate-600">En büyük eşik özet aralığını belirler. Yenileme yüklenince yeni bitiş tarihi kullanılır.</span></span>
                     </label>
+                @elseif($isImm)
+                    <p class="text-sm text-slate-700">Günlük İMM özetini açmak için <a class="font-bold underline" href="{{ route('telegram-kasko.migrate') }}">Telegram veritabanını güncelleyin</a>.</p>
                 @endif
                 <details class="rounded-xl border border-slate-200 p-4" @if(!$isKasko || $errors->has('message_template')) open @endif>
                     <summary class="cursor-pointer text-sm font-bold text-slate-800">Telegram mesaj şablonu</summary>
@@ -144,7 +152,7 @@
                     @if(!$canEditTemplate)
                         <p class="mt-2 text-sm text-slate-700">Şablonu düzenlemek için önce <a class="font-bold underline" href="{{ route('telegram-kasko.migrate') }}">Telegram veritabanını güncelleyin</a>.</p>
                     @else
-                        <p class="mt-2 text-xs text-slate-600">Alanlar araç bilgileriyle otomatik dolar. {{ $isKasko ? '' : 'Hazır şablona dönmek için metni silip kaydedin.' }} Test düğmesi kayıtlı şablonu kullanır.</p>
+                        <p class="mt-2 text-xs text-slate-600">Alanlar araç bilgileriyle otomatik dolar. {{ $isKasko ? '' : 'Hazır şablona dönmek için metni silip kaydedin.' }} {{ $isImm ? 'Kontrol mesajı en büyük eşiğe giren İMM poliçelerini toplu listeler.' : 'Test düğmesi kayıtlı şablonu kullanır.' }}</p>
                         <p class="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
                             @foreach($card['template_fields'] as $field)
                                 <code>&#123;&#123;{{ $field }}&#125;&#125;</code>
@@ -182,7 +190,7 @@
             if (seconds > 0) {
                 setTimeout(updateButton, 1000);
             } else if (status) {
-                status.textContent = 'Bekleme süresi doldu. Test mesajını tekrar gönderebilirsiniz.';
+                status.textContent = 'Bekleme süresi doldu. Mesaj göndermeyi tekrar deneyebilirsiniz.';
             }
         }
 
