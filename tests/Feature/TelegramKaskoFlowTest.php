@@ -61,6 +61,100 @@ class TelegramKaskoFlowTest extends TestCase
         ]);
     }
 
+    public function test_natural_language_replies_use_the_correct_records_across_all_seven_groups(): void
+    {
+        (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
+        $this->travelTo(now('Europe/Istanbul')->setDate(2026, 11, 24)->setTime(10, 0));
+        DB::statement('CREATE TABLE fuels (id INTEGER PRIMARY KEY, company_id INTEGER, vehicle_id INTEGER, date TEXT, km INTEGER, liters REAL)');
+        DB::statement('CREATE TABLE vehicle_maintenance_settings (id INTEGER PRIMARY KEY, company_id INTEGER, vehicle_id INTEGER, oil_change_interval_km INTEGER, under_lubrication_interval_km INTEGER)');
+        DB::statement('CREATE TABLE vehicle_maintenances (id INTEGER PRIMARY KEY, company_id INTEGER, vehicle_id INTEGER, maintenance_type TEXT, service_date TEXT, km INTEGER, next_service_km INTEGER, next_service_date TEXT, status TEXT)');
+        $vehicle = $this->vehicle('42 ABC 123', [
+            'inspection_date' => '2026-11-27', 'insurance_end_date' => '2026-11-28', 'exhaust_date' => '2026-11-29',
+            'min_km_per_liter' => 8, 'current_km' => 1100,
+        ]);
+        $this->document($vehicle, 3);
+        $this->document($vehicle, 4, ['document_type' => 'İMM Poliçesi']);
+        $renewed = $this->vehicle('42 ABC 456', ['inspection_date' => '2026-11-25']);
+        $this->document($renewed, 30, ['document_type' => 'Muayene']);
+        $this->document($renewed, -3);
+        $this->document($renewed, 30);
+        $this->vehicle('42 ABC 789', ['inspection_date' => '2026-11-25', 'company_id' => 2]);
+        DB::table('fuels')->insert([
+            ['company_id' => 1, 'vehicle_id' => $vehicle, 'date' => '2026-11-20', 'km' => 1000, 'liters' => 20],
+            ['company_id' => 1, 'vehicle_id' => $vehicle, 'date' => '2026-11-23', 'km' => 1100, 'liters' => 20],
+        ]);
+        DB::table('vehicle_maintenances')->insert(['company_id' => 1, 'vehicle_id' => $vehicle, 'maintenance_type' => 'PERİYODİK BAKIM',
+            'service_date' => '2026-10-24', 'km' => 900, 'next_service_km' => 1200, 'status' => 'completed']);
+
+        $questions = [
+            'kasko' => ['Son 5 günü kalan kaskoları göster', '3 gün kaldı'],
+            'imm' => ['Önümüzdeki beş günde bitecek İMM poliçelerini listele', '4 gün kaldı'],
+            'insurance' => ['Trafik sigortası en yakın bitecek araç hangisi?', '28.11.2026'],
+            'inspection' => ['Son 5 gün kalan araçların listesini çıkar', '3 gün kaldı'],
+            'exhaust' => ['En yakın egzozu olan araç hangisi?', '5 gün kaldı'],
+            'maintenance' => ['Bakıma 500 km kalan araçlar', '100 km kaldı'],
+            'fuel' => ['Son 7 günde aşırı yakıt tüketen araçlar', '20,00 L/100 km'],
+        ];
+        $chat = app(TelegramDateChatService::class);
+        foreach ($questions as $channel => [$question, $expected]) {
+            $id = count(Http::recorded()) + 100;
+            $bot = $channel === 'kasko' ? $this->setting : TelegramAlertBot::create([
+                'company_id' => 1, 'channel' => $channel, 'bot_token' => "{$id}:fixture", 'chat_id' => (string) -$id,
+            ]);
+            $url = route(match ($channel) {
+                'kasko' => 'telegram-kasko.receive', 'imm' => 'telegram-imm.receive', default => 'telegram-date-bots.receive',
+            }, $bot->id);
+            $headers = ['X-Telegram-Bot-Api-Secret-Token' => $chat->webhookSecret($bot)];
+            $update = ['update_id' => 200, 'message' => ['text' => $question, 'message_id' => 7, 'is_topic_message' => true, 'message_thread_id' => 4,
+                'chat' => ['id' => -999, 'type' => 'supergroup'], 'from' => ['id' => 30, 'is_bot' => false]]];
+            $this->postJson($url, $update, $headers)->assertNoContent();
+            Http::assertSentCount($id - 100);
+            $update['message']['chat']['id'] = (int) $bot->chat_id;
+            $this->postJson($url, $update, $headers)->assertNoContent();
+            $this->postJson($url, $update, $headers)->assertNoContent();
+            Http::assertSentCount($id - 99);
+            $sent = Http::recorded()->last()[0];
+            $this->assertSame($bot->chat_id, $sent['chat_id']);
+            $this->assertSame(7, $sent['reply_parameters']['message_id']);
+            $this->assertSame(4, $sent['message_thread_id']);
+            $this->assertStringContainsString('42 ABC 123', $sent['text'], $channel);
+            $this->assertStringContainsString($expected, $sent['text'], $channel);
+            $this->assertStringContainsString('1 araç', $sent['text'], $channel);
+            $this->assertStringNotContainsString('42 ABC 456', $sent['text'], $channel);
+            $this->assertStringNotContainsString('42 ABC 789', $sent['text'], $channel);
+        }
+    }
+
+    public function test_local_assistant_understands_paraphrases_and_scopes_followups_to_the_sender(): void
+    {
+        (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
+        $this->travelTo(now('Europe/Istanbul')->setDate(2026, 11, 24)->setTime(10, 0));
+        $this->vehicle('42 ABC 123', ['inspection_date' => '2026-11-27']);
+        $this->vehicle('42 ABC 456', ['inspection_date' => '2026-11-29']);
+        $bot = TelegramAlertBot::create(['company_id' => 1, 'channel' => 'inspection', 'bot_token' => '250:fixture', 'chat_id' => '-789']);
+        $chat = app(TelegramDateChatService::class);
+        $url = route('telegram-date-bots.receive', $bot->id);
+        $headers = ['X-Telegram-Bot-Api-Secret-Token' => $chat->webhookSecret($bot)];
+
+        foreach ([
+            ['İlk önce hangisini halletmemiz gerekiyor?', 10, 'Bitişi en yakın araçlar'],
+            ['Son 5 günü kalan araçları listele', 10, '2 araç'],
+            ['Peki 2?', 11, null],
+            ['Peki 2?', 10, 'Bu sorguya uyan araç kaydı bulunamadı'],
+            ['/sor@BaskaBot Son 5 günü kalan araçlar', 10, null],
+            ['/sor Ne yapmam lazım?', 10, 'Soruyu netleştirir misiniz?'],
+        ] as $id => [$question, $sender, $expected]) {
+            $before = count(Http::recorded());
+            $update = ['update_id' => $id + 1, 'message' => ['text' => $question,
+                'chat' => ['id' => -789, 'type' => 'group'], 'from' => ['id' => $sender, 'is_bot' => false]]];
+            $this->postJson($url, $update, $headers)->assertNoContent();
+            Http::assertSentCount($before + (int) ($expected !== null));
+            if ($expected !== null) {
+                $this->assertStringContainsString($expected, Http::recorded()->last()[0]['text']);
+            }
+        }
+    }
+
     public function test_test_message_reaches_telegram_even_when_all_dates_are_undefined(): void
     {
         $this->vehicle('UNDEFINED');
@@ -459,7 +553,9 @@ class TelegramKaskoFlowTest extends TestCase
         ]);
 
         $chat = app(TelegramDateChatService::class);
-        $this->assertStringContainsString('/kontrol@CelebiImmBot', $chat->connectGroup($bot));
+        $connection = $chat->connectGroup($bot);
+        $this->assertStringContainsString('/kontrol@CelebiImmBot', $connection);
+        $this->assertStringContainsString('/sor@CelebiImmBot', $connection);
         Http::assertSent(fn (Request $request) => str_contains($request->url(), '/getChatMember?')
             && str_contains($request->url(), 'chat_id=-555') && str_contains($request->url(), 'user_id=124'));
         Http::assertSent(fn (Request $request) => str_ends_with($request->url(), '/setWebhook')
@@ -478,6 +574,12 @@ class TelegramKaskoFlowTest extends TestCase
         $this->assertSame(0, $chat->processIncomingCommands());
         $this->assertCount(1, Http::recorded(fn (Request $request) => str_ends_with($request->url(), '/sendMessage')));
         Http::assertNotSent(fn (Request $request) => str_contains($request->url(), '/getUpdates'));
+
+        $update['update_id']++;
+        $update['message']['text'] = '/sor@CelebiImmBot Önümüzdeki 5 günde bitecek poliçeler hangileri?';
+        $this->postJson($url, $update, $headers)->assertNoContent();
+        $this->assertStringContainsString('5 gün içinde bitecek', Http::recorded()->last()[0]['text']);
+        $this->assertStringContainsString('IMM-IMMEDIATE', Http::recorded()->last()[0]['text']);
     }
 
     public function test_imm_group_connection_reports_a_bot_outside_the_group_without_registering_a_webhook(): void

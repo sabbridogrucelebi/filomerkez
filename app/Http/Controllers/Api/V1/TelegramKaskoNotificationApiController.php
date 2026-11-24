@@ -8,6 +8,7 @@ use App\Models\TelegramKaskoNotificationSetting;
 use App\Models\TelegramKaskoNotificationLog;
 use App\Services\TelegramAlertBotSettings;
 use App\Services\TelegramAlertSchedule;
+use App\Services\TelegramAssistantQuestion;
 use App\Services\TelegramFleetAlertService;
 use App\Services\TelegramDateChatService;
 use App\Services\TelegramSendCooldown;
@@ -193,6 +194,7 @@ class TelegramKaskoNotificationApiController extends BaseApiController
             'reminder_days' => $days,
             'last_sent_at' => TelegramKaskoNotificationLog::where('company_id', $setting->company_id)->max('sent_at'),
             'message_template' => $setting->message_template ?: TelegramKaskoNotificationSetting::defaultMessageTemplate(),
+            'assistant_examples' => TelegramAssistantQuestion::examples('kasko'),
         ];
     }
 }

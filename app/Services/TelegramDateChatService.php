@@ -15,13 +15,15 @@ use Throwable;
 
 class TelegramDateChatService
 {
-    public const FLEET_CHANNELS = ['imm', 'insurance', 'inspection', 'exhaust'];
+    public const FLEET_CHANNELS = ['imm', 'insurance', 'inspection', 'exhaust', 'maintenance', 'fuel'];
     private const REPLIES_PER_RUN = 8;
 
     public function __construct(
         private readonly TelegramAlertBotSettings $settings,
         private readonly TelegramKaskoNotificationService $telegram,
         private readonly TelegramFleetAlertMessage $messages,
+        private readonly TelegramAssistantQuestion $questions,
+        private readonly TelegramAssistantAnswer $answers,
     ) {
     }
 
@@ -78,10 +80,10 @@ class TelegramDateChatService
         Cache::put($key . ':webhook', true, now()->addHours(6));
         $readsAll = $identity->json('result.can_read_all_group_messages') || in_array($status, ['administrator', 'creator'], true);
         if ($readsAll) {
-            return "{$label} grup bağlantısı kuruldu. Telegram grubuna kontrol yazın.";
+            return "{$label} grup bağlantısı kuruldu. Telegram grubuna kontrol yazabilir veya doğal dille soru sorabilirsiniz.";
         }
 
-        $command = $hasUsername ? ' Telegram grubunda /kontrol@' . $username . ' komutunu kullanın.' : '';
+        $command = $hasUsername ? " Telegram grubunda /kontrol@{$username} komutunu kullanın. Sorunun başına /sor@{$username} yazabilirsiniz." : '';
 
         return "{$label} grup bağlantısı kuruldu." . $command . ' Düz kontrol mesajı için BotFather’da Group Privacy ayarını kapatıp botu gruba yeniden ekleyin.';
     }
@@ -95,25 +97,21 @@ class TelegramDateChatService
     {
         Cache::put($this->cacheKey($bot) . ':webhook', true, now()->addHours(6));
 
-        return $this->handleControl($bot, $update) ?? true;
+        return $this->handleGroupMessage($bot, $update) ?? true;
     }
 
     /** Returns null for other commands, false while a recognized request is pending. */
-    public function handleControl(TelegramAlertBot|TelegramKaskoNotificationSetting $bot, array $update): ?bool
+    public function handleGroupMessage(TelegramAlertBot|TelegramKaskoNotificationSetting $bot, array $update): ?bool
     {
-        if (!$bot->hasCredentials()) {
+        if (!$bot->hasCredentials() || !is_int($update['update_id'] ?? null) || $this->groupText($bot, $update) === null) {
             return null;
         }
         $key = $this->cacheKey($bot);
-        $id = $update['update_id'] ?? null;
-        if (!is_int($id) || !$this->isControlMessage($bot, $update, $key)) {
-            return null;
-        }
 
-        return Cache::lock($key . ':lock', 180)->get(function () use ($bot, $key, $id) {
+        return Cache::lock($key . ':lock', 180)->get(function () use ($bot, $key, $update) {
             $budget = self::REPLIES_PER_RUN;
 
-            return $this->sendUpdate($bot, $key, $id, $budget);
+            return $this->handleMessage($bot, $key, $update, $budget);
         });
     }
 
@@ -144,7 +142,7 @@ class TelegramDateChatService
             } catch (TelegramRateLimited) {
                 // The transport records the wait; the same update resumes on a later run.
             } catch (Throwable $exception) {
-                Log::warning('Telegram tarih grubu komutu işlenemedi.', ['bot_id' => $bot->id, 'error_type' => $exception::class]);
+                Log::warning('Telegram grup komutu işlenemedi.', ['bot_id' => $bot->id, 'error_type' => $exception::class]);
             }
         });
 
@@ -170,7 +168,7 @@ class TelegramDateChatService
             } elseif ($response->status() === 409 && str_contains(Str::lower((string) $response->json('description')), 'webhook')) {
                 Cache::put($key . ':webhook', true, now()->addMinutes(10));
             }
-            Log::warning('Telegram tarih grubu güncellemeleri alınamadı.', ['bot_id' => $bot->id, 'status' => $response->status()]);
+            Log::warning('Telegram grup güncellemeleri alınamadı.', ['bot_id' => $bot->id, 'status' => $response->status()]);
 
             return 0;
         }
@@ -183,10 +181,11 @@ class TelegramDateChatService
                 continue;
             }
 
-            if ($this->isControlMessage($bot, $update, $key)) {
-                if (!$this->sendUpdate($bot, $key, $id, $budget)) {
-                    break;
-                }
+            $result = $this->handleMessage($bot, $key, $update, $budget);
+            if ($result === false) {
+                break;
+            }
+            if ($result === true) {
                 $handled++;
             }
 
@@ -212,22 +211,91 @@ class TelegramDateChatService
         return 'telegram:' . $this->channel($bot) . ':chat:' . hash('sha256', $bot->id . ':' . Str::before($bot->bot_token, ':') . ':' . $bot->chat_id);
     }
 
-    private function isControlMessage(TelegramAlertBot|TelegramKaskoNotificationSetting $bot, array $update, string $key): bool
+    private function groupText(TelegramAlertBot|TelegramKaskoNotificationSetting $bot, array $update): ?string
     {
         $text = data_get($update, 'message.text');
-        if (!is_string($text) || (string) data_get($update, 'message.chat.id') !== $bot->chat_id
+        if (!is_string($text) || mb_strlen($text) > 500 || (string) data_get($update, 'message.chat.id') !== $bot->chat_id
             || !in_array(data_get($update, 'message.chat.type'), ['group', 'supergroup'], true)
             || data_get($update, 'message.from.is_bot', false)) {
-            return false;
+            return null;
         }
-        $command = Str::lower(trim($text));
-        if (in_array($command, ['kontrol', '/kontrol'], true)) {
+
+        return trim($text);
+    }
+
+    private function handleMessage(TelegramAlertBot|TelegramKaskoNotificationSetting $bot, string $key, array $update, int &$budget): ?bool
+    {
+        $text = $this->groupText($bot, $update);
+        if ($text === null || $text === '') {
+            return null;
+        }
+
+        $channel = $this->channel($bot);
+        $kind = TelegramAssistantQuestion::kind($channel);
+        $username = Cache::get($key . ':username');
+        $command = Str::lower($text);
+        $control = in_array($command, ['kontrol', '/kontrol'], true)
+            || (is_string($username) && $command === '/kontrol@' . $username);
+        $id = $update['update_id'];
+        if ($control && $kind === 'date') {
+            return $this->sendUpdate($bot, $key, $id, $budget);
+        }
+
+        $progress = $key . ':update:' . $id;
+        if (Cache::has($progress . ':done')) {
             return true;
         }
 
-        $username = Cache::get($key . ':username');
+        $pages = Cache::get($progress . ':answer');
+        if (!is_array($pages)) {
+            $sender = data_get($update, 'message.from.id');
+            $context = is_int($sender) && !isset($update['message']['sender_chat']) ? $key . ':user:' . $sender : null;
+            $previous = $context ? Cache::get($context) : null;
+            if ($control) {
+                $question = ['intent' => $kind === 'fuel' ? 'high' : 'upcoming'];
+            } else {
+                $replyTo = data_get($update, 'message.reply_to_message.from.id');
+                $directed = is_int($replyTo) && (string) $replyTo === Str::before($bot->bot_token, ':');
+                if (preg_match('/^\/sor(?:@([A-Za-z0-9_]+))?(?:\s+(.*))?$/isu', $text, $parts)) {
+                    if (filled($parts[1] ?? null) && Str::lower($parts[1]) !== $username) {
+                        return null;
+                    }
+                    $text = $parts[2] ?? '';
+                    $directed = true;
+                } elseif (str_starts_with($text, '/')) {
+                    return null;
+                }
+                $question = $this->questions->parse($channel, $text, $directed, is_array($previous) ? $previous : null);
+            }
 
-        return is_string($username) && $command === '/kontrol@' . $username;
+            if ($question === null) {
+                return null;
+            }
+            $pages = $this->answers->messages($bot, $channel, $question);
+            Cache::put($progress . ':answer', $pages, now()->addHours(2));
+            if ($context && !in_array($question['intent'], ['help', 'topic'], true)) {
+                Cache::put($context, $question, now()->addMinutes(10));
+            }
+        }
+
+        $next = (int) Cache::get($progress . ':next', 0);
+        $replyTo = data_get($update, 'message.message_id');
+        $thread = data_get($update, 'message.is_topic_message') ? data_get($update, 'message.message_thread_id') : null;
+        while (isset($pages[$next]) && $budget > 0) {
+            $this->telegram->sendTextMessage($bot, $pages[$next], is_int($replyTo) && $replyTo > 0 ? $replyTo : null,
+                is_int($thread) && $thread > 1 ? $thread : null);
+            Cache::put($progress . ':next', ++$next, now()->addHours(2));
+            $budget--;
+        }
+        if (isset($pages[$next])) {
+            return false;
+        }
+
+        Cache::put($progress . ':done', true, now()->addDays(2));
+        Cache::forget($progress . ':answer');
+        Cache::forget($progress . ':next');
+
+        return true;
     }
 
     private function sendUpdate(TelegramAlertBot|TelegramKaskoNotificationSetting $bot, string $key, int $id, int &$budget): bool

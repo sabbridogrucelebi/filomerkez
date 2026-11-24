@@ -163,7 +163,7 @@ class TelegramKaskoNotificationService
         return $this->sendTextMessage($setting, $this->renderMessage($setting, $vehicle, $daysLeft, $expiryDate, $startDate));
     }
 
-    public function sendTextMessage(TelegramKaskoNotificationSetting|TelegramAlertBot $setting, string $message): string
+    public function sendTextMessage(TelegramKaskoNotificationSetting|TelegramAlertBot $setting, string $message, ?int $replyTo = null, ?int $thread = null): string
     {
         if (!$setting->hasCredentials()) {
             throw new RuntimeException('Telegram bot anahtarı ve sohbet kimliği tanımlanmalıdır.');
@@ -175,7 +175,7 @@ class TelegramKaskoNotificationService
             throw new TelegramRateLimited($wait);
         }
 
-        $response = $this->postMessage($token, $setting->chat_id, $message);
+        $response = $this->postMessage($token, $setting->chat_id, $message, $replyTo, $thread);
 
         if ($response->status() === 429 || (int) $response->json('error_code') === 429) {
             $retryAfter = (int) $response->json('parameters.retry_after');
@@ -193,11 +193,17 @@ class TelegramKaskoNotificationService
         return (string) $response->json('result.message_id');
     }
 
-    private function postMessage(string $token, string $chatId, string $message): Response
+    private function postMessage(string $token, string $chatId, string $message, ?int $replyTo, ?int $thread): Response
     {
         $request = Http::connectTimeout(5)->timeout(15)->withoutRedirecting()->acceptJson();
         $url = 'https://api.telegram.org/bot' . $token . '/sendMessage';
         $payload = ['chat_id' => $chatId, 'text' => $message, 'parse_mode' => 'HTML', 'disable_web_page_preview' => true];
+        if ($thread !== null) {
+            $payload['message_thread_id'] = $thread;
+        }
+        if ($replyTo !== null) {
+            $payload['reply_parameters'] = ['message_id' => $replyTo, 'allow_sending_without_reply' => true];
+        }
 
         try {
             return $request->post($url, $payload);

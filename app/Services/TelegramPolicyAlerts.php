@@ -51,16 +51,18 @@ final class TelegramPolicyAlerts
 
     public static function upcoming(int $companyId, string $channel, Carbon $today, int $window): Collection
     {
-        return Vehicle::where('company_id', $companyId)->where('is_active', true)->with(self::relationFor($channel))->orderBy('id')->get()
-            ->map(function (Vehicle $vehicle) use ($channel, $today, $window) {
-                [$policy, $end] = self::currentDates($vehicle, $channel);
-                if (!$end) {
-                    return null;
-                }
-                $days = self::daysUntil($today, $end);
+        return self::records($companyId, $channel, $today)->filter(fn (array $entry) => $entry['days'] !== null
+            && $entry['days'] >= 0 && $entry['days'] <= $window)->sortBy('days')->values();
+    }
 
-                return $days >= 0 && $days <= $window ? ['vehicle' => $vehicle, 'policy' => $policy, 'end' => $end, 'days' => $days] : null;
-            })->filter()->sortBy('days')->values();
+    public static function records(int $companyId, string $channel, Carbon $today): Collection
+    {
+        return Vehicle::where('company_id', $companyId)->where('is_active', true)->with(self::relationFor($channel))->orderBy('id')->get()
+            ->map(function (Vehicle $vehicle) use ($channel, $today) {
+                [$policy, $end] = self::currentDates($vehicle, $channel);
+
+                return ['vehicle' => $vehicle, 'policy' => $policy, 'end' => $end, 'days' => $end ? self::daysUntil($today, $end) : null];
+            });
     }
 
     public static function withOptionalStart(string $template, ?string $start, string $endField, string $label = 'Poliçe başlangıcı'): string

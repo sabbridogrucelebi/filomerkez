@@ -38,6 +38,7 @@ class TelegramAlertBotSettings
                 'last_sent_at' => $bot ? $lastSent->get($bot->id) : null,
                 'message_template' => $bot?->message_template ?: TelegramFleetAlertMessage::defaultTemplate($key),
                 'template_fields' => TelegramFleetAlertMessage::fields($meta['kind']),
+                'assistant_examples' => TelegramAssistantQuestion::examples($key),
             ];
             if ($key === 'imm') {
                 $channels[$key]['upcoming_summary_enabled'] = $bot?->upcoming_summary_enabled ?? true;

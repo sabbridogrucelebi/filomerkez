@@ -12,6 +12,7 @@
         'last_sent_at' => $kaskoLastSent,
         'upcoming_summary_enabled' => $setting->upcoming_summary_enabled ?? true,
         'message_template' => $setting->message_template ?: \App\Models\TelegramKaskoNotificationSetting::defaultMessageTemplate(),
+        'assistant_examples' => \App\Services\TelegramAssistantQuestion::examples('kasko'),
         'template_fields' => ['company_name', 'days_left', 'kasko_status', 'plate', 'brand_model', 'model_year', 'license_serial_no', 'chassis_no', 'license_owner', 'owner_tax_or_tc_no', 'policy_start_line', 'kasko_end_date'],
     ]] + $channels;
     $active = collect($cards)->filter(fn ($bot) => $bot['is_enabled'] && $bot['has_bot_token'] && filled($bot['chat_id']))->count();
@@ -162,16 +163,24 @@
                 </details>
             </form>
 
-            @if($card['kind'] === 'date' && $configured)
-                <form class="mt-5 border-t border-slate-200 pt-5" method="POST" action="{{ $isKasko ? route('telegram-kasko.connect') : route('telegram-kasko.bots.connect', ['channel' => $selectedChannel]) }}">
-                    @csrf
-                    <button type="submit" class="tg-action">Grup komutlarını bağla</button>
-                </form>
-                <p class="mt-3 text-sm text-slate-700">Bağlantıdan sonra Telegram grubuna <code class="font-bold">kontrol</code> yazın. Grup gizliliği açıksa bağlantı ekranı botun kullanıcı adıyla yazabileceğiniz komutu gösterir.</p>
+            <section class="mt-5 border-t border-slate-200 pt-5" aria-labelledby="tg-questions">
+                <h3 id="tg-questions" class="text-sm font-bold text-slate-900">Telegram’da soru sor</h3>
+                <ul class="mt-3 space-y-1 text-sm text-slate-700">
+                    @foreach($card['assistant_examples'] as $example)
+                        <li>• {{ $example }}</li>
+                    @endforeach
+                </ul>
+                @if($configured)
+                    <form class="mt-3" method="POST" action="{{ $isKasko ? route('telegram-kasko.connect') : route('telegram-kasko.bots.connect', ['channel' => $selectedChannel]) }}">
+                        @csrf
+                        <button type="submit" class="tg-action">Grup komutlarını bağla</button>
+                    </form>
+                    <p class="mt-3 text-sm text-slate-700">Sorunuzu bağlı gruba yazın. Grup gizliliği açıksa sorunun başına <code>/sor@BotKullanıcıAdı</code> ekleyin.</p>
+                @endif
                 @if($isKasko)
                     <p class="mt-2 text-xs text-slate-600">Diğer grup komutları · kaskolu araçlarım · süresi geçenler · kaskosu olmayan araçlar</p>
                 @endif
-            @endif
+            </section>
         @endif
     </section>
 </div>

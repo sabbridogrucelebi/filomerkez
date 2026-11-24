@@ -123,11 +123,6 @@ class TelegramKaskoChatService
 
     public function handleUpdate(TelegramKaskoNotificationSetting $setting, array $update): ?bool
     {
-        $control = $this->controls->handleControl($setting, $update);
-        if ($control !== null) {
-            return $control ? true : null;
-        }
-
         $text = data_get($update, 'message.text');
         if (!is_int($update['update_id'] ?? null) || !is_string($text)
             || (string) data_get($update, 'message.chat.id') !== (string) $setting->chat_id) {
@@ -142,7 +137,11 @@ class TelegramKaskoChatService
             default => $this->isStartCommand($command) ? 'help' : null,
         };
         if ($report === null) {
-            return false;
+            return match ($this->controls->handleGroupMessage($setting, $update)) {
+                true => true,
+                false => null,
+                null => false,
+            };
         }
         $key = $this->webhookCacheKey($setting) . ':update:' . $update['update_id'];
         return Cache::lock($key . ':lock', 180)->block(2, function () use ($key, $setting, $report) {
@@ -150,7 +149,7 @@ class TelegramKaskoChatService
                 return false;
             }
             $replies = $report === 'help'
-                ? ["👋 <b>Filo Merkez Kasko Asistanı</b>\n\n📋 <code>kontrol</code>\n❔ <code>kaskosu olmayan araçlar</code>\n⌛ <code>süresi geçenler</code>\n🛡️ <code>kaskolu araçlarım</code>"]
+                ? ["👋 <b>Filo Merkez Kasko Asistanı</b>\n\n📋 <code>kontrol</code>\n❔ <code>kaskosu olmayan araçlar</code>\n⌛ <code>süresi geçenler</code>\n🛡️ <code>kaskolu araçlarım</code>\n💬 <code>/sor Son 5 günü kalan araçları listele</code>"]
                 : $this->kaskoReportMessages($setting->company_id, $report);
             $next = (int) Cache::get($key, 0);
             foreach (array_slice($replies, $next) as $message) {

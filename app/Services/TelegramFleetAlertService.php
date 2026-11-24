@@ -176,31 +176,19 @@ class TelegramFleetAlertService
 
     private function maintenanceEvents(Vehicle $vehicle, int $threshold, Carbon $today): array
     {
-        $status = $vehicle->maintenance_status;
-        $records = $vehicle->maintenances()->where('company_id', $vehicle->company_id)
-            ->where('status', 'completed')->whereDate('service_date', '<=', $today->toDateString())
-            ->get()->unique('maintenance_type');
-        $currentKm = $status['current_km'] ?? max($vehicle->current_km, $records->max('km'), $vehicle->fuels()->max('km'));
         $events = [];
-        foreach ($records as $record) {
-            $remainingKm = match ($record->maintenance_type) {
-                'YAĞ BAKIMI' => $status['oil_remaining'] ?? null,
-                'ALT YAĞLAMA' => $status['lube_remaining'] ?? null,
-                default => null,
-            };
-            if ($record->next_service_km > 0) {
-                $remainingKm = $record->next_service_km - $currentKm;
-            }
+        foreach (TelegramFleetMeasurements::maintenance($vehicle, $today) as $id => $plan) {
+            $remainingKm = $plan['remaining_km'];
             $dueByKm = $remainingKm !== null && $remainingKm <= $threshold;
-            $dueByDate = $record->next_service_date && $record->next_service_date->toDateString() <= $today->toDateString();
+            $dueByDate = $plan['date'] && $plan['date']->toDateString() <= $today->toDateString();
             if (!$dueByKm && !$dueByDate) {
                 continue;
             }
 
-            $events['maintenance:' . $record->id] = [
-                'maintenance_type' => $record->maintenance_type ?: $record->title ?: 'Planlanan bakım',
-                'current_km' => number_format($currentKm, 0, ',', '.'),
-                'next_service_date' => $record->next_service_date?->format('d.m.Y'),
+            $events['maintenance:' . $id] = [
+                'maintenance_type' => $plan['type'],
+                'current_km' => number_format($plan['current_km'], 0, ',', '.'),
+                'next_service_date' => $plan['date']?->format('d.m.Y'),
                 'maintenance_status' => match (true) {
                     !$dueByKm => 'Planlanan bakım tarihi geldi',
                     $remainingKm < 0 => 'Bakım kilometresi ' . abs($remainingKm) . ' km aşıldı',
@@ -214,27 +202,14 @@ class TelegramFleetAlertService
 
     private function fuelEvents(Vehicle $vehicle, Carbon $today): array
     {
-        $from = $today->copy()->subDay()->toDateString();
-        $fuels = $vehicle->fuels()->where('company_id', $vehicle->company_id)->orderByDesc('km')->orderByDesc('id');
-        $recent = (clone $fuels)->whereBetween('date', [$from, $today->toDateString()])->get()->reverse();
-        if ($recent->isEmpty()) {
-            return [];
-        }
-        $previous = $fuels->whereDate('date', '<', $from)->first();
         $events = [];
-        foreach ($recent as $fuel) {
-            $distance = $previous?->km > 0 && $fuel->km > 0 ? $fuel->km - $previous->km : 0;
-            $previous = $fuel;
-            if ($distance <= 0 || $fuel->liters <= 0) {
-                continue;
-            }
-            $efficiency = $distance / (float) $fuel->liters;
-            if ($efficiency < $vehicle->min_km_per_liter) {
-                $events['fuel:' . $fuel->id] = [
-                    'fuel_date' => $fuel->date->format('d.m.Y'),
-                    'distance_km' => number_format($distance, 0, ',', '.'),
-                    'liters' => number_format((float) $fuel->liters, 2, ',', '.'),
-                    'measured_km_per_liter' => number_format($efficiency, 2, ',', '.'),
+        foreach (TelegramFleetMeasurements::fuel($vehicle, $today->copy()->subDay(), $today) as $id => $record) {
+            if ($record['efficiency'] < $vehicle->min_km_per_liter) {
+                $events['fuel:' . $id] = [
+                    'fuel_date' => $record['date']->format('d.m.Y'),
+                    'distance_km' => number_format($record['distance'], 0, ',', '.'),
+                    'liters' => number_format($record['liters'], 2, ',', '.'),
+                    'measured_km_per_liter' => number_format($record['efficiency'], 2, ',', '.'),
                     'minimum_km_per_liter' => number_format($vehicle->min_km_per_liter, 2, ',', '.'),
                 ];
             }

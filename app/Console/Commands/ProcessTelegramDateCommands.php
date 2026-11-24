@@ -11,12 +11,12 @@ class ProcessTelegramDateCommands extends Command
 
     protected $aliases = ['telegram:imm-commands'];
 
-    protected $description = 'Replies to control requests in configured Telegram date-alert groups.';
+    protected $description = 'Replies to fleet questions and control requests in configured Telegram groups.';
 
     public function handle(TelegramDateChatService $chat): int
     {
         $handled = $chat->processIncomingCommands();
-        $this->info("Telegram tarih grubu komutları: {$handled} kontrol işlendi.");
+        $this->info("Telegram grup komutları: {$handled} istek işlendi.");
 
         return self::SUCCESS;
     }

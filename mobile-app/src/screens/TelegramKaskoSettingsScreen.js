@@ -296,12 +296,18 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                                                 ) : <Text style={styles.notice}>Şablonu düzenlemek için web panelinden Telegram veritabanını güncelleyin.</Text>}
                                             </>
                                         )}
-                                        {bot.kind === 'date' && configured(bot) && (
+                                        {(bot.assistant_examples || []).length > 0 && (
+                                            <>
+                                                <Text style={styles.label}>Telegram’da soru sor</Text>
+                                                {bot.assistant_examples.map(example => <Text key={example} style={styles.muted}>• {example}</Text>)}
+                                            </>
+                                        )}
+                                        {configured(bot) && (
                                             <>
                                                 <TouchableOpacity accessibilityRole="button" disabled={working} onPress={() => action('connect')} style={styles.secondary}>
                                                     <Text style={styles.secondaryText}>Grup komutlarını bağla</Text>
                                                 </TouchableOpacity>
-                                                <Text style={styles.muted}>Bağlantıdan sonra gruba kontrol yazın. Grup gizliliği açıksa ekranda botun kullanıcı adıyla yazabileceğiniz komut gösterilir.</Text>
+                                                <Text style={styles.muted}>Sorunuzu bağlı gruba yazın. Grup gizliliği açıksa sorunun başına /sor@BotKullanıcıAdı ekleyin.</Text>
                                                 {isKasko && <Text style={styles.muted}>Diğer grup komutları · kaskolu araçlarım · süresi geçenler · kaskosu olmayan araçlar</Text>}
                                             </>
                                         )}
