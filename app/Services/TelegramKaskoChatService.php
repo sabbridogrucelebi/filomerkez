@@ -188,7 +188,9 @@ class TelegramKaskoChatService
                 continue;
             }
 
-            $entry = "🚘 <b>" . e($vehicle->plate ?: '-') . "</b> — " . e(trim(($vehicle->brand ?? '') . ' ' . ($vehicle->model ?? '')) ?: '-') . "\n";
+            $entry = "🚘 <b>" . e($vehicle->plate ?: '-') . "</b> — " . e(trim(($vehicle->brand ?? '') . ' ' . ($vehicle->model ?? '')) ?: '-')
+                . "\n👤 Ruhsat sahibi: " . e($vehicle->license_owner ?: '-')
+                . "\n🏢 Vergi / T.C. No: " . e($vehicle->owner_tax_or_tc_no ?: '-') . "\n";
             if ($status === 'missing') {
                 $entry .= "❔ " . $missingReason;
                 $lastDated = $vehicle->kaskoDocuments->first(fn ($doc) => filled($doc->file_path) && $doc->end_date?->lt($today));

@@ -24,6 +24,8 @@ class TelegramKaskoNotificationServiceTest extends TestCase
             'model_year' => 2023,
             'license_serial_no' => 'SERİ-001',
             'chassis_no' => 'ŞASE-001',
+            'license_owner' => 'Mehmet Taşımacılık Tic. Ltd. Şti.',
+            'owner_tax_or_tc_no' => '6130942149',
             'kasko_end_date' => '2026-12-03',
         ]);
 
@@ -36,6 +38,8 @@ class TelegramKaskoNotificationServiceTest extends TestCase
         $this->assertStringContainsString('2023', $message);
         $this->assertStringContainsString('SERİ-001', $message);
         $this->assertStringContainsString('ŞASE-001', $message);
+        $this->assertStringContainsString('Mehmet Taşımacılık Tic. Ltd. Şti.', $message);
+        $this->assertStringContainsString('6130942149', $message);
         $this->assertStringContainsString('Filo Merkez | Filo Takip Sistemleri', $message);
     }
 
@@ -49,5 +53,23 @@ class TelegramKaskoNotificationServiceTest extends TestCase
         $message = (new TelegramKaskoNotificationService())->renderMessage($setting, $vehicle, -3);
 
         $this->assertStringContainsString('3 GÜN</b> önce sona erdi', $message);
+    }
+
+    public function test_it_adds_ownership_details_to_an_existing_custom_template(): void
+    {
+        $setting = new TelegramKaskoNotificationSetting([
+            'message_template' => "🚘 {{plate}}\n<i>Filo Merkez</i>",
+        ]);
+        $vehicle = new Vehicle([
+            'plate' => '42 C 0681',
+            'license_owner' => 'Mehmet Taşımacılık Tic. Ltd. Şti.',
+            'owner_tax_or_tc_no' => '6130942149',
+            'kasko_end_date' => '2026-12-03',
+        ]);
+
+        $message = (new TelegramKaskoNotificationService())->renderMessage($setting, $vehicle, 10);
+
+        $this->assertStringContainsString('Ruhsat Sahibi:</b> Mehmet Taşımacılık Tic. Ltd. Şti.', $message);
+        $this->assertStringContainsString('Vergi / T.C. No:</b> 6130942149', $message);
     }
 }

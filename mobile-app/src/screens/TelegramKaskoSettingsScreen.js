@@ -17,6 +17,8 @@ Aşağıdaki aracın kasko poliçesi {{kasko_status}}
 📅 <b>Model Yılı:</b> {{model_year}}
 🔢 <b>Seri No:</b> {{license_serial_no}}
 🧾 <b>Şase No:</b> {{chassis_no}}
+👤 <b>Ruhsat Sahibi:</b> {{license_owner}}
+🏢 <b>Vergi / T.C. No:</b> {{owner_tax_or_tc_no}}
 🛡️ <b>Kasko Bitiş Tarihi:</b> {{kasko_end_date}}
 
 ⏳ Poliçe yenileme işlemlerini zamanında yaparak
@@ -207,7 +209,7 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                     <View style={styles.card}>
                         <View style={styles.sectionTitleRow}><Text style={styles.sectionEmoji}>✨</Text><View><Text style={styles.sectionTitle}>Premium uyarı metni</Text><Text style={styles.sectionDescription}>Alanlar mesaj gönderilirken otomatik doldurulur.</Text></View></View>
                         <TextInput value={messageTemplate} onChangeText={setMessageTemplate} editable={canManage} multiline textAlignVertical="top" style={[styles.input, styles.templateInput]} />
-                        <Text style={styles.helpText}>Alanlar: {'{{kasko_status}}'}, {'{{plate}}'}, {'{{brand_model}}'}, {'{{model_year}}'}, {'{{license_serial_no}}'}, {'{{chassis_no}}'}, {'{{kasko_end_date}}'}</Text>
+                        <Text style={styles.helpText}>Alanlar: {'{{kasko_status}}'}, {'{{plate}}'}, {'{{brand_model}}'}, {'{{model_year}}'}, {'{{license_serial_no}}'}, {'{{chassis_no}}'}, {'{{license_owner}}'}, {'{{owner_tax_or_tc_no}}'}, {'{{kasko_end_date}}'}</Text>
                     </View>
 
                     {!canManage && <View style={styles.permissionNotice}><Ionicons name="lock-closed-outline" size={18} color="#B45309" /><Text style={styles.permissionText}>Bu ayarları değiştirme yetkiniz yok.</Text></View>}

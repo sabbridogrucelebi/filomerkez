@@ -23,7 +23,7 @@ class TelegramKaskoFlowTest extends TestCase
         DB::purge('sqlite');
         DB::statement('CREATE TABLE companies (id INTEGER PRIMARY KEY, name TEXT, is_active INTEGER, license_expires_at TEXT)');
         DB::statement('CREATE TABLE subscriptions (id INTEGER PRIMARY KEY, company_id INTEGER, status TEXT, ends_at TEXT)');
-        DB::statement('CREATE TABLE vehicles (id INTEGER PRIMARY KEY, company_id INTEGER, plate TEXT, kasko_end_date TEXT, is_active INTEGER, deleted_at TEXT)');
+        DB::statement('CREATE TABLE vehicles (id INTEGER PRIMARY KEY, company_id INTEGER, plate TEXT, brand TEXT, model TEXT, license_owner TEXT, owner_tax_or_tc_no TEXT, kasko_end_date TEXT, is_active INTEGER, deleted_at TEXT)');
         DB::statement('CREATE TABLE documents (id INTEGER PRIMARY KEY, company_id INTEGER, documentable_id INTEGER, documentable_type TEXT, document_type TEXT, start_date TEXT, end_date TEXT, archived_at TEXT, created_at TEXT, file_path TEXT)');
         DB::statement('CREATE TABLE telegram_kasko_notification_settings (id INTEGER PRIMARY KEY, company_id INTEGER, is_enabled INTEGER, upcoming_summary_enabled INTEGER, upcoming_summary_days INTEGER, bot_token TEXT, chat_id TEXT, reminder_days TEXT, last_telegram_update_id INTEGER, last_upcoming_summary_date TEXT, created_at TEXT, updated_at TEXT)');
         DB::statement('CREATE TABLE telegram_kasko_notification_logs (id INTEGER PRIMARY KEY, company_id INTEGER, vehicle_id INTEGER, kasko_end_date TEXT, reminder_day INTEGER, telegram_message_id TEXT, sent_at TEXT, created_at TEXT, updated_at TEXT)');
@@ -64,7 +64,10 @@ class TelegramKaskoFlowTest extends TestCase
     {
         $this->vehicle('UNDEFINED', ['is_active' => 0]);
         $this->vehicle('CARD-ONLY', ['kasko_end_date' => today()->addDays(15)->toDateString()]);
-        $this->document($this->vehicle('NO-ATTACHMENT'), 20, ['file_path' => null]);
+        $this->document($this->vehicle('NO-ATTACHMENT', [
+            'license_owner' => 'Mehmet Taşımacılık Tic. Ltd. Şti.',
+            'owner_tax_or_tc_no' => '6130942149',
+        ]), 20, ['file_path' => null]);
         $this->document($this->vehicle('UNDATED'), 0, ['end_date' => null]);
         $this->vehicle('OTHER-TENANT', ['company_id' => 2]);
         $this->vehicle('DELETED', ['deleted_at' => today()]);
@@ -84,7 +87,7 @@ class TelegramKaskoFlowTest extends TestCase
         $this->postJson($url, $update, $headers)->assertNoContent();
         Http::assertSentCount(1);
         $text = Http::recorded()->first()[0]['text'];
-        foreach (['UNDEFINED', 'NO-ATTACHMENT', 'CARD-ONLY', 'UNDATED', '4 araç'] as $value) {
+        foreach (['UNDEFINED', 'NO-ATTACHMENT', 'CARD-ONLY', 'UNDATED', '4 araç', 'Mehmet Taşımacılık Tic. Ltd. Şti.', '6130942149'] as $value) {
             $this->assertStringContainsString($value, $text);
         }
         foreach (['EXPIRED', 'EXPIRES-TODAY', 'RENEWED', 'DELETED', 'OTHER-TENANT'] as $value) {
@@ -150,7 +153,10 @@ class TelegramKaskoFlowTest extends TestCase
     public function test_daily_summary_lists_every_uploaded_policy_ending_within_the_configured_window_once(): void
     {
         $this->setting->update(['upcoming_summary_enabled' => true, 'upcoming_summary_days' => 20]);
-        $this->document($this->vehicle('ONE-DAY'), 1, ['start_date' => '2026-01-01']);
+        $this->document($this->vehicle('ONE-DAY', [
+            'license_owner' => 'Mehmet Taşımacılık Tic. Ltd. Şti.',
+            'owner_tax_or_tc_no' => '6130942149',
+        ]), 1, ['start_date' => '2026-01-01']);
         $this->document($this->vehicle('TWENTY-DAY'), 20, ['start_date' => '2026-02-01']);
         $this->document($this->vehicle('OUTSIDE-WINDOW'), 21);
         $this->document($this->vehicle('NO-FILE'), 5, ['file_path' => null]);
@@ -159,7 +165,7 @@ class TelegramKaskoFlowTest extends TestCase
         $service = app(TelegramKaskoNotificationService::class);
         $this->assertSame(1, $service->sendScheduledNotifications());
         $message = Http::recorded()->last()[0]['text'];
-        foreach (['20 GÜN İÇİNDE BİTECEK KASKOLAR', 'Toplam: <b>2 araç</b>', 'ONE-DAY', 'TWENTY-DAY', '1 gün kaldı', '20 gün kaldı'] as $value) {
+        foreach (['20 GÜN İÇİNDE BİTECEK KASKOLAR', 'Toplam: <b>2 araç</b>', 'ONE-DAY', 'TWENTY-DAY', '1 gün kaldı', '20 gün kaldı', 'Mehmet Taşımacılık Tic. Ltd. Şti.', '6130942149'] as $value) {
             $this->assertStringContainsString($value, $message);
         }
         foreach (['OUTSIDE-WINDOW', 'NO-FILE', 'INACTIVE'] as $value) {

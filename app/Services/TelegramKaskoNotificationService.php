@@ -129,6 +129,10 @@ class TelegramKaskoNotificationService
             );
         }
 
+        // Eski veya özel şablonlar bu alanları içermese bile, kasko uyarısında
+        // ruhsat sahibi ve vergi/T.C. bilgisi her zaman gösterilsin.
+        $template = $this->ensureOwnershipFields($template);
+
         return strtr($template, [
             '{{company_name}}' => e($setting->company?->name ?? 'Filo Merkez'),
             '{{days_left}}' => (string) abs($daysLeft),
@@ -138,6 +142,8 @@ class TelegramKaskoNotificationService
             '{{model_year}}' => e($vehicle->model_year ?: '-'),
             '{{license_serial_no}}' => e($vehicle->license_serial_no ?: '-'),
             '{{chassis_no}}' => e($vehicle->chassis_no ?: '-'),
+            '{{license_owner}}' => e($vehicle->license_owner ?: '-'),
+            '{{owner_tax_or_tc_no}}' => e($vehicle->owner_tax_or_tc_no ?: '-'),
             '{{kasko_end_date}}' => e($expiryDate->format('d.m.Y')),
         ]);
     }
@@ -240,6 +246,8 @@ class TelegramKaskoNotificationService
             $startDate = $policy->start_date?->format('d.m.Y') ?? 'Kayıtlı değil';
 
             return "🚘 <b>" . e($vehicle->plate ?: '-') . '</b> — ' . e(trim(($vehicle->brand ?? '') . ' ' . ($vehicle->model ?? '')) ?: '-')
+                . "\n👤 Ruhsat sahibi: " . e($vehicle->license_owner ?: '-')
+                . "\n🏢 Vergi / T.C. No: " . e($vehicle->owner_tax_or_tc_no ?: '-')
                 . "\n📅 Poliçe başlangıcı: {$startDate}"
                 . "\n🛡️ Bitiş: " . $policy->end_date->format('d.m.Y')
                 . "\n⏳ <b>{$remainingDays} gün kaldı</b>";
@@ -256,6 +264,28 @@ class TelegramKaskoNotificationService
         $setting->save();
 
         return $sent;
+    }
+
+    private function ensureOwnershipFields(string $template): string
+    {
+        $fields = [];
+        if (!str_contains($template, '{{license_owner}}')) {
+            $fields[] = '👤 <b>Ruhsat Sahibi:</b> {{license_owner}}';
+        }
+        if (!str_contains($template, '{{owner_tax_or_tc_no}}')) {
+            $fields[] = '🏢 <b>Vergi / T.C. No:</b> {{owner_tax_or_tc_no}}';
+        }
+
+        if ($fields === []) {
+            return $template;
+        }
+
+        $footerOffset = strpos($template, "\n<i>");
+        if ($footerOffset !== false) {
+            return substr_replace($template, "\n" . implode("\n", $fields), $footerOffset, 0);
+        }
+
+        return rtrim($template) . "\n\n" . implode("\n", $fields);
     }
 
     private function chunkMessages(string $heading, array $lines): array
