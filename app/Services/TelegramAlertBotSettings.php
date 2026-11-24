@@ -19,6 +19,7 @@ class TelegramAlertBotSettings
     public function dashboard(int $companyId): array
     {
         $available = $this->available();
+        $templatesReady = $available && Schema::hasColumn('telegram_alert_bots', 'message_template');
         $bots = $available ? TelegramAlertBot::where('company_id', $companyId)->get()->keyBy('channel') : collect();
         $lastSent = $available ? TelegramAlertDelivery::where('company_id', $companyId)
             ->selectRaw('bot_id, MAX(created_at) as last_sent_at')->groupBy('bot_id')->pluck('last_sent_at', 'bot_id') : collect();
@@ -33,10 +34,13 @@ class TelegramAlertBotSettings
                 'reminder_days' => $bot?->reminder_days ?? TelegramAlertSchedule::DEFAULT_DAYS,
                 'maintenance_km' => $bot?->maintenance_km ?? 200,
                 'last_sent_at' => $bot ? $lastSent->get($bot->id) : null,
+                'message_template' => $bot?->message_template ?: TelegramFleetAlertMessage::defaultTemplate($key),
+                'template_fields' => TelegramFleetAlertMessage::fields($meta['kind']),
             ];
         }
 
-        return ['fleet_ready' => $available, 'channels' => $channels, 'schedule_time' => TelegramAlertSchedule::TIME];
+        return ['fleet_ready' => $available, 'fleet_templates_ready' => $templatesReady, 'channels' => $channels,
+            'schedule_time' => TelegramAlertSchedule::TIME];
     }
 
     public function bot(int $companyId, string $channel): TelegramAlertBot
@@ -57,6 +61,7 @@ class TelegramAlertBotSettings
             'chat_id' => ['nullable', 'string', 'regex:/^(?:-?\d+|@[A-Za-z0-9_]{5,})$/', 'max:100'],
             'reminder_days_text' => [$kind === 'date' ? 'required' : 'nullable', 'string', 'max:500'],
             'maintenance_km' => [$kind === 'maintenance' ? 'required' : 'nullable', 'integer', 'min:0', 'max:100000'],
+            'message_template' => ['sometimes', 'nullable', 'string', 'max:' . TelegramFleetAlertMessage::MAX_TEMPLATE_LENGTH],
         ]);
 
         $days = $kind === 'date' ? TelegramAlertSchedule::parseDays($data['reminder_days_text']) : null;
@@ -69,6 +74,10 @@ class TelegramAlertBotSettings
         }
         if ($request->boolean('is_enabled') && !$bot->hasCredentials()) {
             throw ValidationException::withMessages(['is_enabled' => 'Etkinleştirmek için bot anahtarı ve sohbet kimliği girin.']);
+        }
+        if (array_key_exists('message_template', $data)) {
+            abort_unless(Schema::hasColumn('telegram_alert_bots', 'message_template'), 503, 'Mesaj şablonunu kaydetmek için Telegram veritabanını güncelleyin.');
+            $bot->message_template = filled($data['message_template']) ? $data['message_template'] : null;
         }
         $bot->fill(['is_enabled' => $request->boolean('is_enabled'), 'reminder_days' => $days,
             'maintenance_km' => $kind === 'maintenance' ? $data['maintenance_km'] : null])->save();

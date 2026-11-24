@@ -121,7 +121,7 @@ class TelegramKaskoNotificationApiController extends BaseApiController
             return $this->errorResponse($exception->getMessage(), 422);
         }
 
-        return $this->successResponse([], 'Test mesajı Telegram’a gönderildi.');
+        return $this->successResponse([], 'Örnek şablon Telegram’a gönderildi.');
     }
 
     private function ensureCanManage(Request $request): void

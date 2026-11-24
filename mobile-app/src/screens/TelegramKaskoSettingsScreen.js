@@ -94,12 +94,13 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
     const isKasko = channel === 'kasko';
     const endpoint = isKasko ? ENDPOINT : ENDPOINT + '/bots/' + channel;
     const ready = isKasko || dashboard?.fleet_ready;
+    const canEditTemplate = isKasko || dashboard?.fleet_templates_ready;
     const count = Object.values(cards).filter(item => configured(item) && item.is_enabled).length;
 
     function select(key) {
         if (working) return;
         setChannel(key);
-        setShowTemplate(false);
+        setShowTemplate(key !== 'kasko');
         applyForm(cards[key]);
         if (settingsTop.current > 0) scroll.current?.scrollTo({ y: settingsTop.current, animated: false });
     }
@@ -127,8 +128,9 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
         }
 
         const payload = { is_enabled: form.enabled, chat_id: chat, ...(token ? { bot_token: token } : {}) };
+        if (canEditTemplate) payload.message_template = form.template;
         if (isKasko) {
-            Object.assign(payload, { reminder_days: days, upcoming_summary_enabled: form.summary, message_template: form.template });
+            Object.assign(payload, { reminder_days: days, upcoming_summary_enabled: form.summary });
         } else if (bot.kind === 'date') {
             payload.reminder_days_text = form.days;
         } else if (bot.kind === 'maintenance') {
@@ -208,6 +210,13 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                                 {!!bot.last_sent_at && <Text style={styles.muted}>Son otomatik uyarı · {bot.last_sent_at}</Text>}
                                 {!ready ? <Text style={styles.notice}>Bu botu kurmak için web panelinden Telegram veritabanını güncelleyin.</Text> : (
                                     <>
+                                        <TouchableOpacity accessibilityRole="button" disabled={working} onPress={save} style={styles.primary}>
+                                            {working ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryText}>Ayarları Kaydet</Text>}
+                                        </TouchableOpacity>
+                                        <TouchableOpacity accessibilityRole="button" disabled={working || !configured(bot)} onPress={() => action('test')}
+                                            style={[styles.secondary, !configured(bot) && styles.disabled]}>
+                                            <Text style={styles.secondaryText}>{isKasko ? 'Tek Araç Testi' : 'Örnek Mesaj Gönder'}</Text>
+                                        </TouchableOpacity>
                                         <View style={styles.toggle}>
                                             <Text style={styles.label}>Otomatik uyarılar etkin</Text>
                                             <Switch accessibilityLabel="Otomatik uyarılar etkin" value={form.enabled} onValueChange={value => update('enabled', value)} disabled={working} />
@@ -225,42 +234,35 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                                         {bot.kind === 'maintenance' && <Input label="Bakım uyarı mesafesi (km)" value={form.km} onChangeText={value => update('km', value)} keyboardType="number-pad" editable={!working} />}
                                         {bot.kind === 'fuel' && <Text style={styles.muted}>Bugünün ve dünün yakıt alımları araçta kayıtlı minimum km/litre sınırıyla karşılaştırılır.</Text>}
                                         {isKasko && (
-                                            <>
-                                                <View style={styles.toggle}>
-                                                    <View style={styles.heroCopy}>
-                                                        <Text style={styles.label}>Günlük yaklaşan kasko özeti</Text>
-                                                        <Text style={styles.muted}>Aralığı en büyük eşik belirler. Yenileme yüklenince yeni bitiş tarihi kullanılır.</Text>
-                                                    </View>
-                                                    <Switch accessibilityLabel="Günlük yaklaşan kasko özeti" value={form.summary} onValueChange={value => update('summary', value)} disabled={working} />
+                                            <View style={styles.toggle}>
+                                                <View style={styles.heroCopy}>
+                                                    <Text style={styles.label}>Günlük yaklaşan kasko özeti</Text>
+                                                    <Text style={styles.muted}>Aralığı en büyük eşik belirler. Yenileme yüklenince yeni bitiş tarihi kullanılır.</Text>
                                                 </View>
-                                                <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: showTemplate }} onPress={() => setShowTemplate(value => !value)} style={styles.secondary}>
-                                                    <Text style={styles.secondaryText}>Mesaj şablonu {showTemplate ? '−' : '+'}</Text>
-                                                </TouchableOpacity>
-                                                {showTemplate && (
+                                                <Switch accessibilityLabel="Günlük yaklaşan kasko özeti" value={form.summary} onValueChange={value => update('summary', value)} disabled={working} />
+                                            </View>
+                                        )}
+                                        <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: showTemplate }} onPress={() => setShowTemplate(value => !value)} style={styles.secondary}>
+                                            <Text style={styles.secondaryText}>Telegram mesaj şablonu {showTemplate ? '−' : '+'}</Text>
+                                        </TouchableOpacity>
+                                        {showTemplate && (
+                                            <>
+                                                <Input label="Mesaj metni" value={form.template} onChangeText={value => update('template', value)}
+                                                    multiline textAlignVertical="top" maxLength={isKasko ? 4000 : 3000} style={styles.template} editable={!working && canEditTemplate} />
+                                                {canEditTemplate ? (
                                                     <>
-                                                        <Input label="Kasko mesaj şablonu" value={form.template} onChangeText={value => update('template', value)}
-                                                            multiline textAlignVertical="top" maxLength={4000} style={styles.template} editable={!working} />
-                                                        <Text style={styles.muted}>{FIELDS.map(field => '{{' + field + '}}').join('  ')}</Text>
+                                                        <Text style={styles.muted}>Alanlar araç bilgileriyle otomatik dolar. {!isKasko && 'Hazır şablona dönmek için metni silip kaydedin.'}</Text>
+                                                        <Text style={styles.muted}>{(bot.template_fields || FIELDS).map(field => '{{' + field + '}}').join('  ')}</Text>
                                                     </>
-                                                )}
+                                                ) : <Text style={styles.notice}>Şablonu düzenlemek için web panelinden Telegram veritabanını güncelleyin.</Text>}
                                             </>
                                         )}
-                                        <TouchableOpacity accessibilityRole="button" disabled={working} onPress={save} style={styles.primary}>
-                                            {working ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryText}>Ayarları kaydet</Text>}
-                                        </TouchableOpacity>
-                                        {configured(bot) && (
+                                        {isKasko && configured(bot) && (
                                             <>
-                                                <TouchableOpacity accessibilityRole="button" disabled={working} onPress={() => action('test')} style={styles.secondary}>
-                                                    <Text style={styles.secondaryText}>{isKasko ? 'Tek araç test mesajı' : 'Bağlantıyı test et'}</Text>
+                                                <TouchableOpacity accessibilityRole="button" disabled={working} onPress={() => action('connect')} style={styles.secondary}>
+                                                    <Text style={styles.secondaryText}>Grup yanıtlarını bağla</Text>
                                                 </TouchableOpacity>
-                                                {isKasko && (
-                                                    <>
-                                                        <TouchableOpacity accessibilityRole="button" disabled={working} onPress={() => action('connect')} style={styles.secondary}>
-                                                            <Text style={styles.secondaryText}>Grup yanıtlarını bağla</Text>
-                                                        </TouchableOpacity>
-                                                        <Text style={styles.muted}>Grup komutları · kaskolu araçlarım · süresi geçenler · kaskosu olmayan araçlar</Text>
-                                                    </>
-                                                )}
+                                                <Text style={styles.muted}>Grup komutları · kaskolu araçlarım · süresi geçenler · kaskosu olmayan araçlar</Text>
                                             </>
                                         )}
                                     </>
@@ -301,5 +303,6 @@ const styles = StyleSheet.create({
     primary: { alignItems: 'center', backgroundColor: '#0369A1', borderRadius: 12, padding: 13 },
     primaryText: { color: '#FFFFFF', fontWeight: '800' },
     secondary: { alignItems: 'center', backgroundColor: '#EAF4FC', borderRadius: 12, padding: 12 },
+    disabled: { opacity: 0.55 },
     secondaryText: { color: '#075985', fontWeight: '800' },
 });

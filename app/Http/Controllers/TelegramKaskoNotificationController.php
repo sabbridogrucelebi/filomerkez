@@ -34,6 +34,7 @@ class TelegramKaskoNotificationController extends Controller
                 'database/migrations/2026_11_23_100200_add_last_telegram_update_id_to_kasko_settings.php',
                 'database/migrations/2026_11_24_090000_add_upcoming_summary_to_telegram_kasko_settings.php',
                 'database/migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php',
+                'database/migrations/2026_11_24_120000_add_message_template_to_telegram_alert_bots.php',
             ] as $path) {
                 if (Artisan::call('migrate', ['--force' => true, '--path' => $path]) !== 0) {
                     throw new \RuntimeException('Telegram migration failed: ' . $path);
@@ -161,7 +162,7 @@ class TelegramKaskoNotificationController extends Controller
             return back()->with('error', $exception->getMessage());
         }
 
-        return back()->with('success', 'Test mesajı Telegram’a gönderildi.');
+        return back()->with('success', 'Örnek şablon Telegram’a gönderildi.');
     }
 
     private function company()

@@ -11,7 +11,11 @@ use Throwable;
 
 class TelegramFleetAlertService
 {
-    public function __construct(private TelegramKaskoNotificationService $telegram, private TelegramAlertBotSettings $settings)
+    public function __construct(
+        private TelegramKaskoNotificationService $telegram,
+        private TelegramAlertBotSettings $settings,
+        private TelegramFleetAlertMessage $messages,
+    )
     {
     }
 
@@ -23,7 +27,7 @@ class TelegramFleetAlertService
 
         $today = now(TelegramAlertSchedule::TIMEZONE)->startOfDay();
         $sent = 0;
-        TelegramAlertBot::where('is_enabled', true)->eachById(function (TelegramAlertBot $bot) use ($today, &$sent) {
+        TelegramAlertBot::with('company')->where('is_enabled', true)->eachById(function (TelegramAlertBot $bot) use ($today, &$sent) {
             try {
                 if ($bot->hasCredentials() && isset(TelegramAlertBot::CHANNELS[$bot->channel])) {
                     $sent += $this->sendForBot($bot, $today);
@@ -38,34 +42,46 @@ class TelegramFleetAlertService
 
     public function sendTest(TelegramAlertBot $bot): void
     {
-        $label = e(TelegramAlertBot::CHANNELS[$bot->channel]['label']);
-        $this->telegram->sendTextMessage($bot, "✅ <b>{$label} · Telegram bağlantı testi</b>\n\n<i>Filo Merkez | Filo Takip Sistemleri</i>");
+        $today = today(TelegramAlertSchedule::TIMEZONE);
+        $sample = new Vehicle([
+            'plate' => 'ÖRNEK-42', 'brand' => 'Örnek', 'model' => 'Araç', 'model_year' => 2024,
+            'license_serial_no' => 'ÖRNEK-001', 'chassis_no' => 'ÖRNEK-ŞASE',
+            'license_owner' => 'Örnek Filo', 'owner_tax_or_tc_no' => '—',
+        ]);
+        $event = match (TelegramAlertBot::CHANNELS[$bot->channel]['kind']) {
+            'date' => ['end_date' => $today->copy()->addDays(5)->format('d.m.Y'), 'days_left' => 5, 'expiry_status' => '5 gün kaldı'],
+            'maintenance' => ['maintenance_type' => 'Periyodik bakım', 'maintenance_status' => '150 km kaldı',
+                'current_km' => '88.350', 'next_service_date' => $today->copy()->addDays(5)->format('d.m.Y')],
+            'fuel' => ['fuel_date' => $today->format('d.m.Y'), 'distance_km' => '256', 'liters' => '40,00',
+                'measured_km_per_liter' => '6,40', 'minimum_km_per_liter' => '8,00'],
+        };
+
+        $this->telegram->sendTextMessage($bot, "🧪 <b>TEST MESAJI</b> · Örnek veriler\n\n" . $this->messages->render($bot, $sample, $event));
     }
 
     private function sendForBot(TelegramAlertBot $bot, Carbon $today): int
     {
-        $channel = TelegramAlertBot::CHANNELS[$bot->channel];
-        $kind = $channel['kind'];
+        $kind = TelegramAlertBot::CHANNELS[$bot->channel]['kind'];
         $days = TelegramAlertSchedule::days($bot->reminder_days ?? TelegramAlertSchedule::DEFAULT_DAYS);
         $sent = 0;
         Vehicle::where('company_id', $bot->company_id)->where('is_active', true)
             ->when($kind === 'date', fn ($query) => $query->with('alertDocuments'))
             ->when($kind === 'maintenance', fn ($query) => $query->with('maintenanceSetting'))
             ->when($kind === 'fuel', fn ($query) => $query->where('min_km_per_liter', '>', 0))
-            ->eachById(function (Vehicle $vehicle) use ($bot, $channel, $kind, $days, $today, &$sent) {
+            ->eachById(function (Vehicle $vehicle) use ($bot, $kind, $days, $today, &$sent) {
                 $events = match ($kind) {
                     'date' => $this->dateEvents($vehicle, $bot->channel, $days, $today),
                     'maintenance' => $this->maintenanceEvents($vehicle, $bot->maintenance_km ?? 200, $today),
                     'fuel' => $this->fuelEvents($vehicle, $today),
                 };
-                foreach ($events as $key => $details) {
+                foreach ($events as $key => $event) {
                     $delivery = ['company_id' => $bot->company_id, 'bot_id' => $bot->id,
                         'vehicle_id' => $vehicle->id, 'event_key' => $key];
                     if (TelegramAlertDelivery::where($delivery)->exists()) {
                         continue;
                     }
                     try {
-                        $this->telegram->sendTextMessage($bot, $this->message($vehicle, $channel, $details));
+                        $this->telegram->sendTextMessage($bot, $this->messages->render($bot, $vehicle, $event));
                         TelegramAlertDelivery::create($delivery);
                         $sent++;
                     } catch (Throwable $exception) {
@@ -99,8 +115,11 @@ class TelegramFleetAlertService
             return [];
         }
 
-        return ['date:' . $end->toDateString() . ':' . $threshold => '📅 Bitiş: ' . $end->format('d.m.Y')
-            . ($remaining === 0 ? "\n⏳ <b>Bugün sona eriyor</b>" : "\n⏳ <b>{$remaining} gün kaldı</b>")];
+        return ['date:' . $end->toDateString() . ':' . $threshold => [
+            'end_date' => $end->format('d.m.Y'),
+            'days_left' => $remaining,
+            'expiry_status' => $remaining === 0 ? 'Bugün sona eriyor' : "{$remaining} gün kaldı",
+        ]];
     }
 
     private function maintenanceEvents(Vehicle $vehicle, int $threshold, Carbon $today): array
@@ -126,14 +145,16 @@ class TelegramFleetAlertService
                 continue;
             }
 
-            $details = '🛠️ ' . e($record->maintenance_type ?: $record->title ?: 'Planlanan bakım');
-            if ($dueByKm) {
-                $details .= $remainingKm >= 0 ? "\n📍 {$remainingKm} km kaldı" : "\n📍 Bakım kilometresi " . abs($remainingKm) . ' km aşıldı';
-            }
-            if ($dueByDate) {
-                $details .= "\n📅 Planlanan tarih: " . $record->next_service_date->format('d.m.Y');
-            }
-            $events['maintenance:' . $record->id] = $details;
+            $events['maintenance:' . $record->id] = [
+                'maintenance_type' => $record->maintenance_type ?: $record->title ?: 'Planlanan bakım',
+                'current_km' => number_format($currentKm, 0, ',', '.'),
+                'next_service_date' => $record->next_service_date?->format('d.m.Y'),
+                'maintenance_status' => match (true) {
+                    !$dueByKm => 'Planlanan bakım tarihi geldi',
+                    $remainingKm < 0 => 'Bakım kilometresi ' . abs($remainingKm) . ' km aşıldı',
+                    default => "{$remainingKm} km kaldı",
+                },
+            ];
         }
 
         return $events;
@@ -149,7 +170,6 @@ class TelegramFleetAlertService
         }
         $previous = $fuels->whereDate('date', '<', $from)->first();
         $events = [];
-        $limit = number_format($vehicle->min_km_per_liter, 2, ',', '.');
         foreach ($recent as $fuel) {
             $distance = $previous?->km > 0 && $fuel->km > 0 ? $fuel->km - $previous->km : 0;
             $previous = $fuel;
@@ -158,21 +178,17 @@ class TelegramFleetAlertService
             }
             $efficiency = $distance / (float) $fuel->liters;
             if ($efficiency < $vehicle->min_km_per_liter) {
-                $actual = number_format($efficiency, 2, ',', '.');
-                $events['fuel:' . $fuel->id] = '📅 Yakıt alımı: ' . $fuel->date->format('d.m.Y')
-                    . "\n⛽ Ölçülen: <b>{$actual} km/L</b>\n📉 Araç alt sınırı: {$limit} km/L";
+                $events['fuel:' . $fuel->id] = [
+                    'fuel_date' => $fuel->date->format('d.m.Y'),
+                    'distance_km' => number_format($distance, 0, ',', '.'),
+                    'liters' => number_format((float) $fuel->liters, 2, ',', '.'),
+                    'measured_km_per_liter' => number_format($efficiency, 2, ',', '.'),
+                    'minimum_km_per_liter' => number_format($vehicle->min_km_per_liter, 2, ',', '.'),
+                ];
             }
         }
 
         return $events;
     }
 
-    private function message(Vehicle $vehicle, array $channel, string $details): string
-    {
-        $name = trim(($vehicle->brand ?? '') . ' ' . ($vehicle->model ?? ''));
-
-        return $channel['icon'] . ' <b>' . e($channel['label']) . " uyarısı</b>\n\n"
-            . '🚘 <b>' . e($vehicle->plate) . '</b>' . ($name !== '' ? ' — ' . e($name) : '')
-            . "\n\n{$details}\n\n<i>Filo Merkez | Filo Takip Sistemleri</i>";
-    }
 }

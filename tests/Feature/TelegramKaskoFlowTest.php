@@ -282,6 +282,39 @@ class TelegramKaskoFlowTest extends TestCase
         $this->assertNotSame('124:demo', DB::table('telegram_alert_bots')->value('bot_token'));
     }
 
+    public function test_fleet_templates_use_defaults_and_save_test_and_send_per_bot(): void
+    {
+        (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
+        $settings = app(TelegramAlertBotSettings::class);
+        $this->assertFalse($settings->dashboard(1)['fleet_templates_ready']);
+        $this->assertStringContainsString('İMM POLİÇESİ YENİLEME UYARISI', $settings->dashboard(1)['channels']['imm']['message_template']);
+        (require database_path('migrations/2026_11_24_120000_add_message_template_to_telegram_alert_bots.php'))->up();
+        $request = \Illuminate\Http\Request::create('/', 'PUT', [
+            'is_enabled' => true, 'bot_token' => '124:demo', 'chat_id' => '-555', 'reminder_days_text' => '20, 5',
+            'message_template' => '📌 <b>{{plate}}</b> · {{expiry_status}} · {{license_owner}}',
+        ]);
+        $settings->save($request, 1, 'imm');
+        $dashboard = $settings->dashboard(1);
+        $this->assertTrue($dashboard['fleet_templates_ready']);
+        $this->assertSame($request->input('message_template'), $dashboard['channels']['imm']['message_template']);
+        $this->assertContains('expiry_status', $dashboard['channels']['imm']['template_fields']);
+        $this->assertStringContainsString('TRAFİK SİGORTASI', $dashboard['channels']['insurance']['message_template']);
+
+        $vehicle = $this->vehicle('TEMPLATE-ONE', ['license_owner' => 'A & B <Filo>']);
+        $this->document($vehicle, 5, ['document_type' => 'İMM Poliçesi']);
+        $service = app(TelegramFleetAlertService::class);
+        $service->sendTest($settings->bot(1, 'imm'));
+        Http::assertSent(fn (Request $message) => str_contains($message['text'], 'TEST MESAJI')
+            && str_contains($message['text'], '<b>ÖRNEK-42</b> · 5 gün kaldı · Örnek Filo'));
+        $this->assertSame(1, $service->sendScheduledNotifications());
+        Http::assertSent(fn (Request $message) => $message['text'] === '📌 <b>TEMPLATE-ONE</b> · 5 gün kaldı · A &amp; B &lt;Filo&gt;');
+
+        $request->merge(['message_template' => '']);
+        $settings->save($request, 1, 'imm');
+        $this->assertNull($settings->bot(1, 'imm')->message_template);
+        $this->assertStringContainsString('İMM POLİÇESİ YENİLEME UYARISI', $settings->dashboard(1)['channels']['imm']['message_template']);
+    }
+
     public function test_telegram_registers_the_subdirectory_callback_with_a_secret(): void
     {
         config(['app.url' => 'https://fleet.example/app']);

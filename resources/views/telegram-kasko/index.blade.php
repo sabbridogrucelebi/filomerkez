@@ -9,11 +9,14 @@
         'is_enabled' => $setting->is_enabled, 'has_bot_token' => $hasBotToken,
         'chat_id' => $setting->chat_id, 'reminder_days' => $setting->reminder_days ?: \App\Services\TelegramAlertSchedule::DEFAULT_DAYS,
         'last_sent_at' => $kaskoLastSent,
+        'message_template' => $setting->message_template ?: \App\Models\TelegramKaskoNotificationSetting::defaultMessageTemplate(),
+        'template_fields' => ['company_name', 'days_left', 'kasko_status', 'plate', 'brand_model', 'model_year', 'license_serial_no', 'chassis_no', 'license_owner', 'owner_tax_or_tc_no', 'kasko_end_date'],
     ]] + $channels;
     $active = collect($cards)->filter(fn ($bot) => $bot['is_enabled'] && $bot['has_bot_token'] && filled($bot['chat_id']))->count();
     $card = $cards[$selectedChannel];
     $isKasko = $selectedChannel === 'kasko';
     $configured = $card['has_bot_token'] && filled($card['chat_id']);
+    $canEditTemplate = $isKasko || $fleet_templates_ready;
 @endphp
 
 <style>
@@ -25,6 +28,12 @@
     @keyframes tg-float { 0%,100% { transform:translateY(2px) rotateX(15deg) rotateY(-18deg); } 50% { transform:translateY(-10px) rotateX(5deg) rotateY(8deg); } }
     .tg-card { transition:transform .22s ease,box-shadow .22s ease; }
     .tg-icon { box-shadow:0 3px 0 #cee2ef,0 6px 12px #0c4a6e14; }
+    .tg-actions { display:flex; flex-wrap:wrap; gap:.65rem; align-items:center; }
+    #bot-settings .tg-action { display:inline-flex; min-height:2.75rem; align-items:center; justify-content:center; border:1px solid #b9d3ea; border-radius:.75rem; padding:.65rem 1rem; background:#edf6ff; color:#0b4774; font-size:.875rem; font-weight:800; cursor:pointer; }
+    #bot-settings .tg-action-primary { color:#fff; background:#075ea8; border-color:#075ea8; }
+    #bot-settings .tg-action-primary:hover { background:#064780; border-color:#064780; }
+    #bot-settings .tg-action:focus-visible { outline:3px solid #237ed0; outline-offset:3px; }
+    #bot-settings .tg-action:disabled { background:#f1f5f9; border-color:#cbd5e1; color:#475569; cursor:not-allowed; }
     @media(hover:hover) { .tg-card:hover { transform:perspective(650px) translateY(-3px) rotateX(5deg); box-shadow:0 10px 24px #1742671b; } }
     @media(max-width:560px) { .tg-orbit { right:-1.5rem; opacity:.34; scale:.7; } }
     @media(prefers-reduced-motion:reduce) { .tg-card { transition:none; } .tg-card:hover { transform:none; } .tg-orbit span { animation:none; } }
@@ -70,16 +79,25 @@
             <div>
                 <h2 class="text-xl font-black text-slate-900">{{ $card['icon'] }} {{ $card['label'] }}</h2>
                 <p class="mt-1 text-sm text-slate-600">{{ $card['description'] }}</p>
+                @if($card['last_sent_at'])
+                    <p class="mt-2 text-xs font-semibold text-slate-600">Son otomatik uyarı · {{ \Carbon\Carbon::parse($card['last_sent_at'])->format('d.m.Y H:i') }}</p>
+                @endif
             </div>
-            @if($card['last_sent_at'])
-                <p class="rounded-full bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700">Son otomatik uyarı · {{ \Carbon\Carbon::parse($card['last_sent_at'])->format('d.m.Y H:i') }}</p>
+            @if($isKasko || $fleet_ready)
+                <div class="tg-actions">
+                    <button type="submit" form="tg-bot-settings-form" class="tg-action tg-action-primary">Ayarları Kaydet</button>
+                    <form method="POST" action="{{ $isKasko ? route('telegram-kasko.test') : route('telegram-kasko.bots.test', ['channel' => $selectedChannel]) }}">
+                        @csrf
+                        <button type="submit" class="tg-action" @disabled(!$configured)>{{ $isKasko ? 'Tek Araç Testi' : 'Örnek Mesaj Gönder' }}</button>
+                    </form>
+                </div>
             @endif
         </header>
 
         @if(!$isKasko && !$fleet_ready)
             <p class="rounded-xl bg-amber-50 p-4 text-sm font-semibold text-amber-900">Botu kurmak için önce <a class="underline" href="{{ route('telegram-kasko.migrate') }}">Telegram veritabanını güncelleyin</a>.</p>
         @else
-            <form method="POST" action="{{ $isKasko ? route('telegram-kasko.update') : route('telegram-kasko.bots.update', ['channel' => $selectedChannel]) }}" class="space-y-5">
+            <form id="tg-bot-settings-form" method="POST" action="{{ $isKasko ? route('telegram-kasko.update') : route('telegram-kasko.bots.update', ['channel' => $selectedChannel]) }}" class="space-y-5">
                 @csrf
                 @method('PUT')
                 <input type="hidden" name="is_enabled" value="0">
@@ -113,35 +131,29 @@
                         <input type="checkbox" name="upcoming_summary_enabled" value="1" class="mt-1 rounded text-sky-700" @checked(old('upcoming_summary_enabled', $setting->upcoming_summary_enabled ?? true))>
                         <span><b>Günlük yaklaşan kasko özeti</b><span class="mt-1 block text-xs text-slate-600">En büyük eşik özet aralığını belirler. Yenileme yüklenince yeni bitiş tarihi kullanılır.</span></span>
                     </label>
-                    <details class="rounded-xl border border-slate-200 p-4" @if($errors->has('message_template')) open @endif>
-                        <summary class="cursor-pointer text-sm font-bold text-slate-800">Mesaj şablonu</summary>
-                        <textarea aria-label="Kasko mesaj şablonu" name="message_template" maxlength="4000" rows="12" class="mt-3 w-full rounded-xl border-slate-300 font-mono text-sm">{{ old('message_template', $setting->message_template ?: \App\Models\TelegramKaskoNotificationSetting::defaultMessageTemplate()) }}</textarea>
+                @endif
+                <details class="rounded-xl border border-slate-200 p-4" @if(!$isKasko || $errors->has('message_template')) open @endif>
+                    <summary class="cursor-pointer text-sm font-bold text-slate-800">Telegram mesaj şablonu</summary>
+                    <textarea aria-label="Telegram mesaj şablonu" name="message_template" maxlength="{{ $isKasko ? 4000 : \App\Services\TelegramFleetAlertMessage::MAX_TEMPLATE_LENGTH }}" rows="12" class="mt-3 w-full rounded-xl border-slate-300 font-mono text-sm" @disabled(!$canEditTemplate)>{{ old('message_template', $card['message_template']) }}</textarea>
+                    @if(!$canEditTemplate)
+                        <p class="mt-2 text-sm text-slate-700">Şablonu düzenlemek için önce <a class="font-bold underline" href="{{ route('telegram-kasko.migrate') }}">Telegram veritabanını güncelleyin</a>.</p>
+                    @else
+                        <p class="mt-2 text-xs text-slate-600">Alanlar araç bilgileriyle otomatik dolar. {{ $isKasko ? '' : 'Hazır şablona dönmek için metni silip kaydedin.' }} Test düğmesi kayıtlı şablonu kullanır.</p>
                         <p class="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
-                            @foreach(['company_name', 'days_left', 'kasko_status', 'plate', 'brand_model', 'model_year', 'license_serial_no', 'chassis_no', 'license_owner', 'owner_tax_or_tc_no', 'kasko_end_date'] as $field)
+                            @foreach($card['template_fields'] as $field)
                                 <code>&#123;&#123;{{ $field }}&#125;&#125;</code>
                             @endforeach
                         </p>
-                    </details>
-                @endif
-                <button class="rounded-xl bg-sky-700 px-5 py-3 text-sm font-bold text-white hover:bg-sky-800">Ayarları kaydet</button>
+                    @endif
+                </details>
             </form>
 
-            @if($configured)
-                <div class="mt-5 flex flex-wrap gap-3 border-t border-slate-200 pt-5">
-                    <form method="POST" action="{{ $isKasko ? route('telegram-kasko.test') : route('telegram-kasko.bots.test', ['channel' => $selectedChannel]) }}">
-                        @csrf
-                        <button class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm font-bold text-sky-800">{{ $isKasko ? 'Tek araç test mesajı' : 'Bağlantıyı test et' }}</button>
-                    </form>
-                    @if($isKasko)
-                        <form method="POST" action="{{ route('telegram-kasko.connect') }}">
-                            @csrf
-                            <button class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-800">Grup yanıtlarını bağla</button>
-                        </form>
-                    @endif
-                </div>
-                @if($isKasko)
-                    <p class="mt-3 text-xs text-slate-600">Grup komutları · kaskolu araçlarım · süresi geçenler · kaskosu olmayan araçlar</p>
-                @endif
+            @if($isKasko && $configured)
+                <form class="mt-5 border-t border-slate-200 pt-5" method="POST" action="{{ route('telegram-kasko.connect') }}">
+                    @csrf
+                    <button type="submit" class="tg-action">Grup yanıtlarını bağla</button>
+                </form>
+                <p class="mt-3 text-xs text-slate-600">Grup komutları · kaskolu araçlarım · süresi geçenler · kaskosu olmayan araçlar</p>
             @endif
         @endif
     </section>
