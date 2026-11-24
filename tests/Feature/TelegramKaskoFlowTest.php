@@ -6,6 +6,7 @@ use App\Models\Fleet\Vehicle;
 use App\Models\TelegramAlertBot;
 use App\Models\TelegramKaskoNotificationLog;
 use App\Models\TelegramKaskoNotificationSetting;
+use App\Models\User;
 use App\Services\TelegramAlertBotSettings;
 use App\Services\TelegramFleetAlertService;
 use App\Services\TelegramKaskoChatService;
@@ -313,6 +314,39 @@ class TelegramKaskoFlowTest extends TestCase
         $settings->save($request, 1, 'imm');
         $this->assertNull($settings->bot(1, 'imm')->message_template);
         $this->assertStringContainsString('İMM POLİÇESİ YENİLEME UYARISI', $settings->dashboard(1)['channels']['imm']['message_template']);
+    }
+
+    public function test_telegram_retry_after_blocks_repeat_requests_until_the_limit_expires(): void
+    {
+        (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
+        $this->freezeTime();
+        $this->withoutMiddleware()->actingAs(new User(['company_id' => 1, 'role' => 'company_admin']));
+        TelegramAlertBot::create(['company_id' => 1, 'channel' => 'imm', 'bot_token' => '124:demo', 'chat_id' => '-555']);
+        TelegramAlertBot::create(['company_id' => 1, 'channel' => 'insurance', 'bot_token' => '125:demo', 'chat_id' => '-556']);
+        Http::swap(new \Illuminate\Http\Client\Factory());
+        Http::preventStrayRequests();
+        Http::fake([
+            '*/bot124:demo/sendMessage' => Http::sequence()
+                ->push(['ok' => false, 'error_code' => 429, 'parameters' => ['retry_after' => 32]], 429)
+                ->push(['ok' => true, 'result' => ['message_id' => 1]]),
+            '*/bot125:demo/sendMessage' => Http::response(['ok' => true, 'result' => ['message_id' => 2]]),
+        ]);
+
+        $url = '/api/v1/telegram-kasko-settings/bots/imm/test';
+        $this->postJson($url)->assertStatus(429)->assertHeader('Retry-After', '32')->assertJsonPath('retry_after', 32);
+        $this->travel(10)->seconds();
+        $this->getJson('/api/v1/telegram-kasko-settings')->assertOk()->assertJsonPath('data.channels.imm.retry_after', 22);
+        $this->postJson($url)->assertStatus(429)->assertHeader('Retry-After', '22');
+        $this->from(route('telegram-kasko.index', ['channel' => 'imm']))
+            ->post(route('telegram-kasko.bots.test', ['channel' => 'imm']))
+            ->assertRedirect(route('telegram-kasko.index', ['channel' => 'imm']))
+            ->assertSessionHas('telegram_rate_limited', true);
+        Http::assertSentCount(1);
+
+        $this->postJson('/api/v1/telegram-kasko-settings/bots/insurance/test')->assertOk();
+        $this->travel(22)->seconds();
+        $this->postJson($url)->assertOk();
+        Http::assertSentCount(3);
     }
 
     public function test_telegram_registers_the_subdirectory_callback_with_a_secret(): void

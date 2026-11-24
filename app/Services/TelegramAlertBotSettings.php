@@ -30,6 +30,7 @@ class TelegramAlertBotSettings
             $channels[$key] = $meta + [
                 'is_enabled' => (bool) $bot?->is_enabled,
                 'has_bot_token' => filled($bot?->bot_token),
+                'retry_after' => TelegramSendCooldown::remaining($bot?->bot_token),
                 'chat_id' => $bot?->chat_id,
                 'reminder_days' => $bot?->reminder_days ?? TelegramAlertSchedule::DEFAULT_DAYS,
                 'maintenance_km' => $bot?->maintenance_km ?? 200,

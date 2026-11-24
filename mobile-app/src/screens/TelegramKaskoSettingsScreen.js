@@ -33,6 +33,9 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
     const [loading, setLoading] = useState(true);
     const [working, setWorking] = useState(false);
     const [showTemplate, setShowTemplate] = useState(false);
+    const [retryAt, setRetryAt] = useState({});
+    const [clock, setClock] = useState(Date.now);
+    const actionInProgress = useRef(false);
     const scroll = useRef(null);
     const settingsTop = useRef(0);
     const orbit = useRef(new Animated.Value(0)).current;
@@ -79,6 +82,10 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
             const data = response.data.data;
             setDashboard(data);
             applyForm(data.settings);
+            const receivedAt = Date.now();
+            setClock(receivedAt);
+            setRetryAt(Object.fromEntries(Object.entries({ ...data.channels, kasko: data.settings })
+                .map(([key, item]) => [key, receivedAt + Number(item.retry_after || 0) * 1000])));
         } catch (error) {
             Alert.alert('Telegram', error.response?.data?.message || 'Ayarlar yüklenemedi.');
         } finally {
@@ -96,6 +103,20 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
     const ready = isKasko || dashboard?.fleet_ready;
     const canEditTemplate = isKasko || dashboard?.fleet_templates_ready;
     const count = Object.values(cards).filter(item => configured(item) && item.is_enabled).length;
+    const testSeconds = Math.max(0, Math.ceil(((retryAt[channel] || 0) - clock) / 1000));
+    const waiting = testSeconds > 0;
+
+    useEffect(() => {
+        if (!waiting) return;
+        const timer = setInterval(() => setClock(Date.now()), 1000);
+        return () => clearInterval(timer);
+    }, [waiting]);
+
+    function rememberCooldown(seconds) {
+        const receivedAt = Date.now();
+        setClock(receivedAt);
+        setRetryAt(previous => ({ ...previous, [channel]: receivedAt + seconds * 1000 }));
+    }
 
     function select(key) {
         if (working) return;
@@ -140,7 +161,9 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
         try {
             const { data } = await api.put(endpoint, payload);
             setDashboard(previous => ({ ...previous, ...data.data }));
-            applyForm(isKasko ? data.data.settings : data.data.channels[channel]);
+            const savedBot = isKasko ? data.data.settings : data.data.channels[channel];
+            applyForm(savedBot);
+            rememberCooldown(Number(savedBot.retry_after || 0));
             Alert.alert('Telegram', data.message);
         } catch (error) {
             const errors = error.response?.data?.errors;
@@ -151,13 +174,22 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
     }
 
     async function action(name) {
+        if (working || actionInProgress.current || (name === 'test' && waiting)) return;
+        actionInProgress.current = true;
         setWorking(true);
         try {
             const { data } = await api.post(endpoint + '/' + name);
             Alert.alert('Telegram', data.message);
         } catch (error) {
-            Alert.alert('Telegram', error.response?.data?.message || 'İşlem tamamlanamadı.');
+            const response = error.response;
+            if (name === 'test' && response?.status === 429) {
+                const seconds = Number(response.data?.retry_after || response.headers?.['retry-after']);
+                rememberCooldown(Number.isFinite(seconds) && seconds > 0 ? seconds : 60);
+            } else {
+                Alert.alert('Telegram', response?.data?.message || 'İşlem tamamlanamadı.');
+            }
         } finally {
+            actionInProgress.current = false;
             setWorking(false);
         }
     }
@@ -213,10 +245,11 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                                         <TouchableOpacity accessibilityRole="button" disabled={working} onPress={save} style={styles.primary}>
                                             {working ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryText}>Ayarları Kaydet</Text>}
                                         </TouchableOpacity>
-                                        <TouchableOpacity accessibilityRole="button" disabled={working || !configured(bot)} onPress={() => action('test')}
-                                            style={[styles.secondary, !configured(bot) && styles.disabled]}>
-                                            <Text style={styles.secondaryText}>{isKasko ? 'Tek Araç Testi' : 'Örnek Mesaj Gönder'}</Text>
+                                        <TouchableOpacity accessibilityRole="button" disabled={working || waiting || !configured(bot)} onPress={() => action('test')}
+                                            style={[styles.secondary, (waiting || !configured(bot)) && styles.disabled]}>
+                                            <Text style={styles.secondaryText}>{waiting ? testSeconds + ' sn bekleyin' : (isKasko ? 'Tek Araç Testi' : 'Örnek Mesaj Gönder')}</Text>
                                         </TouchableOpacity>
+                                        {waiting && <Text style={styles.muted}>Telegram gönderim sınırı uyguladı. Sayaç bitince tekrar deneyin.</Text>}
                                         <View style={styles.toggle}>
                                             <Text style={styles.label}>Otomatik uyarılar etkin</Text>
                                             <Switch accessibilityLabel="Otomatik uyarılar etkin" value={form.enabled} onValueChange={value => update('enabled', value)} disabled={working} />

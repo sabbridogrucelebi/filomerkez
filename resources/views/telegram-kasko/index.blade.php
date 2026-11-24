@@ -7,6 +7,7 @@
     $cards = ['kasko' => [
         'label' => 'Kasko', 'icon' => '🛡️', 'kind' => 'date', 'description' => 'Kasko poliçesi bitişi',
         'is_enabled' => $setting->is_enabled, 'has_bot_token' => $hasBotToken,
+        'retry_after' => $kaskoRetryAfter,
         'chat_id' => $setting->chat_id, 'reminder_days' => $setting->reminder_days ?: \App\Services\TelegramAlertSchedule::DEFAULT_DAYS,
         'last_sent_at' => $kaskoLastSent,
         'message_template' => $setting->message_template ?: \App\Models\TelegramKaskoNotificationSetting::defaultMessageTemplate(),
@@ -17,6 +18,8 @@
     $isKasko = $selectedChannel === 'kasko';
     $configured = $card['has_bot_token'] && filled($card['chat_id']);
     $canEditTemplate = $isKasko || $fleet_templates_ready;
+    $retryAfter = $card['retry_after'] ?? 0;
+    $testLabel = $isKasko ? 'Tek Araç Testi' : 'Örnek Mesaj Gönder';
 @endphp
 
 <style>
@@ -42,6 +45,9 @@
 <div class="mx-auto max-w-6xl space-y-6 p-1">
     @if(session('success'))
         <p role="status" class="rounded-xl bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-800">{{ session('success') }}</p>
+    @endif
+    @if(session('telegram_rate_limited'))
+        <p id="tg-test-status" role="status" class="rounded-xl bg-amber-50 px-5 py-3 text-sm font-semibold text-amber-900">{{ $retryAfter > 0 ? 'Telegram gönderim sınırı uyguladı. Sayaç bitince tekrar deneyin.' : 'Bekleme süresi doldu. Test mesajını tekrar gönderebilirsiniz.' }}</p>
     @endif
     @if(session('error') || $errors->any())
         <div role="alert" class="rounded-xl bg-rose-50 px-5 py-3 text-sm font-semibold text-rose-800">
@@ -86,9 +92,9 @@
             @if($isKasko || $fleet_ready)
                 <div class="tg-actions">
                     <button type="submit" form="tg-bot-settings-form" class="tg-action tg-action-primary">Ayarları Kaydet</button>
-                    <form method="POST" action="{{ $isKasko ? route('telegram-kasko.test') : route('telegram-kasko.bots.test', ['channel' => $selectedChannel]) }}">
+                    <form id="tg-test-form" method="POST" data-retry-after="{{ $retryAfter }}" data-configured="{{ $configured ? '1' : '0' }}" action="{{ $isKasko ? route('telegram-kasko.test') : route('telegram-kasko.bots.test', ['channel' => $selectedChannel]) }}">
                         @csrf
-                        <button type="submit" class="tg-action" @disabled(!$configured)>{{ $isKasko ? 'Tek Araç Testi' : 'Örnek Mesaj Gönder' }}</button>
+                        <button type="submit" class="tg-action" data-test-label="{{ $testLabel }}" @disabled(!$configured || $retryAfter > 0)>{{ $retryAfter > 0 ? $retryAfter . ' sn bekleyin' : $testLabel }}</button>
                     </form>
                 </div>
             @endif
@@ -158,4 +164,39 @@
         @endif
     </section>
 </div>
+<script>
+    (() => {
+        const form = document.getElementById('tg-test-form');
+        if (!form || form.dataset.configured !== '1') return;
+
+        const button = form.querySelector('button');
+        const status = document.getElementById('tg-test-status');
+        const retryAt = Date.now() + Number(form.dataset.retryAfter) * 1000;
+        const remaining = () => Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
+        let sending = false;
+
+        function updateButton() {
+            const seconds = remaining();
+            button.disabled = seconds > 0;
+            button.textContent = seconds > 0 ? seconds + ' sn bekleyin' : button.dataset.testLabel;
+            if (seconds > 0) {
+                setTimeout(updateButton, 1000);
+            } else if (status) {
+                status.textContent = 'Bekleme süresi doldu. Test mesajını tekrar gönderebilirsiniz.';
+            }
+        }
+
+        form.addEventListener('submit', event => {
+            if (sending || remaining() > 0) {
+                event.preventDefault();
+                return;
+            }
+            sending = true;
+            button.disabled = true;
+            button.textContent = 'Gönderiliyor…';
+        });
+
+        updateButton();
+    })();
+</script>
 @endsection

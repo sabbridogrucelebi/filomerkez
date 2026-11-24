@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\TelegramRateLimited;
 use App\Models\TelegramKaskoNotificationSetting;
 use App\Models\TelegramKaskoNotificationLog;
 use App\Services\TelegramAlertBotSettings;
 use App\Services\TelegramAlertSchedule;
 use App\Services\TelegramFleetAlertService;
+use App\Services\TelegramSendCooldown;
 use App\Services\TelegramKaskoNotificationService;
 use App\Services\TelegramKaskoChatService;
 use Illuminate\Http\RedirectResponse;
@@ -62,6 +64,7 @@ class TelegramKaskoNotificationController extends Controller
             'company' => $company,
             'setting' => $setting,
             'hasBotToken' => filled($setting->bot_token),
+            'kaskoRetryAfter' => TelegramSendCooldown::remaining($setting->bot_token),
             'selectedChannel' => $selected,
             'kaskoLastSent' => TelegramKaskoNotificationLog::where('company_id', $company->id)->max('sent_at'),
         ] + $dashboard);
@@ -128,6 +131,8 @@ class TelegramKaskoNotificationController extends Controller
             return redirect()->route('telegram-kasko.index')->with('success', $plate
                 ? "Test mesajı {$plate} aracıyla Telegram'a gönderildi."
                 : 'Bağlantı testi Telegram grubuna gönderildi.');
+        } catch (TelegramRateLimited $exception) {
+            return redirect()->route('telegram-kasko.index')->with('telegram_rate_limited', true);
         } catch (Throwable $exception) {
             report($exception);
 
@@ -158,6 +163,8 @@ class TelegramKaskoNotificationController extends Controller
         $bot = $bots->bot($this->company()->id, $channel);
         try {
             $alerts->sendTest($bot);
+        } catch (TelegramRateLimited $exception) {
+            return redirect()->route('telegram-kasko.index', ['channel' => $channel])->with('telegram_rate_limited', true);
         } catch (\RuntimeException $exception) {
             return back()->with('error', $exception->getMessage());
         }

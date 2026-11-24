@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\TelegramRateLimited;
 use App\Models\Fleet\Vehicle;
 use App\Models\TelegramAlertBot;
 use App\Models\TelegramKaskoNotificationLog;
@@ -164,10 +165,16 @@ class TelegramKaskoNotificationService
             throw new RuntimeException('Telegram bot anahtarı ve sohbet kimliği tanımlanmalıdır.');
         }
 
+        $token = $setting->bot_token;
+        $wait = TelegramSendCooldown::remaining($token);
+        if ($wait > 0) {
+            throw new TelegramRateLimited($wait);
+        }
+
         try {
             $response = Http::timeout(15)
                 ->acceptJson()
-                ->post('https://api.telegram.org/bot' . $setting->bot_token . '/sendMessage', [
+                ->post('https://api.telegram.org/bot' . $token . '/sendMessage', [
                     'chat_id' => $setting->chat_id,
                     'text' => $message,
                     'parse_mode' => 'HTML',
@@ -175,6 +182,15 @@ class TelegramKaskoNotificationService
                 ]);
         } catch (\Illuminate\Http\Client\ConnectionException) {
             throw new RuntimeException('Sunucu Telegram’a bağlanamadı.');
+        }
+
+        if ($response->status() === 429 || (int) $response->json('error_code') === 429) {
+            $retryAfter = (int) $response->json('parameters.retry_after');
+            if ($retryAfter <= 0) {
+                $retryAfter = (int) $response->header('Retry-After');
+            }
+
+            throw new TelegramRateLimited(TelegramSendCooldown::defer($token, $retryAfter > 0 ? $retryAfter : 60));
         }
 
         if (!$response->successful() || !$response->json('ok')) {

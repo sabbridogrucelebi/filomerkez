@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Exceptions\TelegramRateLimited;
 use App\Models\TelegramKaskoNotificationSetting;
 use App\Models\TelegramKaskoNotificationLog;
 use App\Services\TelegramAlertBotSettings;
 use App\Services\TelegramAlertSchedule;
 use App\Services\TelegramFleetAlertService;
+use App\Services\TelegramSendCooldown;
 use App\Services\TelegramKaskoNotificationService;
 use App\Services\TelegramKaskoChatService;
 use Illuminate\Http\Request;
@@ -85,6 +87,8 @@ class TelegramKaskoNotificationApiController extends BaseApiController
             return $this->successResponse([
                 'vehicle_plate' => $plate,
             ], 'Test mesajı Telegram\'a gönderildi.');
+        } catch (TelegramRateLimited $exception) {
+            return $this->rateLimitedResponse($exception);
         } catch (Throwable $exception) {
             report($exception);
 
@@ -117,11 +121,22 @@ class TelegramKaskoNotificationApiController extends BaseApiController
         $bot = $bots->bot($this->getCompanyId(), $channel);
         try {
             $alerts->sendTest($bot);
+        } catch (TelegramRateLimited $exception) {
+            return $this->rateLimitedResponse($exception);
         } catch (\RuntimeException $exception) {
             return $this->errorResponse($exception->getMessage(), 422);
         }
 
         return $this->successResponse([], 'Örnek şablon Telegram’a gönderildi.');
+    }
+
+    private function rateLimitedResponse(TelegramRateLimited $exception)
+    {
+        return response()->json([
+            'success' => false,
+            'message' => $exception->getMessage(),
+            'retry_after' => $exception->retryAfter,
+        ], 429, ['Retry-After' => (string) $exception->retryAfter]);
     }
 
     private function ensureCanManage(Request $request): void
@@ -151,6 +166,7 @@ class TelegramKaskoNotificationApiController extends BaseApiController
             'upcoming_summary_enabled' => $setting->upcoming_summary_enabled ?? true,
             'upcoming_summary_days' => max($days ?: TelegramAlertSchedule::DEFAULT_DAYS),
             'has_bot_token' => filled($setting->bot_token),
+            'retry_after' => TelegramSendCooldown::remaining($setting->bot_token),
             'chat_id' => $setting->chat_id,
             'reminder_days' => $days,
             'last_sent_at' => TelegramKaskoNotificationLog::where('company_id', $setting->company_id)->max('sent_at'),
