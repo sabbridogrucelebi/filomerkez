@@ -8,7 +8,7 @@ import useStatusBarStyle from '../hooks/useStatusBarStyle';
 
 const ENDPOINT = '/v1/telegram-kasko-settings';
 const KASKO_CARD = { label: 'Kasko', icon: '🛡️', description: 'Kasko poliçesi bitişi', kind: 'date' };
-const FIELDS = ['company_name', 'days_left', 'kasko_status', 'plate', 'brand_model', 'model_year', 'license_serial_no', 'chassis_no', 'license_owner', 'owner_tax_or_tc_no', 'kasko_end_date'];
+const FIELDS = ['company_name', 'days_left', 'kasko_status', 'plate', 'brand_model', 'model_year', 'license_serial_no', 'chassis_no', 'license_owner', 'owner_tax_or_tc_no', 'policy_start_line', 'kasko_end_date'];
 
 function configured(bot) {
     return bot?.has_bot_token && !!bot.chat_id;
@@ -296,20 +296,13 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                                                 ) : <Text style={styles.notice}>Şablonu düzenlemek için web panelinden Telegram veritabanını güncelleyin.</Text>}
                                             </>
                                         )}
-                                        {isKasko && configured(bot) && (
-                                            <>
-                                                <TouchableOpacity accessibilityRole="button" disabled={working} onPress={() => action('connect')} style={styles.secondary}>
-                                                    <Text style={styles.secondaryText}>Grup yanıtlarını bağla</Text>
-                                                </TouchableOpacity>
-                                                <Text style={styles.muted}>Grup komutları · kaskolu araçlarım · süresi geçenler · kaskosu olmayan araçlar</Text>
-                                            </>
-                                        )}
-                                        {isImm && configured(bot) && (
+                                        {bot.kind === 'date' && configured(bot) && (
                                             <>
                                                 <TouchableOpacity accessibilityRole="button" disabled={working} onPress={() => action('connect')} style={styles.secondary}>
                                                     <Text style={styles.secondaryText}>Grup komutlarını bağla</Text>
                                                 </TouchableOpacity>
                                                 <Text style={styles.muted}>Bağlantıdan sonra gruba kontrol yazın. Grup gizliliği açıksa ekranda botun kullanıcı adıyla yazabileceğiniz komut gösterilir.</Text>
+                                                {isKasko && <Text style={styles.muted}>Diğer grup komutları · kaskolu araçlarım · süresi geçenler · kaskosu olmayan araçlar</Text>}
                                             </>
                                         )}
                                     </>

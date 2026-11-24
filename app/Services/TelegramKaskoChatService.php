@@ -14,8 +14,10 @@ use Throwable;
 
 class TelegramKaskoChatService
 {
-    public function __construct(private readonly TelegramKaskoNotificationService $telegram)
-    {
+    public function __construct(
+        private readonly TelegramKaskoNotificationService $telegram,
+        private readonly TelegramDateChatService $controls,
+    ) {
     }
 
     /** Gruba yazılan desteklenen komutları en fazla bir kez işler. */
@@ -54,7 +56,11 @@ class TelegramKaskoChatService
 
                     foreach ($response->json('result', []) as $update) {
                         $updateId = (int) data_get($update, 'update_id', 0);
-                        $handled += (int) $this->handleUpdate($setting, $update);
+                        $result = $this->handleUpdate($setting, $update);
+                        if ($result === null) {
+                            break;
+                        }
+                        $handled += (int) $result;
                         if ($updateId > 0) {
                             $setting->last_telegram_update_id = $updateId;
                             $setting->save();
@@ -68,10 +74,16 @@ class TelegramKaskoChatService
         return $handled;
     }
 
-    public function connectGroup(TelegramKaskoNotificationSetting $setting): void
+    public function connectGroup(TelegramKaskoNotificationSetting $setting): string
     {
         if (!$setting->hasCredentials()) {
             throw new RuntimeException('Önce bot anahtarını ve grup kimliğini kaydedin.');
+        }
+        if (preg_match('/^-\d+$/', $setting->chat_id)) {
+            $message = $this->controls->connectGroup($setting);
+            Cache::put($this->webhookCacheKey($setting), true, now()->addDay());
+
+            return $message;
         }
         $url = TelegramWebhookAddress::forRoute('telegram-kasko.receive', $setting->id);
         $bot = 'https://api.telegram.org/bot' . $setting->bot_token;
@@ -95,6 +107,8 @@ class TelegramKaskoChatService
             throw new RuntimeException('Sunucu Telegram’a bağlanamadı.');
         }
         Cache::put($this->webhookCacheKey($setting), true, now()->addDay());
+
+        return 'Telegram grup bağlantısını kabul etti. “Kaskosu olmayan araçlar” yazarak kontrol edebilirsiniz.';
     }
 
     public function webhookSecret(TelegramKaskoNotificationSetting $setting): string
@@ -107,8 +121,13 @@ class TelegramKaskoChatService
         return 'telegram-kasko:webhook:' . hash('sha256', $this->webhookSecret($setting));
     }
 
-    public function handleUpdate(TelegramKaskoNotificationSetting $setting, array $update): bool
+    public function handleUpdate(TelegramKaskoNotificationSetting $setting, array $update): ?bool
     {
+        $control = $this->controls->handleControl($setting, $update);
+        if ($control !== null) {
+            return $control ? true : null;
+        }
+
         $text = data_get($update, 'message.text');
         if (!is_int($update['update_id'] ?? null) || !is_string($text)
             || (string) data_get($update, 'message.chat.id') !== (string) $setting->chat_id) {
@@ -131,7 +150,7 @@ class TelegramKaskoChatService
                 return false;
             }
             $replies = $report === 'help'
-                ? ["👋 <b>Filo Merkez Kasko Asistanı</b>\n\n❔ <code>kaskosu olmayan araçlar</code>\n⌛ <code>süresi geçenler</code>\n🛡️ <code>kaskolu araçlarım</code>"]
+                ? ["👋 <b>Filo Merkez Kasko Asistanı</b>\n\n📋 <code>kontrol</code>\n❔ <code>kaskosu olmayan araçlar</code>\n⌛ <code>süresi geçenler</code>\n🛡️ <code>kaskolu araçlarım</code>"]
                 : $this->kaskoReportMessages($setting->company_id, $report);
             $next = (int) Cache::get($key, 0);
             foreach (array_slice($replies, $next) as $message) {

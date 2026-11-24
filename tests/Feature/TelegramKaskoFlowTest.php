@@ -9,7 +9,7 @@ use App\Models\TelegramKaskoNotificationSetting;
 use App\Models\User;
 use App\Services\TelegramAlertBotSettings;
 use App\Services\TelegramFleetAlertService;
-use App\Services\TelegramImmChatService;
+use App\Services\TelegramDateChatService;
 use App\Services\TelegramKaskoChatService;
 use App\Services\TelegramKaskoNotificationService;
 use GuzzleHttp\Exception\ConnectException;
@@ -429,7 +429,7 @@ class TelegramKaskoFlowTest extends TestCase
             ['update_id' => 102, 'message' => ['text' => '  KONTROL  ', 'chat' => ['id' => -555, 'type' => 'group']]],
         ]])]);
 
-        $service = app(TelegramImmChatService::class);
+        $service = app(TelegramDateChatService::class);
         $this->assertSame(1, $service->processIncomingCommands());
         $this->assertSame(0, $service->processIncomingCommands());
         $sent = Http::recorded(fn (Request $request) => str_ends_with($request->url(), '/sendMessage'));
@@ -458,7 +458,7 @@ class TelegramKaskoFlowTest extends TestCase
             '*/getChatMember*' => Http::response(['ok' => true, 'result' => ['status' => 'member']]),
         ]);
 
-        $chat = app(TelegramImmChatService::class);
+        $chat = app(TelegramDateChatService::class);
         $this->assertStringContainsString('/kontrol@CelebiImmBot', $chat->connectGroup($bot));
         Http::assertSent(fn (Request $request) => str_contains($request->url(), '/getChatMember?')
             && str_contains($request->url(), 'chat_id=-555') && str_contains($request->url(), 'user_id=124'));
@@ -496,6 +496,81 @@ class TelegramKaskoFlowTest extends TestCase
         Http::assertNotSent(fn (Request $request) => str_ends_with($request->url(), '/setWebhook'));
     }
 
+    public function test_kasko_control_sends_individual_vehicle_messages_and_keeps_existing_group_reports(): void
+    {
+        $this->travelTo(now('Europe/Istanbul')->setDate(2026, 11, 24)->setTime(11, 50));
+        $this->setting->update(['reminder_days' => [5]]);
+        $this->document($this->vehicle('KASKO-FIRST'), 3, ['start_date' => '2025-11-27']);
+        $this->document($this->vehicle('KASKO-SECOND'), 5, ['start_date' => null]);
+        $this->document($this->vehicle('KASKO-LATER'), 6);
+        $this->document($this->vehicle('ONLY-IMM'), 4, ['document_type' => 'İMM Poliçesi']);
+
+        $url = route('telegram-kasko.receive', $this->setting->id);
+        $headers = ['X-Telegram-Bot-Api-Secret-Token' => app(TelegramKaskoChatService::class)->webhookSecret($this->setting)];
+        $update = ['update_id' => 889, 'message' => ['text' => 'kontrol', 'chat' => ['id' => -12345678901, 'type' => 'group']]];
+        $this->postJson($url, $update, $headers)->assertNoContent();
+        $this->postJson($url, $update, $headers)->assertNoContent();
+        Http::assertSentCount(2);
+        [$first, $second] = Http::recorded()->map(fn (array $entry) => $entry[0]['text'])->all();
+        $this->assertStringContainsString('KASKO BİTİŞ UYARISI', $first);
+        $this->assertStringContainsString('KASKO-FIRST', $first);
+        $this->assertStringContainsString('Poliçe başlangıcı:</b> 27.11.2025', $first);
+        $this->assertStringContainsString('KASKO-SECOND', $second);
+        $this->assertStringNotContainsString('Poliçe başlangıcı', $second);
+        $update['update_id']++;
+        $update['message']['text'] = 'kaskolu araçlarım';
+        $this->postJson($url, $update, $headers)->assertNoContent();
+        $this->assertStringContainsString('KASKO-LATER', Http::recorded()->last()[0]['text']);
+    }
+
+    public function test_traffic_inspection_and_exhaust_bots_send_individual_control_messages_to_their_own_groups(): void
+    {
+        (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
+        $this->travelTo(now('Europe/Istanbul')->setDate(2026, 11, 24)->setTime(11, 50));
+        config(['app.url' => 'https://fleet.example/app']);
+        Http::fake([
+            '*/getMe' => Http::response(['ok' => true, 'result' => ['id' => 1234, 'username' => 'DateDemoBot', 'can_read_all_group_messages' => true]]),
+            '*/getChatMember*' => Http::response(['ok' => true, 'result' => ['status' => 'member']]),
+        ]);
+        $chat = app(TelegramDateChatService::class);
+        $case = [
+            'insurance' => ['Sigorta', 'insurance_end_date', 'TRAFİK SİGORTASI YENİLEME UYARISI', 'Poliçe başlangıcı'],
+            'inspection' => ['Muayene Raporu', 'inspection_date', 'ARAÇ MUAYENESİ HATIRLATMASI', 'Belge başlangıcı'],
+            'exhaust' => ['Egzoz', 'exhaust_date', 'EGZOZ EMİSYON ÖLÇÜMÜ HATIRLATMASI', 'Belge başlangıcı'],
+        ];
+        $id = 100;
+        foreach ($case as $channel => [$type, $fallback, $heading, $startLabel]) {
+            $id++;
+            $group = '-' . $id;
+            $token = $id . ':demo';
+            $bot = TelegramAlertBot::create(['company_id' => 1, 'channel' => $channel, 'bot_token' => $token, 'chat_id' => $group, 'reminder_days' => [2, 5]]);
+            $this->assertStringContainsString('grup bağlantısı kuruldu', $chat->connectGroup($bot));
+            Http::assertSent(fn (Request $request) => str_ends_with($request->url(), '/bot' . $token . '/setWebhook')
+                && $request['url'] === 'https://fleet.example/app/api/telegram-date-bots/incoming/' . $bot->id);
+            $this->document($this->vehicle($channel . '-DOC'), 3, ['document_type' => $type, 'start_date' => '2025-11-27']);
+            $this->vehicle($channel . '-CARD', [$fallback => today()->addDays(4)->toDateString()]);
+            $this->document($this->vehicle($channel . '-RENEWED', [$fallback => today()->addDays(2)->toDateString()]), 30, ['document_type' => $type]);
+            $url = route('telegram-date-bots.receive', $bot->id);
+            $headers = ['X-Telegram-Bot-Api-Secret-Token' => $chat->webhookSecret($bot)];
+            $update = ['update_id' => 300, 'message' => ['text' => 'kontrol', 'chat' => ['id' => -999, 'type' => 'group']]];
+            $this->postJson($url, $update, $headers)->assertNoContent();
+            $update['message']['chat']['id'] = (int) $group;
+            $this->postJson($url, $update, $headers)->assertNoContent();
+            $this->postJson($url, $update, $headers)->assertNoContent();
+
+            $sent = Http::recorded(fn (Request $request) => str_ends_with($request->url(), '/bot' . $token . '/sendMessage'));
+            $this->assertCount(2, $sent);
+            [$document, $card] = $sent->map(fn (array $pair) => $pair[0])->values()->all();
+            $this->assertSame($group, $document['chat_id']);
+            $this->assertSame($group, $card['chat_id']);
+            $this->assertStringContainsString($heading, $document['text']);
+            $this->assertStringContainsString($channel . '-DOC', $document['text']);
+            $this->assertStringContainsString($startLabel . ':</b> 27.11.2025', $document['text']);
+            $this->assertStringContainsString($channel . '-CARD', $card['text']);
+            $this->assertStringNotContainsString($startLabel, $card['text']);
+        }
+    }
+
     public function test_telegram_control_resumes_after_a_rate_limit_without_duplicating_vehicle_messages(): void
     {
         (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
@@ -515,7 +590,7 @@ class TelegramKaskoFlowTest extends TestCase
                 ->push(['ok' => true, 'result' => ['message_id' => 2]]),
         ]);
 
-        $service = app(TelegramImmChatService::class);
+        $service = app(TelegramDateChatService::class);
         $this->assertSame(0, $service->processIncomingCommands());
         $this->assertSame(0, $service->processIncomingCommands());
         $this->travel(60)->seconds();
@@ -610,6 +685,7 @@ class TelegramKaskoFlowTest extends TestCase
     public function test_telegram_registers_the_subdirectory_callback_with_a_secret(): void
     {
         config(['app.url' => 'https://fleet.example/app']);
+        $this->fakeKaskoGroupMembership();
         app(TelegramKaskoChatService::class)->connectGroup($this->setting);
         Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/setWebhook')
             && $r['url'] === 'https://fleet.example/app/api/telegram-kasko/incoming/' . $this->setting->id
@@ -624,6 +700,7 @@ class TelegramKaskoFlowTest extends TestCase
     public function test_cpanel_panel_and_mobile_register_the_same_https_callback_with_default_app_url(): void
     {
         config(['app.url' => 'http://localhost']);
+        $this->fakeKaskoGroupMembership();
         foreach (['/app/telegram-kasko/connect', '/app/api/v1/telegram-kasko-settings/connect'] as $path) {
             $this->app->instance('request', \Illuminate\Http\Request::create(
                 'https://mehmetcelebiturizm.com' . $path, 'POST', [], [], [],
@@ -649,6 +726,14 @@ class TelegramKaskoFlowTest extends TestCase
             $this->assertStringContainsString('APP_URL', $e->getMessage());
         }
         Http::assertNothingSent();
+    }
+
+    private function fakeKaskoGroupMembership(): void
+    {
+        Http::fake([
+            '*/getMe' => Http::response(['ok' => true, 'result' => ['id' => 123, 'username' => 'KaskoDemoBot', 'can_read_all_group_messages' => true]]),
+            '*/getChatMember*' => Http::response(['ok' => true, 'result' => ['status' => 'member']]),
+        ]);
     }
 
     public function test_calendar_falls_back_to_the_vehicle_field_but_automation_requires_an_uploaded_kasko_document(): void

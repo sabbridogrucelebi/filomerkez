@@ -9,7 +9,7 @@ use App\Models\TelegramKaskoNotificationLog;
 use App\Services\TelegramAlertBotSettings;
 use App\Services\TelegramAlertSchedule;
 use App\Services\TelegramFleetAlertService;
-use App\Services\TelegramImmChatService;
+use App\Services\TelegramDateChatService;
 use App\Services\TelegramSendCooldown;
 use App\Services\TelegramKaskoNotificationService;
 use App\Services\TelegramKaskoChatService;
@@ -104,17 +104,18 @@ class TelegramKaskoNotificationApiController extends BaseApiController
     {
         $this->ensureCanManage($request);
         try {
-            $chat->connectGroup($this->setting());
+            $message = $chat->connectGroup($this->setting());
         } catch (\RuntimeException $exception) {
             return $this->errorResponse($exception->getMessage(), 422);
         }
-        return $this->successResponse([], 'Telegram grup bağlantısını kabul etti. Gruba “kaskosu olmayan araçlar” yazın.');
+        return $this->successResponse([], $message);
     }
 
-    public function connectImm(Request $request, TelegramAlertBotSettings $bots, TelegramImmChatService $chat)
+    public function connectDateBot(Request $request, string $channel, TelegramAlertBotSettings $bots, TelegramDateChatService $chat)
     {
         $this->ensureCanManage($request);
-        $bot = $bots->bot($this->getCompanyId(), 'imm');
+        abort_unless(in_array($channel, TelegramDateChatService::FLEET_CHANNELS, true), 404);
+        $bot = $bots->bot($this->getCompanyId(), $channel);
         try {
             return $this->successResponse([], $chat->connectGroup($bot));
         } catch (\RuntimeException $exception) {

@@ -16,4 +16,4 @@ Schedule::command('reports:calculate-daily')->dailyAt('04:00');
 Schedule::command('telegram:kasko-alerts')->dailyAt(\App\Services\TelegramAlertSchedule::TIME)->timezone(\App\Services\TelegramAlertSchedule::TIMEZONE)->withoutOverlapping();
 Schedule::command('telegram:fleet-alerts')->dailyAt(\App\Services\TelegramAlertSchedule::TIME)->timezone(\App\Services\TelegramAlertSchedule::TIMEZONE)->withoutOverlapping();
 Schedule::command('telegram:kasko-commands')->everyMinute()->withoutOverlapping();
-Schedule::command('telegram:imm-commands')->everyMinute()->withoutOverlapping();
+Schedule::command('telegram:date-bot-commands')->everyMinute()->withoutOverlapping();

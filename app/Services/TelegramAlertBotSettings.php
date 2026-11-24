@@ -37,7 +37,7 @@ class TelegramAlertBotSettings
                 'maintenance_km' => $bot?->maintenance_km ?? 200,
                 'last_sent_at' => $bot ? $lastSent->get($bot->id) : null,
                 'message_template' => $bot?->message_template ?: TelegramFleetAlertMessage::defaultTemplate($key),
-                'template_fields' => TelegramFleetAlertMessage::fields($meta['kind'], $key),
+                'template_fields' => TelegramFleetAlertMessage::fields($meta['kind']),
             ];
             if ($key === 'imm') {
                 $channels[$key]['upcoming_summary_enabled'] = $bot?->upcoming_summary_enabled ?? true;

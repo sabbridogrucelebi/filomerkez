@@ -86,7 +86,7 @@ class TelegramFleetAlertService
             }
         }
         Vehicle::where('company_id', $bot->company_id)->where('is_active', true)
-            ->when($kind === 'date', fn ($query) => $query->with($bot->channel === 'imm' ? 'immDocuments' : 'alertDocuments'))
+            ->when($kind === 'date', fn ($query) => $query->with(TelegramPolicyAlerts::relationFor($bot->channel)))
             ->when($kind === 'maintenance', fn ($query) => $query->with('maintenanceSetting'))
             ->when($kind === 'fuel', fn ($query) => $query->where('min_km_per_liter', '>', 0))
             ->eachById(function (Vehicle $vehicle) use ($bot, $kind, $days, $today, &$sent) {
@@ -126,7 +126,7 @@ class TelegramFleetAlertService
             }
 
             $window = max(TelegramAlertSchedule::days($bot->reminder_days ?? []) ?: TelegramAlertSchedule::DEFAULT_DAYS);
-            $entries = TelegramPolicyAlerts::upcoming($bot->company_id, 'immDocuments', $today, $window);
+            $entries = TelegramPolicyAlerts::upcoming($bot->company_id, 'imm', $today, $window);
             $title = $manual ? "İMM KONTROLÜ · {$window} GÜN İÇİNDE BİTECEK POLİÇELER" : "{$window} GÜN İÇİNDE BİTECEK İMM POLİÇELERİ";
             $messages = TelegramPolicyAlerts::summaryMessages($title, $entries);
             $progressKey = $lockKey . ':' . $today->toDateString() . ':' . hash('sha256', $bot->chat_id . serialize($messages));
@@ -156,16 +156,7 @@ class TelegramFleetAlertService
 
     private function dateEvents(Vehicle $vehicle, string $channel, array $days, Carbon $today): array
     {
-        if ($channel === 'imm') {
-            $document = TelegramPolicyAlerts::latestUploaded($vehicle, 'immDocuments');
-            $end = $document?->end_date;
-        } else {
-            $types = Vehicle::ALERT_DOC_TYPES[$channel] ?? ['Egzoz', 'Egzoz Emisyon'];
-            $fallback = Vehicle::ALERT_FALLBACK_FIELDS[$channel] ?? 'exhaust_date';
-            $document = $vehicle->alertDocuments->where('company_id', $vehicle->company_id)
-                ->whereIn('document_type', $types)->sortByDesc('end_date')->first();
-            $end = $document?->end_date ?? $vehicle->{$fallback};
-        }
+        [$document, $end] = TelegramPolicyAlerts::currentDates($vehicle, $channel);
         if (!$end) {
             return [];
         }
@@ -179,7 +170,7 @@ class TelegramFleetAlertService
         }
 
         return ['date:' . $end->toDateString() . ':' . $threshold => TelegramFleetAlertMessage::dateEvent(
-            $end, $remaining, $channel === 'imm' ? $document : null,
+            $end, $remaining, $document,
         )];
     }
 

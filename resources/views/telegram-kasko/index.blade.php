@@ -12,7 +12,7 @@
         'last_sent_at' => $kaskoLastSent,
         'upcoming_summary_enabled' => $setting->upcoming_summary_enabled ?? true,
         'message_template' => $setting->message_template ?: \App\Models\TelegramKaskoNotificationSetting::defaultMessageTemplate(),
-        'template_fields' => ['company_name', 'days_left', 'kasko_status', 'plate', 'brand_model', 'model_year', 'license_serial_no', 'chassis_no', 'license_owner', 'owner_tax_or_tc_no', 'kasko_end_date'],
+        'template_fields' => ['company_name', 'days_left', 'kasko_status', 'plate', 'brand_model', 'model_year', 'license_serial_no', 'chassis_no', 'license_owner', 'owner_tax_or_tc_no', 'policy_start_line', 'kasko_end_date'],
     ]] + $channels;
     $active = collect($cards)->filter(fn ($bot) => $bot['is_enabled'] && $bot['has_bot_token'] && filled($bot['chat_id']))->count();
     $card = $cards[$selectedChannel];
@@ -162,18 +162,15 @@
                 </details>
             </form>
 
-            @if($isKasko && $configured)
-                <form class="mt-5 border-t border-slate-200 pt-5" method="POST" action="{{ route('telegram-kasko.connect') }}">
-                    @csrf
-                    <button type="submit" class="tg-action">Grup yanıtlarını bağla</button>
-                </form>
-                <p class="mt-3 text-xs text-slate-600">Grup komutları · kaskolu araçlarım · süresi geçenler · kaskosu olmayan araçlar</p>
-            @elseif($isImm && $configured)
-                <form class="mt-5 border-t border-slate-200 pt-5" method="POST" action="{{ route('telegram-kasko.imm.connect') }}">
+            @if($card['kind'] === 'date' && $configured)
+                <form class="mt-5 border-t border-slate-200 pt-5" method="POST" action="{{ $isKasko ? route('telegram-kasko.connect') : route('telegram-kasko.bots.connect', ['channel' => $selectedChannel]) }}">
                     @csrf
                     <button type="submit" class="tg-action">Grup komutlarını bağla</button>
                 </form>
-                <p class="mt-3 text-sm text-slate-700">Bağlantıdan sonra İMM grubuna <code class="font-bold">kontrol</code> yazın. Grup gizliliği açıksa bağlantı ekranı botun kullanıcı adıyla yazabileceğiniz komutu gösterir.</p>
+                <p class="mt-3 text-sm text-slate-700">Bağlantıdan sonra Telegram grubuna <code class="font-bold">kontrol</code> yazın. Grup gizliliği açıksa bağlantı ekranı botun kullanıcı adıyla yazabileceğiniz komutu gösterir.</p>
+                @if($isKasko)
+                    <p class="mt-2 text-xs text-slate-600">Diğer grup komutları · kaskolu araçlarım · süresi geçenler · kaskosu olmayan araçlar</p>
+                @endif
             @endif
         @endif
     </section>

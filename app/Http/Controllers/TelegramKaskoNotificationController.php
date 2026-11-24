@@ -8,7 +8,7 @@ use App\Models\TelegramKaskoNotificationLog;
 use App\Services\TelegramAlertBotSettings;
 use App\Services\TelegramAlertSchedule;
 use App\Services\TelegramFleetAlertService;
-use App\Services\TelegramImmChatService;
+use App\Services\TelegramDateChatService;
 use App\Services\TelegramSendCooldown;
 use App\Services\TelegramKaskoNotificationService;
 use App\Services\TelegramKaskoChatService;
@@ -146,17 +146,18 @@ class TelegramKaskoNotificationController extends Controller
     {
         $setting = $this->setting($this->company()->id);
         try {
-            $chat->connectGroup($setting);
+            $message = $chat->connectGroup($setting);
         } catch (\RuntimeException $exception) {
             return back()->with('error', $exception->getMessage());
         }
-        return back()->with('success', 'Telegram grup bağlantısını kabul etti. Gruba “kaskosu olmayan araçlar” yazın.');
+        return back()->with('success', $message);
     }
 
-    public function connectImm(TelegramAlertBotSettings $bots, TelegramImmChatService $chat): RedirectResponse
+    public function connectDateBot(string $channel, TelegramAlertBotSettings $bots, TelegramDateChatService $chat): RedirectResponse
     {
-        $bot = $bots->bot($this->company()->id, 'imm');
-        $page = redirect()->route('telegram-kasko.index', ['channel' => 'imm']);
+        abort_unless(in_array($channel, TelegramDateChatService::FLEET_CHANNELS, true), 404);
+        $bot = $bots->bot($this->company()->id, $channel);
+        $page = redirect()->route('telegram-kasko.index', ['channel' => $channel]);
         try {
             return $page->with('success', $chat->connectGroup($bot));
         } catch (\RuntimeException $exception) {

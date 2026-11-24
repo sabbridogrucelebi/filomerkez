@@ -22,18 +22,66 @@ final class TelegramPolicyAlerts
         return (int) $today->diffInDays($end, false);
     }
 
-    public static function upcoming(int $companyId, string $relation, Carbon $today, int $window): Collection
+    public static function relationFor(string $channel): string
     {
-        return Vehicle::where('company_id', $companyId)->where('is_active', true)->with($relation)->orderBy('id')->get()
-            ->map(function (Vehicle $vehicle) use ($relation, $today, $window) {
-                $policy = self::latestUploaded($vehicle, $relation);
-                if (!$policy) {
+        return match ($channel) {
+            'kasko' => 'kaskoDocuments',
+            'imm' => 'immDocuments',
+            default => 'alertDocuments',
+        };
+    }
+
+    /** @return array{0: ?Document, 1: ?Carbon} */
+    public static function currentDates(Vehicle $vehicle, string $channel): array
+    {
+        $relation = self::relationFor($channel);
+        if ($relation !== 'alertDocuments') {
+            $document = self::latestUploaded($vehicle, $relation);
+
+            return [$document, $document?->end_date];
+        }
+
+        $types = Vehicle::ALERT_DOC_TYPES[$channel] ?? ['Egzoz', 'Egzoz Emisyon'];
+        $fallback = Vehicle::ALERT_FALLBACK_FIELDS[$channel] ?? 'exhaust_date';
+        $document = $vehicle->alertDocuments->where('company_id', $vehicle->company_id)
+            ->whereIn('document_type', $types)->sortByDesc('end_date')->first();
+
+        return [$document, $document?->end_date ?? $vehicle->{$fallback}];
+    }
+
+    public static function upcoming(int $companyId, string $channel, Carbon $today, int $window): Collection
+    {
+        return Vehicle::where('company_id', $companyId)->where('is_active', true)->with(self::relationFor($channel))->orderBy('id')->get()
+            ->map(function (Vehicle $vehicle) use ($channel, $today, $window) {
+                [$policy, $end] = self::currentDates($vehicle, $channel);
+                if (!$end) {
                     return null;
                 }
-                $days = self::daysUntil($today, $policy->end_date);
+                $days = self::daysUntil($today, $end);
 
-                return $days >= 0 && $days <= $window ? ['vehicle' => $vehicle, 'policy' => $policy, 'days' => $days] : null;
+                return $days >= 0 && $days <= $window ? ['vehicle' => $vehicle, 'policy' => $policy, 'end' => $end, 'days' => $days] : null;
             })->filter()->sortBy('days')->values();
+    }
+
+    public static function withOptionalStart(string $template, ?string $start, string $endField, string $label = 'Poliçe başlangıcı'): string
+    {
+        $field = '{{policy_start_line}}';
+        if (!$start) {
+            return str_replace([$field . "\r\n", $field . "\n", $field], '', $template);
+        }
+
+        $line = '📅 <b>' . e($label) . ':</b> ' . e($start);
+        if (str_contains($template, $field)) {
+            return str_replace($field, $line, $template);
+        }
+        $expiry = strpos($template, $endField);
+        if ($expiry !== false) {
+            $lineStart = strrpos(substr($template, 0, $expiry), "\n");
+
+            return substr_replace($template, $line . "\n", $lineStart === false ? 0 : $lineStart + 1, 0);
+        }
+
+        return rtrim($template) . "\n\n" . $line;
     }
 
     public static function summaryMessages(string $title, Collection $entries): array
@@ -42,12 +90,12 @@ final class TelegramPolicyAlerts
         $messages = [];
         $current = $heading;
         foreach ($entries as $item) {
-            ['vehicle' => $vehicle, 'policy' => $policy, 'days' => $days] = $item;
+            ['vehicle' => $vehicle, 'policy' => $policy, 'end' => $end, 'days' => $days] = $item;
             $entry = '🚘 <b>' . e($vehicle->plate ?: '-') . '</b> — ' . e(trim(($vehicle->brand ?? '') . ' ' . ($vehicle->model ?? '')) ?: '-')
                 . "\n👤 Ruhsat sahibi: " . e($vehicle->license_owner ?: '-')
                 . "\n🏢 Vergi / T.C. No: " . e($vehicle->owner_tax_or_tc_no ?: '-')
-                . ($policy->start_date ? "\n📅 Poliçe başlangıcı: " . $policy->start_date->format('d.m.Y') : '')
-                . "\n🛡️ Bitiş: " . $policy->end_date->format('d.m.Y')
+                . ($policy?->start_date ? "\n📅 Poliçe başlangıcı: " . $policy->start_date->format('d.m.Y') : '')
+                . "\n🛡️ Bitiş: " . $end->format('d.m.Y')
                 . "\n⏳ <b>{$days} gün kaldı</b>";
 
             if (mb_strlen($current . "\n\n" . $entry) > 3500 && $current !== $heading) {

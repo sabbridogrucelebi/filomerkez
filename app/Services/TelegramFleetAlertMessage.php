@@ -12,11 +12,10 @@ final class TelegramFleetAlertMessage
     public const MAX_TEMPLATE_LENGTH = 3000;
     private const OLD_IMM_LEAD = 'Aracınızın ihtiyari mali mesuliyet poliçesinin bitişi yaklaşıyor.';
     private const IMM_LEAD = 'Aşağıda aracınızın ihtiyari mali mesuliyet poliçesinin güncel durumu yer alıyor.';
-    private const START_LINE = '{{policy_start_line}}';
 
     private const VEHICLE_FIELDS = ['company_name', 'plate', 'brand_model', 'model_year', 'license_serial_no', 'chassis_no', 'license_owner', 'owner_tax_or_tc_no'];
 
-    public static function fields(string $kind, ?string $channel = null): array
+    public static function fields(string $kind): array
     {
         $fields = array_merge(self::VEHICLE_FIELDS, match ($kind) {
             'date' => ['end_date', 'days_left', 'expiry_status'],
@@ -24,7 +23,7 @@ final class TelegramFleetAlertMessage
             'fuel' => ['fuel_date', 'distance_km', 'liters', 'measured_km_per_liter', 'minimum_km_per_liter'],
         });
 
-        if ($channel === 'imm') {
+        if ($kind === 'date') {
             $fields[] = 'policy_start_line';
         }
 
@@ -62,8 +61,8 @@ final class TelegramFleetAlertMessage
             'maintenance' => "🔧 <b>Bakım türü:</b> {{maintenance_type}}\n📍 <b>Güncel km:</b> {{current_km}}\n🗓️ <b>Planlanan tarih:</b> {{next_service_date}}\n⚠️ <b>{{maintenance_status}}</b>",
             'fuel' => "📅 <b>Yakıt alımı:</b> {{fuel_date}}\n🛣️ <b>Mesafe:</b> {{distance_km}} km · <b>Alım:</b> {{liters}} L\n📉 <b>Ölçülen:</b> {{measured_km_per_liter}} km/L\n🎯 <b>Araç alt sınırı:</b> {{minimum_km_per_liter}} km/L",
         };
-        if ($channel === 'imm') {
-            $details = self::START_LINE . "\n" . $details;
+        if (TelegramAlertBot::CHANNELS[$channel]['kind'] === 'date') {
+            $details = "{{policy_start_line}}\n" . $details;
         }
 
         return <<<TEXT
@@ -107,34 +106,14 @@ TEXT;
 
         $template = $bot->message_template ?: self::defaultTemplate($bot->channel);
         if ($bot->channel === 'imm') {
-            $template = $this->formatImmTemplate($template, $event);
+            $template = ($event['expired'] ?? false) ? str_replace(self::OLD_IMM_LEAD, self::IMM_LEAD, $template)
+                : str_replace(self::IMM_LEAD, self::OLD_IMM_LEAD, $template);
+        }
+        if (TelegramAlertBot::CHANNELS[$bot->channel]['kind'] === 'date') {
+            $label = in_array($bot->channel, ['inspection', 'exhaust'], true) ? 'Belge başlangıcı' : 'Poliçe başlangıcı';
+            $template = TelegramPolicyAlerts::withOptionalStart($template, $event['start_date'] ?? null, '{{end_date}}', $label);
         }
 
         return strtr($template, $values);
-    }
-
-    private function formatImmTemplate(string $template, array $event): string
-    {
-        $expired = $event['expired'] ?? false;
-        $template = $expired ? str_replace(self::OLD_IMM_LEAD, self::IMM_LEAD, $template)
-            : str_replace(self::IMM_LEAD, self::OLD_IMM_LEAD, $template);
-        $start = $event['start_date'] ?? null;
-        if (!$start) {
-            return str_replace([self::START_LINE . "\r\n", self::START_LINE . "\n", self::START_LINE], '', $template);
-        }
-
-        $line = '📅 <b>Poliçe başlangıcı:</b> ' . e($start);
-        if (str_contains($template, self::START_LINE)) {
-            return str_replace(self::START_LINE, $line, $template);
-        }
-
-        // Preserve saved templates and place the optional date just above the expiry line.
-        $expiry = strpos($template, '{{end_date}}');
-        if ($expiry !== false) {
-            $lineStart = strrpos(substr($template, 0, $expiry), "\n");
-            return substr_replace($template, $line . "\n", $lineStart === false ? 0 : $lineStart + 1, 0);
-        }
-
-        return rtrim($template) . "\n\n" . $line;
     }
 }

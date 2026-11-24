@@ -54,6 +54,7 @@ Aşağıdaki aracın kasko poliçesi {{kasko_status}}
 🧾 <b>Şase No:</b> {{chassis_no}}
 👤 <b>Ruhsat Sahibi:</b> {{license_owner}}
 🏢 <b>Vergi / T.C. No:</b> {{owner_tax_or_tc_no}}
+{{policy_start_line}}
 🛡️ <b>Kasko Bitiş Tarihi:</b> {{kasko_end_date}}
 
 ⏳ Poliçe yenileme işlemlerini zamanında yaparak
