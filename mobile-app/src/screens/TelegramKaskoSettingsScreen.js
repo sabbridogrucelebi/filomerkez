@@ -186,7 +186,8 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                 const seconds = Number(response.data?.retry_after || response.headers?.['retry-after']);
                 rememberCooldown(Number.isFinite(seconds) && seconds > 0 ? seconds : 60);
             } else {
-                Alert.alert('Telegram', response?.data?.message || 'İşlem tamamlanamadı.');
+                const title = name === 'test' && response?.status === 503 ? 'Telegram bağlantısı' : 'Telegram';
+                Alert.alert(title, response?.data?.message || 'İşlem tamamlanamadı.');
             }
         } finally {
             actionInProgress.current = false;

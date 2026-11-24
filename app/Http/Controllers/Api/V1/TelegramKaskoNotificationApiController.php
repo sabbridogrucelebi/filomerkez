@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Exceptions\TelegramConnectionProblem;
 use App\Exceptions\TelegramRateLimited;
 use App\Models\TelegramKaskoNotificationSetting;
 use App\Models\TelegramKaskoNotificationLog;
@@ -89,6 +90,8 @@ class TelegramKaskoNotificationApiController extends BaseApiController
             ], 'Test mesajı Telegram\'a gönderildi.');
         } catch (TelegramRateLimited $exception) {
             return $this->rateLimitedResponse($exception);
+        } catch (TelegramConnectionProblem $exception) {
+            return $this->errorResponse($exception->getMessage(), 503);
         } catch (Throwable $exception) {
             report($exception);
 
@@ -123,6 +126,8 @@ class TelegramKaskoNotificationApiController extends BaseApiController
             $alerts->sendTest($bot);
         } catch (TelegramRateLimited $exception) {
             return $this->rateLimitedResponse($exception);
+        } catch (TelegramConnectionProblem $exception) {
+            return $this->errorResponse($exception->getMessage(), 503);
         } catch (\RuntimeException $exception) {
             return $this->errorResponse($exception->getMessage(), 422);
         }

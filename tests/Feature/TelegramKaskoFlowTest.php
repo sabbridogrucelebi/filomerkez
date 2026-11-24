@@ -11,6 +11,7 @@ use App\Services\TelegramAlertBotSettings;
 use App\Services\TelegramFleetAlertService;
 use App\Services\TelegramKaskoChatService;
 use App\Services\TelegramKaskoNotificationService;
+use GuzzleHttp\Exception\ConnectException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\DB;
@@ -347,6 +348,48 @@ class TelegramKaskoFlowTest extends TestCase
         $this->travel(22)->seconds();
         $this->postJson($url)->assertOk();
         Http::assertSentCount(3);
+    }
+
+    public function test_fleet_test_recovers_with_ipv4_when_the_first_connection_fails_before_send(): void
+    {
+        (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
+        $this->withoutMiddleware()->actingAs(new User(['company_id' => 1, 'role' => 'company_admin']));
+        TelegramAlertBot::create(['company_id' => 1, 'channel' => 'imm', 'bot_token' => '124:demo', 'chat_id' => '-555']);
+        Http::swap(new \Illuminate\Http\Client\Factory());
+        Http::preventStrayRequests();
+        $attempts = [];
+        Http::fake(function (Request $request, array $options) use (&$attempts) {
+            $attempts[] = $options['force_ip_resolve'] ?? null;
+            if (count($attempts) === 1) {
+                throw new ConnectException('Could not connect', $request->toPsrRequest(), null, ['errno' => 7]);
+            }
+
+            return Http::response(['ok' => true, 'result' => ['message_id' => 1]]);
+        });
+
+        $this->postJson('/api/v1/telegram-kasko-settings/bots/imm/test')->assertOk();
+        $this->assertSame([null, 'v4'], $attempts);
+    }
+
+    public function test_fleet_test_reports_response_timeout_without_a_duplicate_send_or_token_leak(): void
+    {
+        (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
+        $this->withoutMiddleware()->actingAs(new User(['company_id' => 1, 'role' => 'company_admin']));
+        TelegramAlertBot::create(['company_id' => 1, 'channel' => 'imm', 'bot_token' => '124:demo', 'chat_id' => '-555']);
+        Http::swap(new \Illuminate\Http\Client\Factory());
+        Http::preventStrayRequests();
+        $attempts = 0;
+        Http::fake(function (Request $request) use (&$attempts) {
+            $attempts++;
+            throw new ConnectException('Timeout for ' . $request->url(), $request->toPsrRequest(), null, [
+                'errno' => 28, 'pretransfer_time' => 0.3, 'request_size' => 240, 'size_upload' => 80,
+            ]);
+        });
+
+        $response = $this->postJson('/api/v1/telegram-kasko-settings/bots/imm/test')->assertStatus(503);
+        $response->assertJsonPath('message', 'Telegram yanıtı zamanında gelmedi. Tekrar göndermeden önce mesajın gruba ulaşıp ulaşmadığına bakın. (cURL 28)');
+        $response->assertDontSee('124:demo');
+        $this->assertSame(1, $attempts);
     }
 
     public function test_telegram_registers_the_subdirectory_callback_with_a_secret(): void

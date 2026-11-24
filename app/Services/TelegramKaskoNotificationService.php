@@ -2,12 +2,17 @@
 
 namespace App\Services;
 
+use App\Exceptions\TelegramConnectionProblem;
 use App\Exceptions\TelegramRateLimited;
 use App\Models\Fleet\Vehicle;
 use App\Models\TelegramAlertBot;
 use App\Models\TelegramKaskoNotificationLog;
 use App\Models\TelegramKaskoNotificationSetting;
 use Carbon\Carbon;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Exception\RequestException;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -171,18 +176,7 @@ class TelegramKaskoNotificationService
             throw new TelegramRateLimited($wait);
         }
 
-        try {
-            $response = Http::timeout(15)
-                ->acceptJson()
-                ->post('https://api.telegram.org/bot' . $token . '/sendMessage', [
-                    'chat_id' => $setting->chat_id,
-                    'text' => $message,
-                    'parse_mode' => 'HTML',
-                    'disable_web_page_preview' => true,
-                ]);
-        } catch (\Illuminate\Http\Client\ConnectionException) {
-            throw new RuntimeException('Sunucu Telegram’a bağlanamadı.');
-        }
+        $response = $this->postMessage($token, $setting->chat_id, $message);
 
         if ($response->status() === 429 || (int) $response->json('error_code') === 429) {
             $retryAfter = (int) $response->json('parameters.retry_after');
@@ -198,6 +192,48 @@ class TelegramKaskoNotificationService
         }
 
         return (string) $response->json('result.message_id');
+    }
+
+    private function postMessage(string $token, string $chatId, string $message): Response
+    {
+        $request = Http::connectTimeout(5)->timeout(15)->withoutRedirecting()->acceptJson();
+        $url = 'https://api.telegram.org/bot' . $token . '/sendMessage';
+        $payload = ['chat_id' => $chatId, 'text' => $message, 'parse_mode' => 'HTML', 'disable_web_page_preview' => true];
+
+        try {
+            return $request->post($url, $payload);
+        } catch (ConnectionException $exception) {
+            $context = $this->connectionContext($exception);
+            if (!$this->failedBeforeSend($context)) {
+                throw new TelegramConnectionProblem($context['errno'] ?? null);
+            }
+        }
+
+        // An address-family fallback is safe only if the first attempt sent no request.
+        try {
+            return $request->withOptions(['force_ip_resolve' => 'v4'])->post($url, $payload);
+        } catch (ConnectionException $exception) {
+            $context = $this->connectionContext($exception);
+
+            throw new TelegramConnectionProblem($context['errno'] ?? null, $this->failedBeforeSend($context));
+        }
+    }
+
+    private function connectionContext(ConnectionException $exception): array
+    {
+        $cause = $exception->getPrevious();
+
+        return ($cause instanceof ConnectException || $cause instanceof RequestException) ? $cause->getHandlerContext() : [];
+    }
+
+    private function failedBeforeSend(array $context): bool
+    {
+        $code = $context['errno'] ?? null;
+
+        return in_array($code, [6, 7], true) || ($code === 28
+            && isset($context['request_size'], $context['size_upload'], $context['pretransfer_time'])
+            && $context['request_size'] === 0 && (float) $context['size_upload'] === 0.0
+            && (float) $context['pretransfer_time'] === 0.0);
     }
 
     private function wasAlreadySent(TelegramKaskoNotificationSetting $setting, Vehicle $vehicle, Carbon $expiryDate, int $daysLeft): bool
