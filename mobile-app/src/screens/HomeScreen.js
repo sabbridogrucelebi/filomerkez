@@ -1,390 +1,285 @@
-import React, { useContext, useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Animated, Dimensions, Image, Easing } from 'react-native';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import {
+    AccessibilityInfo,
+    ActivityIndicator,
+    Animated,
+    Easing,
+    Image,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from '@expo/vector-icons/MaterialCommunityIcons';
-import { AuthContext } from '../context/AuthContext';
-import api from '../api/axios';
-import { emoji } from '../emoji';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import dayjs from 'dayjs';
 import 'dayjs/locale/tr';
+import { AuthContext } from '../context/AuthContext';
+import api from '../api/axios';
 
-dayjs.locale('tr');
-const { width } = Dimensions.get('window');
+const coach = require('../../assets/fleet-dashboard-coach.webp');
+const numbers = new Intl.NumberFormat('tr-TR');
+const currency = new Intl.NumberFormat('tr-TR', {
+    style: 'currency',
+    currency: 'TRY',
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+});
 
-const toTitleCase = (str) => {
-    if (!str) return '';
-    return str.toLocaleLowerCase('tr-TR').split(' ').map(word => word.charAt(0).toLocaleUpperCase('tr-TR') + word.slice(1)).join(' ');
-};
+const quickActions = [
+    { label: 'Yeni Şoför', icon: 'account-plus-outline', route: 'Personnel' },
+    { label: 'Yeni Araç', icon: 'car-side', route: 'VehiclesTab' },
+    { label: 'Seferler', icon: 'map-marker-path', route: 'Trips' },
+    { label: 'Maaşlar', icon: 'cash-multiple', route: 'Payroll' },
+];
+
+function MaintenanceCard({ vehicle, onPress }) {
+    return (
+        <TouchableOpacity
+            style={styles.maintenanceCard}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            onPress={onPress}
+        >
+            <View style={styles.maintenanceHeader}>
+                <View>
+                    <Text style={styles.plate}>{vehicle.plate}</Text>
+                    <Text style={styles.note}>{numbers.format(vehicle.current_km)} km</Text>
+                </View>
+                <Icon name="chevron-right" size={24} color="#416b9c" />
+            </View>
+
+            {vehicle.alerts.map((alert, index) => {
+                const overdue = alert.remaining <= 0;
+                const distance = numbers.format(Math.abs(alert.remaining));
+                return (
+                    <View key={index} style={styles.alertRow}>
+                        <Text style={styles.alertType}>{alert.type}</Text>
+                        <Text style={[styles.alertStatus, overdue && styles.overdue]}>
+                            {distance} km {overdue ? 'gecikti' : 'kaldı'}
+                        </Text>
+                    </View>
+                );
+            })}
+        </TouchableOpacity>
+    );
+}
 
 export default function HomeScreen({ navigation }) {
     const { userInfo } = useContext(AuthContext);
     const [stats, setStats] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
-    
-    // Animasyon Değerleri
-    const scrollY = useRef(new Animated.Value(0)).current;
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    const slideAnim = useRef(new Animated.Value(50)).current;
-    
-    // 3D Flip & Float Değerleri
-    const flipAnims = useRef([new Animated.Value(0), new Animated.Value(0), new Animated.Value(0)]).current;
+    const [failed, setFailed] = useState(false);
+    const request = useRef(null);
+    const arrival = useRef(new Animated.Value(1)).current;
 
-    const fetchDashboard = async () => {
+    const loadOverview = useCallback(async (showRefresh = false) => {
+        request.current?.abort();
+        const controller = new AbortController();
+        request.current = controller;
+        setRefreshing(showRefresh);
+        setFailed(false);
+
         try {
-            const res = await api.get('/v1/dashboard', { params: { view: 'home' } });
-            setStats(res.data.data);
-            
-            // Giriş Animasyonları
-            Animated.parallel([
-                Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-                Animated.timing(slideAnim, { toValue: 0, duration: 800, easing: Easing.out(Easing.exp), useNativeDriver: true }),
-                // Kartların sırayla takla atarak gelmesi
-                Animated.stagger(150, flipAnims.map(anim => 
-                    Animated.spring(anim, {
-                        toValue: 1,
-                        friction: 6,
-                        tension: 40,
-                        useNativeDriver: true
-                    })
-                ))
-            ]).start();
-            
-        } catch (e) {
-            console.log('Dashboard fetch error:', e);
+            const response = await api.get('/v1/dashboard', {
+                params: { view: 'home' },
+                signal: controller.signal,
+            });
+            if (request.current === controller) setStats(response.data.data);
+        } catch {
+            if (request.current === controller && !controller.signal.aborted) setFailed(true);
+        } finally {
+            if (request.current === controller) {
+                request.current = null;
+                setRefreshing(false);
+            }
         }
-    };
-
-    useFocusEffect(
-        useCallback(() => {
-            fetchDashboard();
-        }, [])
-    );
-
-    const onRefresh = useCallback(async () => {
-        setRefreshing(true);
-        // Animasyonları sıfırla
-        fadeAnim.setValue(0);
-        slideAnim.setValue(50);
-        flipAnims.forEach(a => a.setValue(0));
-        
-        await fetchDashboard();
-        setRefreshing(false);
     }, []);
 
-    const firstName = toTitleCase(userInfo?.name?.split(' ')[0] || 'Kullanıcı');
-    const currentDate = dayjs().format('D MMMM YYYY, dddd');
+    useFocusEffect(useCallback(() => {
+        loadOverview();
+        return () => {
+            request.current?.abort();
+            request.current = null;
+        };
+    }, [loadOverview]));
 
-    const get3DIcon = (iconName) => {
-        switch (iconName) {
-            case 'bus-multiple': return emoji('Travel and places/Oncoming Bus');
-            case 'account-tie': return emoji('People/Construction Worker');
-            case 'domain': return emoji('Travel and places/Office Building');
-            default: return emoji('Travel and places/Automobile');
-        }
-    };
-
-    // Parallax Background Style
-    const bgTransform = {
-        transform: [{
-            translateY: scrollY.interpolate({
-                inputRange: [-100, 0, 500],
-                outputRange: [-50, 0, 150],
-                extrapolate: 'clamp'
-            })
-        }]
-    };
-
-    const KpiCard = ({ index, icon, title, value, gradientColors, darkColor, isHalf }) => {
-        // 3D Flip Efekti X ve Y Ekseninde
-        const flipRotate = flipAnims[index].interpolate({
-            inputRange: [0, 1],
-            outputRange: ['-90deg', '0deg']
+    useEffect(() => {
+        let active = true;
+        const animation = Animated.timing(arrival, {
+            toValue: 1,
+            duration: 650,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+            isInteraction: false,
         });
-        
-        const scaleEffect = flipAnims[index].interpolate({
-            inputRange: [0, 0.5, 1],
-            outputRange: [0.5, 1.1, 1]
+        AccessibilityInfo.isReduceMotionEnabled().then((reducedMotion) => {
+            if (!active || reducedMotion) return;
+            arrival.setValue(0);
+            animation.start();
+        }).catch(() => {});
+        const setting = AccessibilityInfo.addEventListener('reduceMotionChanged', (reducedMotion) => {
+            if (reducedMotion) {
+                animation.stop();
+                arrival.setValue(1);
+            }
         });
+        return () => {
+            active = false;
+            setting?.remove();
+            animation.stop();
+        };
+    }, [arrival]);
 
-        return (
-            <Animated.View style={[
-                styles.kpi3DBase, 
-                { shadowColor: darkColor },
-                { 
-                    opacity: flipAnims[index],
-                    transform: [
-                        { perspective: 1000 },
-                        { rotateX: flipRotate },
-                        { scale: scaleEffect }
-                    ]
-                }
-            ]}>
-                <BlurView intensity={40} tint="dark" style={{ borderRadius: 28, overflow: 'hidden' }}>
-                    <LinearGradient colors={[gradientColors[0] + '95', gradientColors[1] + '70']} style={[styles.kpiCard, isHalf && { padding: 18, flexDirection: 'column', alignItems: 'flex-start' }]} start={{x: 0, y: 0}} end={{x: 1, y: 1}}>
-                        <Animated.View style={[
-                            styles.kpiIconBox, 
-                            { shadowColor: darkColor, backgroundColor: 'rgba(255,255,255,0.15)' }, 
-                            isHalf && { width: 46, height: 46, borderRadius: 14, marginBottom: 12, marginRight: 0 },
-                        ]}>
-                            <Image source={get3DIcon(icon)} style={{ width: isHalf ? 36 : 48, height: isHalf ? 36 : 48 }} resizeMode="contain" />
-                        </Animated.View>
-                        <View style={[styles.kpiInfo, isHalf && { width: '100%' }]}>
-                            <Text style={[styles.kpiValue, isHalf && { fontSize: 28 }]} adjustsFontSizeToFit numberOfLines={1}>{value !== undefined ? value : '-'}</Text>
-                            <Text style={[styles.kpiTitle, isHalf && { fontSize: 13 }]} adjustsFontSizeToFit numberOfLines={1}>{title}</Text>
-                        </View>
-                    </LinearGradient>
-                </BlurView>
-            </Animated.View>
-        );
-    };
-
-    const QuickActions = () => {
-        const actions = [
-            { id: 1, title: 'Yeni Şoför', icon: 'account-plus', color: '#8B5CF6', route: 'Personnel' },
-            { id: 2, title: 'Yeni Araç', icon: 'car-side', color: '#3B82F6', route: 'VehiclesTab' },
-            { id: 3, title: 'Seferler', icon: 'map-marker-path', color: '#10B981', route: 'Trips' },
-            { id: 4, title: 'Maaşlar', icon: 'cash-multiple', color: '#F59E0B', route: 'Payroll' },
-        ];
-
-        return (
-            <View style={{ marginBottom: 30 }}>
-                <Text style={styles.sectionTitle}>Hızlı İşlemler</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 16 }}>
-                    {actions.map((action, idx) => {
-                        // Basit kaydırma ile gelen gecikmeli giriş animasyonu
-                        const actionSlide = slideAnim.interpolate({
-                            inputRange: [0, 50],
-                            outputRange: [0, 20 + (idx * 15)]
-                        });
-
-                        return (
-                            <Animated.View key={action.id} style={{ transform: [{ translateX: actionSlide }] }}>
-                                <TouchableOpacity 
-                                    style={styles.quickActionCard}
-                                    activeOpacity={0.7}
-                                    onPress={() => navigation.navigate(action.route)}
-                                >
-                                    <BlurView intensity={30} tint="light" style={styles.quickActionBlur}>
-                                        <View style={[styles.quickActionIconBox, { backgroundColor: action.color + '25', borderWidth: 1, borderColor: action.color + '40' }]}>
-                                            <Icon name={action.icon} size={26} color={action.color} />
-                                        </View>
-                                        <Text style={styles.quickActionTitle}>{action.title}</Text>
-                                    </BlurView>
-                                </TouchableOpacity>
-                            </Animated.View>
-                        );
-                    })}
-                </ScrollView>
-            </View>
-        );
-    };
-
-    const renderMaintenanceHealth = () => {
-        if (!stats?.maintenance_health || stats.maintenance_health.length === 0) {
-            return (
-                <View style={styles.emptyState}>
-                    <Icon name="check-circle" size={48} color="#10B981" style={{ marginBottom: 16 }} />
-                    <Text style={styles.emptyTitle}>Bakım uyarısı yok</Text>
-                    <Text style={styles.emptyDesc}>Bu aralıkta bakım veya yağlama uyarısı bulunmuyor.</Text>
-                </View>
-            );
-        }
-
-        return stats.maintenance_health.map((mh, i) => (
-            <View key={i} style={styles.mhCard}>
-                <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFillObject} />
-                <LinearGradient colors={['rgba(255,255,255,0.08)', 'transparent']} style={StyleSheet.absoluteFillObject} />
-                <View style={styles.mhHeader}>
-                    <View style={styles.mhHeaderLeft}>
-                        <View style={styles.mhPlateBox}>
-                            <Icon name="car-sports" size={18} color="#60A5FA" />
-                            <Text style={styles.mhPlateText}>{mh.plate}</Text>
-                        </View>
-                        <View style={styles.mhKmBadge}>
-                            <Icon name="speedometer" size={14} color="#94A3B8" />
-                            <Text style={styles.mhCurrentKm}>{new Intl.NumberFormat('tr-TR').format(mh.current_km)} KM</Text>
-                        </View>
-                    </View>
-                    <TouchableOpacity style={styles.mhActionBtn} onPress={() => navigation.navigate('VehiclesTab', { screen: 'VehicleMaintenances', params: { vehicleId: mh.vehicle_id, vehicle: mh } })}>
-                        <Text style={styles.mhActionText}>Göz At</Text>
-                        <Icon name="arrow-right-circle" size={18} color="#fff" />
-                    </TouchableOpacity>
-                </View>
-                <View style={styles.mhAlerts}>
-                    {mh.alerts.map((alert, idx) => {
-                        const isOverdue = alert.remaining <= 0;
-                        const alertColor = isOverdue ? '#F43F5E' : '#F59E0B';
-                        const alertBg = isOverdue ? 'rgba(244, 63, 94, 0.15)' : 'rgba(245, 158, 11, 0.15)';
-                        const alertIcon = isOverdue ? 'alert-decagram' : 'alert-circle-outline';
-                        const statusText = isOverdue ? `Gecikti (${Math.abs(alert.remaining)} KM)` : `Yaklaştı (${alert.remaining} KM Kaldı)`;
-
-                        return (
-                            <View key={idx} style={[styles.alertRow, { backgroundColor: alertBg, borderColor: alertColor + '50' }]}>
-                                <View style={[styles.alertIconWrap, { backgroundColor: alertColor + '20' }]}>
-                                    <Icon name={alertIcon} size={22} color={alertColor} />
-                                </View>
-                                <View style={styles.alertContent}>
-                                    <Text style={[styles.alertType, { color: alertColor }]}>{alert.type}</Text>
-                                    <Text style={[styles.alertStatus, { color: alertColor }]}>{statusText}</Text>
-                                </View>
-                                {isOverdue && <View style={[styles.pulseDot, { backgroundColor: alertColor }]} />}
-                            </View>
-                        );
-                    })}
-                </View>
-            </View>
-        ));
-    };
+    const firstName = userInfo?.name?.trim().split(/\s+/)[0] || 'Kullanıcı';
+    const currentDate = dayjs().locale('tr').format('D MMMM YYYY, dddd');
+    const hour = dayjs().hour();
+    const greeting = hour < 12 ? 'Günaydın' : hour < 18 ? 'Tünaydın' : 'İyi Akşamlar';
+    const operations = [
+        { title: 'Bugünkü sefer', value: stats?.today_trips },
+        { title: 'Devam eden bakım', value: stats?.active_maintenances },
+        { title: 'Bekleyen bakım', value: stats?.waiting_maintenances },
+    ];
 
     return (
-        <View style={styles.container}>
-            {/* Parallax arka plan */}
-            <Animated.View style={[StyleSheet.absoluteFill, bgTransform]}>
-                <LinearGradient colors={['#020617', '#0F172A', '#1E1B4B']} style={StyleSheet.absoluteFillObject} />
-                <View style={styles.bgBlob1} />
-                <View style={styles.bgBlob2} />
-            </Animated.View>
-            
-            <SafeAreaView style={{ flex: 1 }}>
-                <Animated.ScrollView 
-                    contentContainerStyle={styles.scrollContent}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8B5CF6" />}
-                    showsVerticalScrollIndicator={false}
-                    onScroll={Animated.event(
-                        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-                        { useNativeDriver: true }
-                    )}
-                    scrollEventThrottle={16}
-                >
-                    <View style={styles.header}>
-                        <View>
-                            <Text style={styles.dateText}>{currentDate}</Text>
-                            <Text style={styles.welcomeText}>Hoş Geldin, <Text style={styles.userName}>{firstName}</Text></Text>
-                        </View>
-                        <View style={styles.profileAvatar}>
-                            <Text style={styles.profileInitials}>{firstName.charAt(0)}</Text>
-                        </View>
-                    </View>
-
-                    {stats ? (
-                        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-                            
-                            {/* KPI Grid */}
-                            <Text style={styles.sectionTitle}>Filo Özeti</Text>
-                            <View style={styles.kpiContainer}>
-                                <KpiCard index={0} icon="bus-multiple" title="Toplam Araç" value={stats.vehicle_count} gradientColors={['#3B82F6', '#1D4ED8']} darkColor="#1E3A8A" />
-                                <View style={styles.kpiRow}>
-                                    <View style={{ flex: 1, marginRight: 6 }}>
-                                        <KpiCard index={1} icon="account-tie" title="Şoförler" value={stats.driver_count} gradientColors={['#8B5CF6', '#6D28D9']} darkColor="#4C1D95" isHalf />
-                                    </View>
-                                    <View style={{ flex: 1, marginLeft: 6 }}>
-                                        <KpiCard index={2} icon="domain" title="Müşteriler" value={stats.customer_count} gradientColors={['#10B981', '#047857']} darkColor="#064E3B" isHalf />
-                                    </View>
-                                </View>
+        <SafeAreaView style={styles.container}>
+            <ScrollView
+                contentContainerStyle={styles.content}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadOverview(true)} />}
+            >
+                <LinearGradient colors={['#09172e', '#183858']} style={styles.hero}>
+                    <Text style={styles.date}>{currentDate}</Text>
+                    <Text accessibilityRole="header" style={styles.greeting}>
+                        {greeting}, <Text style={styles.name}>{firstName}</Text>
+                    </Text>
+                    <Animated.View
+                        accessible={false}
+                        importantForAccessibility="no-hide-descendants"
+                        style={[styles.scene, {
+                            opacity: arrival,
+                            transform: [
+                                { perspective: 850 },
+                                { translateY: arrival.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) },
+                                { rotateY: arrival.interpolate({ inputRange: [0, 1], outputRange: ['-10deg', '0deg'] }) },
+                            ],
+                        }]}
+                    >
+                        <Image source={coach} resizeMode="contain" style={styles.coach} />
+                    </Animated.View>
+                    <View style={styles.operations}>
+                        {operations.map(({ title, value }) => (
+                            <View key={title} style={styles.operation}>
+                                <Text style={styles.operationValue}>{value ?? '—'}</Text>
+                                <Text style={styles.operationLabel}>{title}</Text>
                             </View>
+                        ))}
+                    </View>
+                </LinearGradient>
 
-                            <View style={styles.dailySummary}>
+                {failed && (
+                    <TouchableOpacity style={styles.retry} accessibilityRole="button" onPress={() => loadOverview(true)}>
+                        <Text style={styles.link}>Özet yüklenemedi. Yeniden dene.</Text>
+                    </TouchableOpacity>
+                )}
+                {!stats && !failed && <ActivityIndicator color="#275ba7" />}
+                {stats && (
+                    <>
+                        <View>
+                            <Text accessibilityRole="header" style={styles.sectionTitle}>Filo Özeti</Text>
+                            <View style={styles.grid}>
                                 {[
-                                    ['Bugünkü sefer', stats.today_trips],
-                                    ['Devam eden bakım', stats.active_maintenances],
-                                    ['Bekleyen bakım', stats.waiting_maintenances],
-                                    ['Aylık gelir', new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0, minimumFractionDigits: 0 }).format(stats.monthly_income)],
-                                ].map(([label, value]) => (
-                                    <View style={styles.dailyMetric} key={label}>
-                                        <Text style={styles.dailyLabel}>{label}</Text>
-                                        <Text style={styles.dailyValue}>{value}</Text>
-                                    </View>
+                                    { label: 'Toplam araç', value: stats.vehicle_count, color: '#275ba7', tint: '#e5eeff' },
+                                    { label: 'Şoför', value: stats.driver_count, color: '#633e9a', tint: '#f0e7fe' },
+                                    { label: 'Müşteri', value: stats.customer_count, color: '#176a65', tint: '#e2f5f1' },
+                                    { label: 'Aylık gelir', value: currency.format(stats.monthly_income), color: '#885521', tint: '#fff2dc' },
+                                ].map(({ label, value, color, tint }) => (
+                                    <LinearGradient key={label} colors={['#ffffff', tint]} style={styles.metric}>
+                                        <Text style={[styles.metricLabel, { color }]}>{label}</Text>
+                                        <Text style={styles.metricValue}>{value}</Text>
+                                    </LinearGradient>
                                 ))}
                             </View>
-                            <QuickActions />
-
-                            {/* Bakım Sağlığı (Maintenance Health) */}
-                            <View style={styles.sectionHeaderWrap}>
-                                <Icon name="heart-pulse" size={24} color="#F43F5E" style={{ marginRight: 8 }} />
-                                <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Bakım Sağlığı</Text>
-                            </View>
-                            <Text style={styles.sectionSubtitle}>500 KM altına düşen veya süresi geçen araçlar.</Text>
-                            
-                            <View style={styles.mhContainer}>
-                                {renderMaintenanceHealth()}
-                            </View>
-
-                            <View style={{ height: 120 }} />
-                        </Animated.View>
-                    ) : (
-                        <View style={{ marginTop: 50, alignItems: 'center' }}>
-                            <Icon name="loading" size={32} color="#8B5CF6" />
                         </View>
-                    )}
-                </Animated.ScrollView>
-            </SafeAreaView>
-        </View>
+
+                        <View>
+                            <Text accessibilityRole="header" style={styles.sectionTitle}>Hızlı İşlemler</Text>
+                            <View style={styles.actions}>
+                                {quickActions.map(({ label, icon, route }) => (
+                                    <TouchableOpacity
+                                        key={route}
+                                        accessibilityRole="button"
+                                        activeOpacity={0.75}
+                                        style={styles.action}
+                                        onPress={() => navigation.navigate(route)}
+                                    >
+                                        <Icon name={icon} size={21} color="#275ba7" />
+                                        <Text style={styles.actionLabel}>{label}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+
+                        <View>
+                            <Text accessibilityRole="header" style={styles.sectionTitle}>Filo Bakım Sağlığı</Text>
+                            <Text style={styles.maintenanceNote}>500 km içinde yaklaşan ve geciken bakımlar</Text>
+                            {stats.maintenance_health?.length > 0 ? (
+                                <View style={styles.alerts}>
+                                    {stats.maintenance_health.map((vehicle) => (
+                                        <MaintenanceCard
+                                            key={vehicle.vehicle_id}
+                                            vehicle={vehicle}
+                                            onPress={() => navigation.navigate('VehiclesTab', {
+                                                screen: 'VehicleMaintenances',
+                                                params: { vehicleId: vehicle.vehicle_id, vehicle },
+                                            })}
+                                        />
+                                    ))}
+                                </View>
+                            ) : <Text style={styles.empty}>Bakım uyarısı yok.</Text>}
+                        </View>
+                    </>
+                )}
+            </ScrollView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#020617' },
-    
-    dailySummary: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 },
-    dailyMetric: { width: '48%', padding: 12, borderRadius: 14, backgroundColor: '#18243b' },
-    dailyLabel: { color: '#bdcbe0', fontSize: 12 },
-    dailyValue: { color: '#fff', fontSize: 18, fontWeight: '700', marginTop: 4 },
-
-    // Parallax efekti için arka plan blur efektleri
-    bgBlob1: { position: 'absolute', top: -50, right: -50, width: 250, height: 250, borderRadius: 125, backgroundColor: 'rgba(139, 92, 246, 0.15)', transform: [{ scale: 1.5 }] },
-    bgBlob2: { position: 'absolute', top: 250, left: -80, width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(59, 130, 246, 0.12)', transform: [{ scale: 2 }] },
-
-    scrollContent: { paddingHorizontal: 20, paddingTop: 10 },
-    
-    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 },
-    dateText: { fontSize: 13, color: '#94A3B8', fontWeight: '600', letterSpacing: 0.5, marginBottom: 4 },
-    welcomeText: { fontSize: 28, color: '#fff', fontWeight: '500' },
-    userName: { fontWeight: '900', color: '#8B5CF6' },
-    profileAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(139, 92, 246, 0.2)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(139, 92, 246, 0.4)' },
-    profileInitials: { color: '#C4B5FD', fontSize: 20, fontWeight: '800' },
-
-    sectionTitle: { fontSize: 18, fontWeight: '800', color: '#F8FAFC', marginBottom: 16, letterSpacing: 0.5 },
-    sectionHeaderWrap: { flexDirection: 'row', alignItems: 'center', marginTop: 32, marginBottom: 4 },
-    sectionSubtitle: { fontSize: 13, color: '#94A3B8', marginBottom: 16, fontWeight: '500' },
-
-    kpiContainer: { gap: 12 },
-    kpiRow: { flexDirection: 'row' },
-    kpi3DBase: { borderRadius: 28, shadowColor: '#000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.9, shadowRadius: 18, elevation: 15, marginBottom: 8 },
-    kpiCard: { padding: 22, flexDirection: 'row', alignItems: 'center', borderRadius: 28, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
-    kpiIconBox: { width: 60, height: 60, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 16, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 1, shadowRadius: 8, elevation: 6 },
-    kpiInfo: { flex: 1 },
-    kpiValue: { fontSize: 36, fontWeight: '900', color: '#FFF', letterSpacing: -1, marginBottom: 2, textShadowColor: 'rgba(0,0,0,0.6)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10 },
-    kpiTitle: { fontSize: 14, fontWeight: '700', color: 'rgba(255,255,255,0.85)', letterSpacing: 0.5 },
-
-    quickActionCard: { width: 105, height: 115, borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 5 },
-    quickActionBlur: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 10, backgroundColor: 'rgba(255,255,255,0.05)' },
-    quickActionIconBox: { width: 54, height: 54, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
-    quickActionTitle: { color: '#F8FAFC', fontSize: 13, fontWeight: '700' },
-
-    mhContainer: { gap: 16 },
-    mhCard: { backgroundColor: 'transparent', borderRadius: 24, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.7, shadowRadius: 15, elevation: 10, overflow: 'hidden' },
-    mhHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-    mhHeaderLeft: { flex: 1 },
-    mhPlateBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(59, 130, 246, 0.15)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, alignSelf: 'flex-start', marginBottom: 8, borderWidth: 1, borderColor: 'rgba(59, 130, 246, 0.4)' },
-    mhPlateText: { color: '#60A5FA', fontSize: 16, fontWeight: '900', marginLeft: 8, letterSpacing: 0.5 },
-    mhKmBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.08)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, alignSelf: 'flex-start' },
-    mhCurrentKm: { color: '#CBD5E1', fontSize: 12, fontWeight: '700', marginLeft: 4 },
-    
-    mhActionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(59, 130, 246, 0.2)', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(59, 130, 246, 0.5)' },
-    mhActionText: { color: '#60A5FA', fontSize: 13, fontWeight: '800', marginRight: 6 },
-
-    mhAlerts: { gap: 10 },
-    alertRow: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 16, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3 },
-    alertIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-    alertContent: { marginLeft: 14, flex: 1 },
-    alertType: { fontSize: 15, fontWeight: '900', marginBottom: 2 },
-    alertStatus: { fontSize: 13, fontWeight: '700', opacity: 1 },
-    pulseDot: { width: 8, height: 8, borderRadius: 4, shadowColor: '#F43F5E', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 8, elevation: 5 },
-
-    emptyState: { backgroundColor: 'rgba(16, 185, 129, 0.08)', borderRadius: 28, padding: 32, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.2)', shadowColor: '#10B981', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.2, shadowRadius: 15, elevation: 6 },
-    emptyTitle: { fontSize: 20, fontWeight: '900', color: '#10B981', marginBottom: 8 },
-    emptyDesc: { fontSize: 14, color: '#94A3B8', textAlign: 'center', lineHeight: 22, fontWeight: '500' }
+    container: { flex: 1, backgroundColor: '#f2f6fc' },
+    content: { width: '100%', maxWidth: 680, alignSelf: 'center', padding: 16, paddingBottom: 120, gap: 22 },
+    hero: { borderRadius: 24, padding: 18, borderWidth: 1, borderColor: '#29466d', elevation: 4 },
+    date: { color: '#9ae6e1', fontSize: 12, fontWeight: '700' },
+    greeting: { color: '#fff', fontSize: 29, fontWeight: '800', letterSpacing: -0.8, marginTop: 6 },
+    name: { color: '#c5d9f0' },
+    scene: { width: '100%', maxWidth: 440, aspectRatio: 1.8, alignSelf: 'center' },
+    coach: { width: '100%', height: '100%' },
+    operations: { flexDirection: 'row', gap: 7 },
+    operation: { flex: 1, padding: 8, borderRadius: 11, borderWidth: 1, borderColor: '#456387', backgroundColor: '#233f60' },
+    operationValue: { fontSize: 22, fontWeight: '800', color: 'white', fontVariant: ['tabular-nums'] },
+    operationLabel: { fontSize: 11, color: '#d3e3f7', marginTop: 3 },
+    sectionTitle: { color: '#14243b', fontWeight: '800', fontSize: 19, marginBottom: 9 },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    metric: { width: '48%', flexGrow: 1, padding: 13, borderRadius: 15, borderWidth: 1, borderBottomWidth: 3, borderColor: '#dbe6f4' },
+    metricLabel: { fontWeight: '700', fontSize: 13 },
+    metricValue: { color: '#14243b', fontWeight: '800', fontSize: 25, marginTop: 4, fontVariant: ['tabular-nums'] },
+    actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    action: { flexGrow: 1, minWidth: '46%', minHeight: 46, flexDirection: 'row', gap: 8, alignItems: 'center', borderWidth: 1, padding: 10, borderRadius: 12, borderColor: '#dbe6f4', backgroundColor: 'white' },
+    actionLabel: { color: '#243958', fontWeight: '700', fontSize: 13 },
+    note: { color: '#526780', fontSize: 12 },
+    link: { color: '#275ba7', fontWeight: '700' },
+    retry: { padding: 13, borderRadius: 12, backgroundColor: 'white' },
+    maintenanceNote: { color: '#526780', fontSize: 13, marginBottom: 10 },
+    alerts: { gap: 8 },
+    maintenanceCard: { padding: 12, borderWidth: 1, borderColor: '#dbe6f4', borderRadius: 14, backgroundColor: 'white' },
+    maintenanceHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    plate: { color: '#14243b', fontWeight: '800', fontSize: 15 },
+    alertRow: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderColor: '#e9eef6' },
+    alertType: { color: '#526780', fontSize: 12 },
+    alertStatus: { color: '#83501d', fontWeight: '700', fontSize: 12 },
+    overdue: { color: '#a12b41' },
+    empty: { backgroundColor: 'white', padding: 14, borderWidth: 1, borderRadius: 12, borderColor: '#dbe6f4', color: '#526780' },
 });

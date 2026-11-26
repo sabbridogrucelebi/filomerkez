@@ -50,6 +50,7 @@
             box-shadow: inset 4px 0 10px -2px rgba(99, 102, 241, 0.3);
         }
     </style>
+    @stack('page-styles')
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased overflow-x-hidden">
 
