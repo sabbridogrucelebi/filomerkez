@@ -79,8 +79,7 @@ class VehicleController extends Controller
             ->when($specialFilter === 'upcoming_inspection', fn ($q) => $q->whereIn('id', $upcomingInspectionIds))
             ->when($specialFilter === 'upcoming_insurance', fn ($q) => $q->whereIn('id', $upcomingInsuranceIds))
             ->when($specialFilter === 'no_driver', fn ($q) => $q->where('is_active', true)->whereDoesntHave('drivers', fn($d) => $d->where('is_active', true)))
-            ->orderByRaw("CASE WHEN plate REGEXP '^[0-9]{2} *C *[0-9]+.*$' THEN 0 ELSE 1 END")
-            ->orderBy('plate', 'asc')
+            ->orderByCPlateNumber()
             ->paginate(100)
             ->withQueryString();
 

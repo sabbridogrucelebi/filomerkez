@@ -56,8 +56,7 @@ class VehicleReadService
             });
         }
 
-        $paginator = $query->orderByRaw("CASE WHEN plate REGEXP '^[0-9]{2} *C *[0-9]+.*$' THEN 0 ELSE 1 END")
-            ->orderBy('plate', 'asc')
+        $paginator = $query->orderByCPlateNumber()
             ->paginate($perPage);
 
         $formattedVehicles = collect($paginator->items())->map(function ($vehicle) {

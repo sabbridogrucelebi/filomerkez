@@ -6,6 +6,7 @@ use App\Models\Fuel;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\TrafficPenalty;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -76,6 +77,23 @@ class Vehicle extends Model
                 $vehicle->public_image_upload_token = Str::random(40);
             }
         });
+    }
+
+    public function scopeOrderByCPlateNumber(Builder $query): Builder
+    {
+        $plate = "UPPER(REPLACE(vehicles.plate, ' ', ''))";
+        $number = "SUBSTR($plate, 4)";
+        $pattern = "'^[0-9]{2}C[0-9]+$'";
+        $isCPlate = match ($query->getConnection()->getDriverName()) {
+            'sqlite' => "$plate GLOB '[0-9][0-9]C[0-9]*' AND $number NOT GLOB '*[^0-9]*'",
+            'pgsql' => "$plate ~ $pattern",
+            default => "$plate REGEXP $pattern",
+        };
+
+        return $query->orderByRaw("CASE WHEN $isCPlate THEN 0 ELSE 1 END")
+            ->orderByRaw("CASE WHEN $isCPlate THEN CAST($number AS DECIMAL(20,0)) END")
+            ->orderBy('vehicles.plate')
+            ->orderBy('vehicles.id');
     }
 
     public function company(): BelongsTo
