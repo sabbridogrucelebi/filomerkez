@@ -18,7 +18,7 @@ class DashboardService
     /**
      * Web ve mobil için ortak dashboard istatistiklerini hesaplar ve döndürür.
      */
-    public function getStatistics($companyId)
+    public function getStatistics($companyId, bool $homeOverview = false)
     {
         $vehicleCount = Vehicle::where('company_id', $companyId)->count();
         $driverCount = Driver::where('company_id', $companyId)->count();
@@ -32,6 +32,24 @@ class DashboardService
             ->whereYear('trip_date', now()->year)
             ->sum('trip_price');
 
+        $activeMaintenances = VehicleMaintenance::where('company_id', $companyId)
+            ->where('status', 'in_progress')->count();
+        $waitingMaintenances = VehicleMaintenance::where('company_id', $companyId)
+            ->where('status', 'waiting')->count();
+
+        if ($homeOverview) {
+            return [
+                'vehicle_count' => $vehicleCount,
+                'driver_count' => $driverCount,
+                'customer_count' => $customerCount,
+                'today_trips' => $todayTrips,
+                'monthly_income' => $monthlyIncome,
+                'active_maintenances' => $activeMaintenances,
+                'waiting_maintenances' => $waitingMaintenances,
+                'maintenance_health' => $this->maintenanceHealth($companyId),
+            ];
+        }
+
         $monthlyFuel = Fuel::where('company_id', $companyId)
             ->whereMonth('date', now()->month)
             ->whereYear('date', now()->year)
@@ -41,11 +59,6 @@ class DashboardService
             ->whereMonth('penalty_date', now()->month)
             ->whereYear('penalty_date', now()->year)
             ->sum('penalty_amount');
-
-        $activeMaintenances = VehicleMaintenance::where('company_id', $companyId)
-            ->where('status', 'in_progress')->count();
-        $waitingMaintenances = VehicleMaintenance::where('company_id', $companyId)
-            ->where('status', 'waiting')->count();
 
         $today = now()->startOfDay();
         $sevenDaysLater = now()->copy()->addDays(7)->startOfDay();
@@ -93,6 +106,31 @@ class DashboardService
             ->take(6)
             ->get();
 
+        return [
+            'vehicle_count' => $vehicleCount,
+            'driver_count' => $driverCount,
+            'customer_count' => $customerCount,
+            'today_trips' => $todayTrips,
+            'monthly_income' => $monthlyIncome,
+            'monthly_fuel' => $monthlyFuel,
+            'monthly_penalty' => $monthlyPenalty,
+            'active_maintenances' => $activeMaintenances,
+            'waiting_maintenances' => $waitingMaintenances,
+            'expired_documents_count' => $expiredDocumentsCount,
+            'documents_expiring_in_7_days_count' => $documentsExpiringIn7DaysCount,
+            'documents_expiring_in_30_days_count' => $documentsExpiringIn30DaysCount,
+            'upcoming_documents' => $upcomingDocuments,
+            'total_fuel' => $totalFuel,
+            'total_salary' => $totalSalary,
+            'net_profit' => $netProfit,
+            'recent_trips' => $recentTrips,
+            'recent_activity' => $recentActivity,
+            'maintenance_health' => $this->maintenanceHealth($companyId)
+        ];
+    }
+
+    private function maintenanceHealth($companyId): array
+    {
         // Bakım Sağlığı (Maintenance Health)
         // Son 500 KM'ye düşen veya gecikmiş (<= 500) yağ ve alt yağlama bakımlarını bul
         $vehiclesWithSettings = Vehicle::withMaintenanceReadings()->whereHas('maintenanceSetting')
@@ -138,26 +176,6 @@ class DashboardService
             return $minA <=> $minB;
         });
 
-        return [
-            'vehicle_count' => $vehicleCount,
-            'driver_count' => $driverCount,
-            'customer_count' => $customerCount,
-            'today_trips' => $todayTrips,
-            'monthly_income' => $monthlyIncome,
-            'monthly_fuel' => $monthlyFuel,
-            'monthly_penalty' => $monthlyPenalty,
-            'active_maintenances' => $activeMaintenances,
-            'waiting_maintenances' => $waitingMaintenances,
-            'expired_documents_count' => $expiredDocumentsCount,
-            'documents_expiring_in_7_days_count' => $documentsExpiringIn7DaysCount,
-            'documents_expiring_in_30_days_count' => $documentsExpiringIn30DaysCount,
-            'upcoming_documents' => $upcomingDocuments,
-            'total_fuel' => $totalFuel,
-            'total_salary' => $totalSalary,
-            'net_profit' => $netProfit,
-            'recent_trips' => $recentTrips,
-            'recent_activity' => $recentActivity,
-            'maintenance_health' => $maintenanceHealth
-        ];
+        return $maintenanceHealth;
     }
 }

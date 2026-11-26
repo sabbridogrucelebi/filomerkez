@@ -1,4 +1,4 @@
-import React, { useContext, useState, useCallback, useRef, useEffect } from 'react';
+import React, { useContext, useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Animated, Dimensions, Image, Easing } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,11 +31,10 @@ export default function HomeScreen({ navigation }) {
     
     // 3D Flip & Float Değerleri
     const flipAnims = useRef([new Animated.Value(0), new Animated.Value(0), new Animated.Value(0)]).current;
-    const floatAnim = useRef(new Animated.Value(0)).current;
 
     const fetchDashboard = async () => {
         try {
-            const res = await api.get('/v1/dashboard');
+            const res = await api.get('/v1/dashboard', { params: { view: 'home' } });
             setStats(res.data.data);
             
             // Giriş Animasyonları
@@ -63,26 +62,6 @@ export default function HomeScreen({ navigation }) {
             fetchDashboard();
         }, [])
     );
-
-    // Sürekli Float (Levitation) Animasyonu
-    useEffect(() => {
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(floatAnim, {
-                    toValue: 1,
-                    duration: 2000,
-                    easing: Easing.inOut(Easing.sin),
-                    useNativeDriver: true
-                }),
-                Animated.timing(floatAnim, {
-                    toValue: 0,
-                    duration: 2000,
-                    easing: Easing.inOut(Easing.sin),
-                    useNativeDriver: true
-                })
-            ])
-        ).start();
-    }, []);
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
@@ -118,15 +97,6 @@ export default function HomeScreen({ navigation }) {
         }]
     };
 
-    const floatTransform = {
-        transform: [{
-            translateY: floatAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, -8]
-            })
-        }]
-    };
-
     const KpiCard = ({ index, icon, title, value, gradientColors, darkColor, isHalf }) => {
         // 3D Flip Efekti X ve Y Ekseninde
         const flipRotate = flipAnims[index].interpolate({
@@ -158,7 +128,6 @@ export default function HomeScreen({ navigation }) {
                             styles.kpiIconBox, 
                             { shadowColor: darkColor, backgroundColor: 'rgba(255,255,255,0.15)' }, 
                             isHalf && { width: 46, height: 46, borderRadius: 14, marginBottom: 12, marginRight: 0 },
-                            floatTransform // Havada süzülme animasyonu
                         ]}>
                             <Image source={get3DIcon(icon)} style={{ width: isHalf ? 36 : 48, height: isHalf ? 36 : 48 }} resizeMode="contain" />
                         </Animated.View>
@@ -218,8 +187,8 @@ export default function HomeScreen({ navigation }) {
             return (
                 <View style={styles.emptyState}>
                     <Icon name="check-circle" size={48} color="#10B981" style={{ marginBottom: 16 }} />
-                    <Text style={styles.emptyTitle}>Harika Haber!</Text>
-                    <Text style={styles.emptyDesc}>Acil bakım veya yağlama gerektiren aracınız bulunmuyor. Filonuz tamamen güvende.</Text>
+                    <Text style={styles.emptyTitle}>Bakım uyarısı yok</Text>
+                    <Text style={styles.emptyDesc}>Bu aralıkta bakım veya yağlama uyarısı bulunmuyor.</Text>
                 </View>
             );
         }
@@ -303,9 +272,6 @@ export default function HomeScreen({ navigation }) {
                     {stats ? (
                         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
                             
-                            {/* Hızlı İşlemler */}
-                            <QuickActions />
-
                             {/* KPI Grid */}
                             <Text style={styles.sectionTitle}>Filo Özeti</Text>
                             <View style={styles.kpiContainer}>
@@ -319,6 +285,21 @@ export default function HomeScreen({ navigation }) {
                                     </View>
                                 </View>
                             </View>
+
+                            <View style={styles.dailySummary}>
+                                {[
+                                    ['Bugünkü sefer', stats.today_trips],
+                                    ['Devam eden bakım', stats.active_maintenances],
+                                    ['Bekleyen bakım', stats.waiting_maintenances],
+                                    ['Aylık gelir', new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0, minimumFractionDigits: 0 }).format(stats.monthly_income)],
+                                ].map(([label, value]) => (
+                                    <View style={styles.dailyMetric} key={label}>
+                                        <Text style={styles.dailyLabel}>{label}</Text>
+                                        <Text style={styles.dailyValue}>{value}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                            <QuickActions />
 
                             {/* Bakım Sağlığı (Maintenance Health) */}
                             <View style={styles.sectionHeaderWrap}>
@@ -347,6 +328,11 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#020617' },
     
+    dailySummary: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 },
+    dailyMetric: { width: '48%', padding: 12, borderRadius: 14, backgroundColor: '#18243b' },
+    dailyLabel: { color: '#bdcbe0', fontSize: 12 },
+    dailyValue: { color: '#fff', fontSize: 18, fontWeight: '700', marginTop: 4 },
+
     // Parallax efekti için arka plan blur efektleri
     bgBlob1: { position: 'absolute', top: -50, right: -50, width: 250, height: 250, borderRadius: 125, backgroundColor: 'rgba(139, 92, 246, 0.15)', transform: [{ scale: 1.5 }] },
     bgBlob2: { position: 'absolute', top: 250, left: -80, width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(59, 130, 246, 0.12)', transform: [{ scale: 2 }] },

@@ -13,11 +13,8 @@
 
 use App\Models\Trip;
 use App\Models\Fuel;
-use App\Models\Document;
-use App\Models\Payroll;
 use App\Models\ActivityLog;
 use App\Models\Customer;
-use App\Models\TrafficPenalty;
 use App\Models\VehicleMaintenance;
 use App\Models\Fleet\Driver;
 use App\Models\Fleet\Vehicle;
@@ -250,51 +247,8 @@ Route::get('/dashboard', function () {
         ->whereYear('trip_date', now()->year)
         ->sum('trip_price');
 
-    $monthlyFuel = Fuel::whereMonth('date', now()->month)
-        ->whereYear('date', now()->year)
-        ->sum('total_cost');
-
-    $monthlyPenalty = TrafficPenalty::whereMonth('penalty_date', now()->month)
-        ->whereYear('penalty_date', now()->year)
-        ->sum('penalty_amount');
-
     $activeMaintenances = VehicleMaintenance::where('status', 'in_progress')->count();
     $waitingMaintenances = VehicleMaintenance::where('status', 'waiting')->count();
-
-    $today = now()->startOfDay();
-    $sevenDaysLater = now()->copy()->addDays(7)->startOfDay();
-    $thirtyDaysLater = now()->copy()->addDays(30)->startOfDay();
-
-    $expiredDocumentsCount = Document::whereNotNull('end_date')
-        ->whereDate('end_date', '<', $today)
-        ->count();
-
-    $documentsExpiringIn7DaysCount = Document::whereNotNull('end_date')
-        ->whereDate('end_date', '>=', $today)
-        ->whereDate('end_date', '<=', $sevenDaysLater)
-        ->count();
-
-    $documentsExpiringIn30DaysCount = Document::whereNotNull('end_date')
-        ->whereDate('end_date', '>', $sevenDaysLater)
-        ->whereDate('end_date', '<=', $thirtyDaysLater)
-        ->count();
-
-    $upcomingDocuments = Document::whereNotNull('end_date')
-        ->whereDate('end_date', '>=', $today)
-        ->whereDate('end_date', '<=', $thirtyDaysLater)
-        ->orderBy('end_date')
-        ->take(10)
-        ->get();
-
-    $totalFuel = Fuel::sum('total_cost');
-    $totalSalary = Payroll::sum('net_salary');
-    $netProfit = $monthlyIncome - ($totalFuel + $totalSalary);
-
-    $recentTrips = Trip::with(['vehicle', 'driver'])
-        ->orderBy('trip_date', 'desc')
-        ->orderBy('id', 'desc')
-        ->take(5)
-        ->get();
 
     $recentActivity = ActivityLog::with('user')
         ->orderBy('created_at', 'desc')
@@ -369,18 +323,8 @@ Route::get('/dashboard', function () {
         'customerCount',
         'todayTrips',
         'monthlyIncome',
-        'monthlyFuel',
-        'monthlyPenalty',
         'activeMaintenances',
         'waitingMaintenances',
-        'expiredDocumentsCount',
-        'documentsExpiringIn7DaysCount',
-        'documentsExpiringIn30DaysCount',
-        'upcomingDocuments',
-        'totalFuel',
-        'totalSalary',
-        'netProfit',
-        'recentTrips',
         'recentActivity',
         'lastBackupDate',
         'lastBackupSize',

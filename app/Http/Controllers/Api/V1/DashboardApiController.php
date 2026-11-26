@@ -22,7 +22,7 @@ class DashboardApiController extends BaseApiController
         }
 
         $companyId = $this->getCompanyId();
-        $statistics = $this->dashboardService->getStatistics($companyId);
+        $statistics = $this->dashboardService->getStatistics($companyId, $request->query('view') === 'home');
 
         return $this->successResponse($statistics, 'Dashboard istatistikleri başarıyla getirildi.');
     }
