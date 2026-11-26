@@ -403,19 +403,13 @@ class ChatApiController extends Controller
     public function unreadCount(Request $request)
     {
         $user = $request->user();
-        $conversations = $user->conversations()->with('users')->get();
-        
-        $totalUnread = 0;
-        foreach ($conversations as $conv) {
-            $pivot = $conv->pivot;
-            $unreadQuery = Message::where('conversation_id', $conv->id)
-                ->where('sender_id', '!=', $user->id);
-                
-            if ($pivot->last_read_message_id) {
-                $unreadQuery->where('id', '>', $pivot->last_read_message_id);
-            }
-            $totalUnread += $unreadQuery->count();
-        }
+        $memberships = $user->conversations()->getQuery()
+            ->select('conversations.id', 'conversation_user.last_read_message_id');
+        $totalUnread = Message::query()
+            ->joinSub($memberships, 'membership', 'membership.id', '=', 'messages.conversation_id')
+            ->where('messages.sender_id', '!=', $user->id)
+            ->whereRaw('messages.id > COALESCE(membership.last_read_message_id, 0)')
+            ->count();
 
         return response()->json([
             'count' => $totalUnread,
