@@ -98,6 +98,7 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
     const update = (key, value) => setForm(previous => ({ ...previous, [key]: value }));
     const cards = dashboard ? { kasko: { ...KASKO_CARD, ...dashboard.settings }, ...dashboard.channels } : {};
     const bot = cards[channel];
+    const check = dashboard?.automatic_checks?.[channel];
     const isKasko = channel === 'kasko';
     const isImm = channel === 'imm';
     const canEditSummary = isKasko || (isImm && dashboard?.imm_summary_ready);
@@ -217,6 +218,7 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                                     <Text style={styles.heroTitle}>Telegram Uyarı Merkezi</Text>
                                     <Text style={styles.heroInfo}>{count} / {Object.keys(cards).length} bot etkin</Text>
                                     <Text style={styles.heroInfo}>Her gün {dashboard.schedule_time || '07:50'} · Türkiye saati</Text>
+                                    {!!dashboard.scheduler_note && <Text style={styles.heroInfo}>{dashboard.scheduler_note}</Text>}
                                 </View>
                                 <Animated.View style={[styles.orb, { transform: [
                                     { perspective: 500 },
@@ -243,6 +245,8 @@ export default function TelegramKaskoSettingsScreen({ navigation }) {
                             <View onLayout={event => { settingsTop.current = event.nativeEvent.layout.y; }} style={styles.panel}>
                                 <Text style={styles.title}>{bot.icon} {bot.label}</Text>
                                 <Text style={styles.muted}>{bot.description}</Text>
+                                {check ? <Text style={styles.muted}>Son otomatik kontrol · {check.checked_at} · {check.summary}</Text>
+                                    : !!dashboard.automatic_checks && bot.is_enabled && <Text style={styles.muted}>Bu hat için ilk otomatik kontrol bekleniyor.</Text>}
                                 {!!bot.last_sent_at && <Text style={styles.muted}>Son otomatik uyarı · {bot.last_sent_at}</Text>}
                                 {!ready ? <Text style={styles.notice}>Bu botu kurmak için web panelinden Telegram veritabanını güncelleyin.</Text> : (
                                     <>

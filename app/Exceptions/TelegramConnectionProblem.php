@@ -6,7 +6,7 @@ use RuntimeException;
 
 final class TelegramConnectionProblem extends RuntimeException
 {
-    public function __construct(?int $curlCode, bool $beforeSend = false)
+    public function __construct(?int $curlCode, public readonly bool $beforeSend = false)
     {
         $message = match ($curlCode) {
             5, 6 => 'Sunucu Telegram adresini DNS üzerinden çözemedi. Hosting desteğinden api.telegram.org için DNS çözümlemesini kontrol etmesini isteyin.',

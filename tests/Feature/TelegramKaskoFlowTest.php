@@ -333,13 +333,17 @@ class TelegramKaskoFlowTest extends TestCase
         }
 
         $service = app(TelegramFleetAlertService::class);
-        $this->assertSame(6, $service->sendScheduledNotifications());
-        $this->assertSame(0, $service->sendScheduledNotifications());
+        $this->assertSame(6, $service->sendScheduledNotifications(true));
+        $this->assertSame(0, $service->sendScheduledNotifications(true));
         foreach (['11 gün kaldı', '2 gün kaldı', '3 gün kaldı', '7 gün kaldı', '100 km kaldı', '5,00 km/L'] as $i => $text) {
             Http::assertSent(fn (Request $request) => str_ends_with($request->url(), '/bot' . (100 + $i) . ':demo/sendMessage')
                 && $request['chat_id'] === (string) (-200 - $i) && str_contains($request['text'], $text));
         }
         $dashboard = app(TelegramAlertBotSettings::class)->dashboard(1);
+        foreach (array_keys(TelegramAlertBot::CHANNELS) as $channel) {
+            $this->assertSame('done', $dashboard['automatic_checks'][$channel]['state']);
+            $this->assertSame(1, $dashboard['automatic_checks'][$channel]['sent']);
+        }
         $this->assertTrue($dashboard['fleet_ready']);
         $this->assertArrayNotHasKey('bot_token', $dashboard['channels']['fuel']);
         $this->assertNotNull($dashboard['channels']['fuel']['last_sent_at']);
@@ -347,13 +351,73 @@ class TelegramKaskoFlowTest extends TestCase
 
     public function test_telegram_sends_at_0750_in_turkey(): void
     {
-        $events = collect(app(Schedule::class)->events())->filter(fn ($event) => str_contains($event->command, 'telegram:kasko-alerts')
-            || str_contains($event->command, 'telegram:fleet-alerts'));
+        $events = collect(app(Schedule::class)->events())->filter(fn ($event) => str_contains($event->command ?? '', 'telegram:kasko-alerts')
+            || str_contains($event->command ?? '', 'telegram:fleet-alerts'));
         $this->assertCount(2, $events);
         foreach ($events as $event) {
-            $this->assertSame('50 7 * * *', $event->expression);
+            $this->assertStringContainsString('--scheduled', $event->command);
             $this->assertSame('Europe/Istanbul', $event->timezone);
+            foreach (['07:45' => false, '07:50' => true, '08:05' => true, '10:11' => false, '23:55' => true, '00:00' => false] as $time => $expected) {
+                $this->travelTo(\Carbon\Carbon::parse("2026-11-26 {$time}", 'Europe/Istanbul'));
+                $this->assertSame($expected, $event->isDue($this->app) && $event->filtersPass($this->app), $time);
+            }
         }
+    }
+
+    public function test_missed_morning_run_and_partial_rate_limit_resume_once_for_the_right_company(): void
+    {
+        (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
+        $this->travelTo(\Carbon\Carbon::parse('2026-11-26 10:10', 'Europe/Istanbul'));
+        $this->document($this->vehicle('KASKO-ONE'), 3);
+        $this->document($this->vehicle('KASKO-TWO'), 3);
+        Http::swap(new \Illuminate\Http\Client\Factory());
+        Http::preventStrayRequests();
+        Http::fake(['*/sendMessage' => Http::sequence()
+            ->push(['ok' => true, 'result' => ['message_id' => 1]])
+            ->push(['ok' => false, 'parameters' => ['retry_after' => 340]], 429)
+            ->push(['ok' => true, 'result' => ['message_id' => 2]])]);
+        $this->artisan('telegram:kasko-alerts --scheduled')->assertSuccessful();
+        $this->assertSame('retry', \App\Services\TelegramScheduledCheck::status(1, 'kasko')['state']);
+        $this->travel(5)->minutes();
+        $this->artisan('telegram:kasko-alerts --scheduled')->assertSuccessful();
+        Http::assertSentCount(2);
+        $this->travel(5)->minutes();
+        $this->artisan('telegram:kasko-alerts --scheduled')->assertSuccessful();
+        $this->artisan('telegram:kasko-alerts --scheduled')->assertSuccessful();
+        Http::assertSentCount(3);
+        $messages = Http::recorded()->map(fn ($pair) => $pair[0]['text'])->values();
+        $this->assertStringContainsString('KASKO-ONE', $messages[0]);
+        $this->assertStringContainsString('KASKO-TWO', $messages[1]);
+        $this->assertSame($messages[1], $messages[2]);
+        $check = \App\Services\TelegramScheduledCheck::status(1, 'kasko');
+        $this->assertSame('done', $check['state']);
+        $this->assertSame(2, $check['sent']);
+        $this->assertNull(\App\Services\TelegramScheduledCheck::status(2, 'kasko'));
+    }
+
+    public function test_one_rejected_group_does_not_hide_other_channels_or_send_again_on_the_next_tick(): void
+    {
+        (require database_path('migrations/2026_11_24_110000_create_telegram_fleet_alert_tables.php'))->up();
+        $this->travelTo(\Carbon\Carbon::parse('2026-11-26 10:10', 'Europe/Istanbul'));
+        $this->vehicle('FILO-1', ['inspection_date' => '2026-11-29', 'insurance_end_date' => '2026-11-29']);
+        foreach (['insurance', 'inspection', 'exhaust'] as $i => $channel) {
+            TelegramAlertBot::create(['company_id' => 1, 'channel' => $channel, 'is_enabled' => true,
+                'bot_token' => (101 + $i) . ':fixture', 'chat_id' => (string) (-501 - $i)]);
+        }
+        Http::swap(new \Illuminate\Http\Client\Factory());
+        Http::preventStrayRequests();
+        Http::fake(['*/bot101:fixture/sendMessage' => Http::response(['ok' => false, 'error_code' => 403], 403),
+            '*/bot102:fixture/sendMessage' => Http::response(['ok' => true, 'result' => ['message_id' => 1]])]);
+        $this->artisan('telegram:fleet-alerts --scheduled')->assertSuccessful();
+        $this->travel(5)->minutes();
+        $this->artisan('telegram:fleet-alerts --scheduled')->assertSuccessful();
+        Http::assertSentCount(2);
+        $checks = app(TelegramAlertBotSettings::class)->dashboard(1)['automatic_checks'];
+        $this->assertSame('review', $checks['insurance']['state']);
+        $this->assertStringContainsString('izni', $checks['insurance']['summary']);
+        $this->assertSame(1, $checks['inspection']['sent']);
+        $this->assertSame(0, $checks['exhaust']['sent']);
+        $this->assertSame('done', $checks['exhaust']['state']);
     }
 
     public function test_fleet_settings_keep_bot_tokens_separate_even_after_rotation(): void

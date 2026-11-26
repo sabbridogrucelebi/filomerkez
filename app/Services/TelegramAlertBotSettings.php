@@ -46,6 +46,9 @@ class TelegramAlertBotSettings
         }
 
         return ['fleet_ready' => $available, 'fleet_templates_ready' => $templatesReady, 'imm_summary_ready' => $summaryReady, 'channels' => $channels,
+            'scheduler_note' => TelegramScheduledCheck::schedulerNote(),
+            'automatic_checks' => collect(['kasko', ...array_keys($channels)])->mapWithKeys(fn (string $channel) =>
+                [$channel => TelegramScheduledCheck::status($companyId, $channel)])->all(),
             'schedule_time' => TelegramAlertSchedule::TIME];
     }
 

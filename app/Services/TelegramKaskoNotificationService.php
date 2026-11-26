@@ -13,6 +13,7 @@ use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -20,7 +21,7 @@ use Throwable;
 
 class TelegramKaskoNotificationService
 {
-    public function sendScheduledNotifications(): int
+    public function sendScheduledNotifications(bool $scheduled = false): int
     {
         $sentCount = 0;
         $today = now(TelegramAlertSchedule::TIMEZONE)->startOfDay();
@@ -28,63 +29,64 @@ class TelegramKaskoNotificationService
         TelegramKaskoNotificationSetting::query()
             ->where('is_enabled', true)
             ->get()
-            ->each(function (TelegramKaskoNotificationSetting $setting) use ($today, &$sentCount) {
-                if (!$setting->hasCredentials()) {
-                    return;
-                }
-
-                $days = TelegramAlertSchedule::days($setting->reminder_days ?? []);
-
-                try {
-                    $sentCount += $this->sendUpcomingSummary($setting, $today, max($days ?: TelegramAlertSchedule::DEFAULT_DAYS));
-                } catch (Throwable $exception) {
-                    Log::warning('Telegram kasko özeti gönderilemedi.', [
-                        'company_id' => $setting->company_id,
-                        'error_type' => $exception::class,
-                    ]);
-                }
-
-                Vehicle::query()->with('kaskoDocuments')
-                    ->where('company_id', $setting->company_id)
-                    ->where('is_active', true)
-                    ->eachById(function (Vehicle $vehicle) use ($setting, $today, $days, &$sentCount) {
-                        $policy = TelegramPolicyAlerts::latestUploaded($vehicle, 'kaskoDocuments');
-                        $expiryDate = $policy?->end_date?->copy()->startOfDay();
-                        if (!$expiryDate) {
-                            return;
-                        }
-                        $daysLeft = TelegramPolicyAlerts::daysUntil($today, $expiryDate);
-
-                        $threshold = TelegramAlertSchedule::policyThreshold($days, $daysLeft);
-                        if ($threshold === null || $this->wasAlreadySent($setting, $vehicle, $expiryDate, $threshold)) {
-                            return;
-                        }
-
-                        try {
-                            $messageId = $this->send($setting, $vehicle, $daysLeft, $expiryDate, $policy->start_date);
-
-                            TelegramKaskoNotificationLog::create([
-                                'company_id' => $setting->company_id,
-                                'vehicle_id' => $vehicle->id,
-                                'kasko_end_date' => $expiryDate->toDateString(),
-                                'reminder_day' => $threshold,
-                                'telegram_message_id' => $messageId,
-                                'sent_at' => now(),
-                            ]);
-
-                            $sentCount++;
-                        } catch (Throwable $exception) {
-                            report($exception);
-                            Log::warning('Telegram kasko bildirimi gönderilemedi.', [
-                                'company_id' => $setting->company_id,
-                                'vehicle_id' => $vehicle->id,
-                                'reminder_day' => $daysLeft,
-                            ]);
-                        }
-                    });
+            ->each(function (TelegramKaskoNotificationSetting $setting) use ($today, $scheduled, &$sentCount) {
+                $sentCount += TelegramScheduledCheck::run($setting, $scheduled,
+                    fn (TelegramScheduledCheck $check) => $this->sendForSetting($setting, $today, $check));
             });
 
         return $sentCount;
+    }
+
+    private function sendForSetting(TelegramKaskoNotificationSetting $setting, Carbon $today, TelegramScheduledCheck $check): void
+    {
+        $days = TelegramAlertSchedule::days($setting->reminder_days ?? []);
+        try {
+            $this->sendUpcomingSummary($setting, $today, max($days ?: TelegramAlertSchedule::DEFAULT_DAYS), $check);
+        } catch (Throwable $exception) {
+            $check->failed($exception);
+        }
+
+        Vehicle::query()->with('kaskoDocuments')
+            ->where('company_id', $setting->company_id)
+            ->where('is_active', true)
+            ->eachById(function (Vehicle $vehicle) use ($setting, $today, $days, $check) {
+                if ($check->shouldPause()) {
+                    return false;
+                }
+                $policy = TelegramPolicyAlerts::latestUploaded($vehicle, 'kaskoDocuments');
+                $expiryDate = $policy?->end_date?->copy()->startOfDay();
+                if (!$expiryDate) {
+                    return;
+                }
+                $daysLeft = TelegramPolicyAlerts::daysUntil($today, $expiryDate);
+
+                $threshold = TelegramAlertSchedule::policyThreshold($days, $daysLeft);
+                if ($threshold === null || $this->wasAlreadySent($setting, $vehicle, $expiryDate, $threshold)) {
+                    return;
+                }
+
+                try {
+                    $messageId = $this->send($setting, $vehicle, $daysLeft, $expiryDate, $policy->start_date);
+
+                    TelegramKaskoNotificationLog::create([
+                        'company_id' => $setting->company_id,
+                        'vehicle_id' => $vehicle->id,
+                        'kasko_end_date' => $expiryDate->toDateString(),
+                        'reminder_day' => $threshold,
+                        'telegram_message_id' => $messageId,
+                        'sent_at' => now(),
+                    ]);
+
+                    $check->sent++;
+                } catch (Throwable $exception) {
+                    $check->failed($exception);
+                    Log::warning('Telegram kasko bildirimi gönderilemedi.', [
+                        'company_id' => $setting->company_id,
+                        'vehicle_id' => $vehicle->id,
+                        'reminder_day' => $daysLeft,
+                    ]);
+                }
+            });
     }
 
     public function sendTestForCompany(TelegramKaskoNotificationSetting $setting): ?string
@@ -187,7 +189,7 @@ class TelegramKaskoNotificationService
         }
 
         if (!$response->successful() || !$response->json('ok')) {
-            throw new RuntimeException($response->json('description') ?: 'Telegram mesajı gönderilemedi.');
+            throw new RuntimeException($response->json('description') ?: 'Telegram mesajı gönderilemedi.', (int) ($response->json('error_code') ?: $response->status()));
         }
 
         return (string) $response->json('result.message_id');
@@ -251,23 +253,27 @@ class TelegramKaskoNotificationService
             ->exists();
     }
 
-    private function sendUpcomingSummary(TelegramKaskoNotificationSetting $setting, Carbon $today, int $summaryDays): int
+    private function sendUpcomingSummary(TelegramKaskoNotificationSetting $setting, Carbon $today, int $summaryDays, TelegramScheduledCheck $check): void
     {
         if (!$setting->upcoming_summary_enabled
             || $setting->last_upcoming_summary_date?->isSameDay($today)) {
-            return 0;
+            return;
         }
 
         $entries = TelegramPolicyAlerts::upcoming($setting->company_id, 'kasko', $today, $summaryDays);
         $messages = TelegramPolicyAlerts::summaryMessages("{$summaryDays} GÜN İÇİNDE BİTECEK KASKOLAR", $entries);
-        foreach ($messages as $message) {
+        $key = 'telegram:kasko:summary:' . $setting->id . ':' . $today->toDateString() . ':' . hash('sha256', $setting->chat_id . serialize($messages));
+        $next = (int) Cache::get($key, 0);
+        foreach (array_slice($messages, $next) as $message) {
             $this->sendTextMessage($setting, $message);
+            Cache::put($key, ++$next, $today->copy()->addDay());
+            $check->sent++;
         }
 
         $setting->last_upcoming_summary_date = $today;
         $setting->save();
 
-        return count($messages);
+        Cache::forget($key);
     }
 
     private function ensureOwnershipFields(string $template): string

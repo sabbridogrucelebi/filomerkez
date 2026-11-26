@@ -69,6 +69,7 @@
             <p class="text-sm font-bold text-sky-200">{{ $company->name }}</p>
             <h2 class="mt-2 text-3xl font-black tracking-tight">Telegram Uyarı Merkezi</h2>
             <p class="mt-4 text-sm font-semibold text-slate-200">{{ $active }} / {{ count($cards) }} bot etkin · Her gün {{ $schedule_time }} Türkiye saati</p>
+            <p class="mt-1 text-sm text-slate-200">{{ $scheduler_note }}</p>
         </div>
     </section>
 
@@ -92,6 +93,11 @@
             <div>
                 <h2 class="text-xl font-black text-slate-900">{{ $card['icon'] }} {{ $card['label'] }}</h2>
                 <p class="mt-1 text-sm text-slate-600">{{ $card['description'] }}</p>
+                @if($check = $automatic_checks[$selectedChannel] ?? null)
+                    <p class="mt-2 text-sm text-slate-700">Son otomatik kontrol · {{ $check['checked_at'] }} · {{ $check['summary'] }}</p>
+                @elseif($card['is_enabled'])
+                    <p class="mt-2 text-sm text-slate-700">Bu hat için ilk otomatik kontrol bekleniyor.</p>
+                @endif
                 @if($card['last_sent_at'])
                     <p class="mt-2 text-xs font-semibold text-slate-600">Son otomatik uyarı · {{ \Carbon\Carbon::parse($card['last_sent_at'])->format('d.m.Y H:i') }}</p>
                 @endif

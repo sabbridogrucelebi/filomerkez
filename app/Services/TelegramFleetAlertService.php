@@ -21,7 +21,7 @@ class TelegramFleetAlertService
     {
     }
 
-    public function sendScheduledNotifications(): int
+    public function sendScheduledNotifications(bool $scheduled = false): int
     {
         if (!$this->settings->available()) {
             return 0;
@@ -29,13 +29,10 @@ class TelegramFleetAlertService
 
         $today = now(TelegramAlertSchedule::TIMEZONE)->startOfDay();
         $sent = 0;
-        TelegramAlertBot::with('company')->where('is_enabled', true)->eachById(function (TelegramAlertBot $bot) use ($today, &$sent) {
-            try {
-                if ($bot->hasCredentials() && isset(TelegramAlertBot::CHANNELS[$bot->channel])) {
-                    $sent += $this->sendForBot($bot, $today);
-                }
-            } catch (Throwable $exception) {
-                Log::warning('Telegram filo uyarıları işlenemedi.', ['bot_id' => $bot->id, 'error_type' => $exception::class]);
+        TelegramAlertBot::with('company')->where('is_enabled', true)->eachById(function (TelegramAlertBot $bot) use ($today, $scheduled, &$sent) {
+            if (isset(TelegramAlertBot::CHANNELS[$bot->channel])) {
+                $sent += TelegramScheduledCheck::run($bot, $scheduled,
+                    fn (TelegramScheduledCheck $check) => $this->sendForBot($bot, $today, $check));
             }
         });
 
@@ -73,23 +70,25 @@ class TelegramFleetAlertService
         return null;
     }
 
-    private function sendForBot(TelegramAlertBot $bot, Carbon $today): int
+    private function sendForBot(TelegramAlertBot $bot, Carbon $today, TelegramScheduledCheck $check): void
     {
         $kind = TelegramAlertBot::CHANNELS[$bot->channel]['kind'];
         $days = TelegramAlertSchedule::days($bot->reminder_days ?? TelegramAlertSchedule::DEFAULT_DAYS);
-        $sent = 0;
         if ($bot->channel === 'imm' && $bot->upcoming_summary_enabled) {
             try {
-                [, $sent] = $this->sendImmSummary($bot, $today, manual: false);
+                $this->sendImmSummary($bot, $today, manual: false, check: $check);
             } catch (Throwable $exception) {
-                Log::warning('Telegram İMM özeti gönderilemedi.', ['bot_id' => $bot->id, 'error_type' => $exception::class]);
+                $check->failed($exception);
             }
         }
         Vehicle::where('company_id', $bot->company_id)->where('is_active', true)
             ->when($kind === 'date', fn ($query) => $query->with(TelegramPolicyAlerts::relationFor($bot->channel)))
             ->when($kind === 'maintenance', fn ($query) => $query->with('maintenanceSetting'))
             ->when($kind === 'fuel', fn ($query) => $query->where('min_km_per_liter', '>', 0))
-            ->eachById(function (Vehicle $vehicle) use ($bot, $kind, $days, $today, &$sent) {
+            ->eachById(function (Vehicle $vehicle) use ($bot, $kind, $days, $today, $check) {
+                if ($check->shouldPause()) {
+                    return false;
+                }
                 $events = match ($kind) {
                     'date' => $this->dateEvents($vehicle, $bot->channel, $days, $today),
                     'maintenance' => $this->maintenanceEvents($vehicle, $bot->maintenance_km ?? 200, $today),
@@ -104,23 +103,25 @@ class TelegramFleetAlertService
                     try {
                         $this->telegram->sendTextMessage($bot, $this->messages->render($bot, $vehicle, $event));
                         TelegramAlertDelivery::create($delivery);
-                        $sent++;
+                        $check->sent++;
                     } catch (Throwable $exception) {
+                        $check->failed($exception);
                         Log::warning('Telegram araç uyarısı gönderilemedi.', [
                             'bot_id' => $bot->id, 'vehicle_id' => $vehicle->id, 'error_type' => $exception::class,
                         ]);
+                        if ($check->shouldPause()) {
+                            return false;
+                        }
                     }
                 }
             });
-
-        return $sent;
     }
 
     /** @return array{0: int, 1: int} Matching vehicles and messages sent by this call. */
-    private function sendImmSummary(TelegramAlertBot $bot, Carbon $today, bool $manual): array
+    private function sendImmSummary(TelegramAlertBot $bot, Carbon $today, bool $manual, ?TelegramScheduledCheck $check = null): array
     {
         $lockKey = 'telegram:imm:summary:' . $bot->id;
-        $result = Cache::lock($lockKey, 300)->get(function () use ($bot, $today, $manual, $lockKey) {
+        $result = Cache::lock($lockKey, 300)->get(function () use ($bot, $today, $manual, $lockKey, $check) {
             if (!$manual && $bot->last_upcoming_summary_date?->isSameDay($today)) {
                 return [0, 0];
             }
@@ -135,6 +136,9 @@ class TelegramFleetAlertService
             foreach (array_slice($messages, $next) as $message) {
                 $this->telegram->sendTextMessage($bot, $message);
                 Cache::put($progressKey, ++$next, $today->copy()->addDay());
+                if ($check) {
+                    $check->sent++;
+                }
                 $sent++;
             }
 

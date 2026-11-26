@@ -13,7 +13,13 @@ Schedule::command('app:backup-tenant-data')->dailyAt('00:00');
 Schedule::command('maintenance:check-health')->everyTenMinutes();
 Schedule::command('trips:analyze-stops')->dailyAt('03:00');
 Schedule::command('reports:calculate-daily')->dailyAt('04:00');
-Schedule::command('telegram:kasko-alerts')->dailyAt(\App\Services\TelegramAlertSchedule::TIME)->timezone(\App\Services\TelegramAlertSchedule::TIMEZONE)->withoutOverlapping();
-Schedule::command('telegram:fleet-alerts')->dailyAt(\App\Services\TelegramAlertSchedule::TIME)->timezone(\App\Services\TelegramAlertSchedule::TIMEZONE)->withoutOverlapping();
+Schedule::call(fn () => \Illuminate\Support\Facades\Cache::put('telegram:scheduler:last-tick', now()->timestamp, 86400))
+    ->name('telegram:scheduler-heartbeat')->everyMinute();
+foreach (['telegram:kasko-alerts', 'telegram:fleet-alerts'] as $command) {
+    Schedule::command($command, ['--scheduled'])->everyFiveMinutes()
+        ->timezone(\App\Services\TelegramAlertSchedule::TIMEZONE)
+        ->when(fn () => now(\App\Services\TelegramAlertSchedule::TIMEZONE)->format('H:i') >= \App\Services\TelegramAlertSchedule::TIME)
+        ->withoutOverlapping(60);
+}
 Schedule::command('telegram:kasko-commands')->everyMinute()->withoutOverlapping();
 Schedule::command('telegram:date-bot-commands')->everyMinute()->withoutOverlapping();
