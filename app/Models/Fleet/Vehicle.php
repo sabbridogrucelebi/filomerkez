@@ -246,6 +246,24 @@ class Vehicle extends Model
      * Akıllı Bakım Tahminleme Metotları
      */
 
+    private static function latestCompletedMaintenanceKm(string $type): Builder
+    {
+        return VehicleMaintenance::query()->select('km')
+            ->where('maintenance_type', $type)->where('status', 'completed')
+            ->orderByDesc('service_date')->orderByDesc('id')->limit(1);
+    }
+
+    public function scopeWithMaintenanceReadings(Builder $query): Builder
+    {
+        return $query->with('maintenanceSetting')
+            ->withMax('fuels as max_fuel_km', 'km')
+            ->withMax('maintenances as max_maintenance_km', 'km')
+            ->addSelect([
+                'latest_oil_km' => self::latestCompletedMaintenanceKm('YAĞ BAKIMI')->whereColumn('vehicle_id', 'vehicles.id'),
+                'latest_lube_km' => self::latestCompletedMaintenanceKm('ALT YAĞLAMA')->whereColumn('vehicle_id', 'vehicles.id'),
+            ]);
+    }
+
     public function getMaintenanceStatusAttribute(): array
     {
         $setting = $this->maintenanceSetting;
@@ -260,18 +278,13 @@ class Vehicle extends Model
         }
 
         // Güncel KM'yi en yüksek değere göre bul (Araç, Yakıt, Bakım)
-        $maxFuelKm = \App\Models\Fuel::where('vehicle_id', $this->id)->max('km') ?: 0;
-        $maxMaintenanceKm = $this->maintenances()->max('km') ?: 0;
+        $maxFuelKm = array_key_exists('max_fuel_km', $this->attributes)
+            ? $this->max_fuel_km : $this->fuels()->max('km');
+        $maxMaintenanceKm = array_key_exists('max_maintenance_km', $this->attributes)
+            ? $this->max_maintenance_km : $this->maintenances()->max('km');
         $currentKm = max((int)$this->current_km, (int)$maxFuelKm, (int)$maxMaintenanceKm);
 
         // Yağ Değişimi Hesaplama
-        $lastOilChange = $this->maintenances()
-            ->where('maintenance_type', 'YAĞ BAKIMI')
-            ->where('status', 'completed')
-            ->orderByDesc('service_date')
-            ->orderByDesc('km')
-            ->first();
-
         $oilInterval = $setting->oil_change_interval_km;
         $hasOilSetting = !empty($oilInterval);
         
@@ -279,7 +292,8 @@ class Vehicle extends Model
         $oilPercent = 0;
         
         if ($hasOilSetting) {
-            $lastOilKm = $lastOilChange ? $lastOilChange->km : 0;
+            $lastOilKm = array_key_exists('latest_oil_km', $this->attributes)
+                ? $this->latest_oil_km : self::latestCompletedMaintenanceKm('YAĞ BAKIMI')->where('vehicle_id', $this->id)->value('km');
             // Eğer daha önce hiç yağ bakımı kaydı yoksa hesaplama yanlış çıkmasın diye
             if ($lastOilKm > 0) {
                 $oilRemaining = ($lastOilKm + $oilInterval) - $currentKm;
@@ -293,13 +307,6 @@ class Vehicle extends Model
         }
 
         // Alt Yağlama Hesaplama
-        $lastLubeChange = $this->maintenances()
-            ->where('maintenance_type', 'ALT YAĞLAMA')
-            ->where('status', 'completed')
-            ->orderByDesc('service_date')
-            ->orderByDesc('km')
-            ->first();
-
         $lubeInterval = $setting->under_lubrication_interval_km;
         $hasLubeSetting = !empty($lubeInterval);
         
@@ -307,7 +314,8 @@ class Vehicle extends Model
         $lubePercent = 0;
         
         if ($hasLubeSetting) {
-            $lastLubeKm = $lastLubeChange ? $lastLubeChange->km : 0;
+            $lastLubeKm = array_key_exists('latest_lube_km', $this->attributes)
+                ? $this->latest_lube_km : self::latestCompletedMaintenanceKm('ALT YAĞLAMA')->where('vehicle_id', $this->id)->value('km');
             if ($lastLubeKm > 0) {
                 $lubeRemaining = ($lastLubeKm + $lubeInterval) - $currentKm;
                 $lubePercent = max(0, min(100, ($lubeRemaining / $lubeInterval) * 100));

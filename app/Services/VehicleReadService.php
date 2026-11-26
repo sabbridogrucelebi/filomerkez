@@ -11,7 +11,7 @@ class VehicleReadService
 {
     public function getVehicles(int $companyId, array $filters, int $perPage = 20): array
     {
-        $query = Vehicle::with(['drivers', 'alertDocuments', 'documents' => fn ($q) => $q->whereNull('archived_at')->latest()])
+        $query = Vehicle::with('alertDocuments')
             ->select('vehicles.*')
             ->where('company_id', $companyId)
             ->addSelect([
@@ -63,16 +63,6 @@ class VehicleReadService
             $currentKm = max((int)$vehicle->current_km, (int)$vehicle->max_fuel_km, (int)$vehicle->max_maintenance_km);
             $driver = $vehicle->last_driver_name;
             
-            $docTypes = ['Muayene', 'Egzoz', 'Sigorta', 'Kasko', 'İMM Poliçesi', 'İMM POLİÇESİ'];
-            $latestDocs = $vehicle->documents
-                ->whereIn('document_type', $docTypes)
-                ->whereNotNull('end_date')
-                ->groupBy('document_type')
-                ->map(fn($g) => $g->sortByDesc('end_date')->first());
-
-            $inspectionDoc = $latestDocs->get('Muayene');
-            $insuranceDoc  = $latestDocs->get('Sigorta');
-
             return [
                 'id' => $vehicle->id,
                 'plate' => $vehicle->plate,

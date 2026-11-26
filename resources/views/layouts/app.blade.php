@@ -77,7 +77,7 @@
         $driverDocumentAlerts = collect(\App\Http\Controllers\DriverController::getDriverDocumentAlertsForLayout());
 
         $criticalMaintenances = collect();
-        $vehiclesForMaint = \App\Models\Fleet\Vehicle::with(['maintenanceSetting', 'maintenances'])
+        $vehiclesForMaint = \App\Models\Fleet\Vehicle::withMaintenanceReadings()->whereHas('maintenanceSetting')
             ->where('company_id', $company->id)
             ->where('is_active', true)
             ->get();

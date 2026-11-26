@@ -49,16 +49,12 @@ class VehicleController extends Controller
         $upcomingInspectionIds = Vehicle::upcomingAlertIds('inspection');
         $upcomingInsuranceIds  = Vehicle::upcomingAlertIds('insurance');
 
-        $vehicles = Vehicle::query()
+        $vehicles = Vehicle::withMaintenanceReadings()
             ->with([
-                'fuels' => fn ($q) => $q->latest('date')->latest('id')->limit(3),
-                'drivers' => fn ($q) => $q->latest()->limit(3),
-                'images' => fn ($q) => $q->orderByDesc('is_featured')->orderBy('sort_order')->limit(1),
-                'maintenanceSetting',
-                'documents' => fn ($q) => $q->whereNull('archived_at')->latest(),
-                'alertDocuments',
+                'fuels' => fn ($q) => $q->latest('id')->limit(1),
+                'drivers' => fn ($q) => $q->latest()->limit(1),
             ])
-            ->withCount(['maintenances', 'fuels', 'trafficPenalties'])
+            ->when(in_array($specialFilter, ['upcoming_inspection', 'upcoming_insurance'], true), fn ($q) => $q->with('alertDocuments'))
             ->where(function($q) {
                 $q->whereNull('vehicle_type')->orWhere('vehicle_type', '!=', 'TRACKING_ONLY');
             })

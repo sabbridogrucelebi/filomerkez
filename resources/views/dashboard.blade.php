@@ -17,7 +17,7 @@
     $operationSeries = [8, 11, 13, 16, 18, 21, 24, max((int) $todayTrips, 12)];
 
     // Bakım Verileri
-    $maintVehicles = \App\Models\Fleet\Vehicle::with(['maintenanceSetting', 'maintenances'])
+    $maintVehicles = \App\Models\Fleet\Vehicle::withMaintenanceReadings()
         ->where('company_id', auth()->user()->company_id)
         ->get();
     

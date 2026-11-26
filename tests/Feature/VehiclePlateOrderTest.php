@@ -19,7 +19,7 @@ class VehiclePlateOrderTest extends TestCase
         DB::statement('CREATE TABLE documents (id INTEGER PRIMARY KEY, company_id INTEGER, documentable_type TEXT, documentable_id INTEGER, document_type TEXT, end_date TEXT, archived_at TEXT, created_at TEXT)');
         DB::statement('CREATE TABLE drivers (id INTEGER PRIMARY KEY, company_id INTEGER, vehicle_id INTEGER, full_name TEXT, phone TEXT, is_active INTEGER, created_at TEXT, deleted_at TEXT)');
         foreach (['fuels', 'vehicle_maintenances', 'traffic_penalties', 'vehicle_images', 'vehicle_maintenance_settings'] as $table) {
-            DB::statement("CREATE TABLE $table (id INTEGER PRIMARY KEY, company_id INTEGER, vehicle_id INTEGER, km INTEGER, date TEXT, is_featured INTEGER, sort_order INTEGER)");
+            DB::statement("CREATE TABLE $table (id INTEGER PRIMARY KEY, company_id INTEGER, vehicle_id INTEGER, km INTEGER, date TEXT, is_featured INTEGER, sort_order INTEGER, maintenance_type TEXT, service_date TEXT, status TEXT)");
         }
 
         $this->actingAs(new User(['company_id' => 1, 'role' => 'company_admin']));

@@ -278,7 +278,7 @@
                 <tbody class="divide-y divide-slate-100">
                     @forelse($vehicles as $vehicle)
                         @php
-                            $primaryDriver = $vehicle->drivers()->latest()->first();
+                            $primaryDriver = $vehicle->drivers->first();
                             $latestFuel = $vehicle->fuels->first();
                             $displayKm = $latestFuel->km ?? $vehicle->current_km ?? 0;
                             $mStatus = $vehicle->maintenance_status;

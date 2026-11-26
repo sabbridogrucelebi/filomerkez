@@ -327,13 +327,12 @@ Route::get('/dashboard', function () {
     }
 
     $fuelAnomalies = collect();
-    $vehiclesWithBounds = Vehicle::whereNotNull('min_km_per_liter')->orWhereNotNull('max_km_per_liter')->get();
+    $vehiclesWithBounds = Vehicle::where(fn ($q) => $q->whereNotNull('min_km_per_liter')->orWhereNotNull('max_km_per_liter'))
+        ->with(['fuels' => fn ($q) => $q->orderByDesc('id')->limit(2)])
+        ->get();
     foreach ($vehiclesWithBounds as $v) {
-        $recentFuels = Fuel::where('vehicle_id', $v->id)
-            ->orderByDesc('date')
-            ->orderByDesc('id')
-            ->take(2)
-            ->get();
+        $recentFuels = $v->fuels;
+        $v->unsetRelation('fuels');
             
         if ($recentFuels->count() === 2) {
             $f = $recentFuels[0];

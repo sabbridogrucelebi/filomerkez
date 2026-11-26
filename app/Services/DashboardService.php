@@ -95,9 +95,8 @@ class DashboardService
 
         // Bakım Sağlığı (Maintenance Health)
         // Son 500 KM'ye düşen veya gecikmiş (<= 500) yağ ve alt yağlama bakımlarını bul
-        $vehiclesWithSettings = Vehicle::with(['maintenanceSetting', 'maintenances' => function($q) {
-            $q->whereIn('maintenance_type', ['YAĞ BAKIMI', 'ALT YAĞLAMA'])->where('status', 'completed');
-        }])->where('company_id', $companyId)->get();
+        $vehiclesWithSettings = Vehicle::withMaintenanceReadings()->whereHas('maintenanceSetting')
+            ->where('company_id', $companyId)->get();
 
         $maintenanceHealth = [];
         foreach ($vehiclesWithSettings as $vehicle) {
